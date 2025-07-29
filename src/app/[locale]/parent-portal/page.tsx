@@ -370,14 +370,29 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <Link href={`/${locale}`} style={{
-            fontSize: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
             color: 'white',
             textDecoration: 'none',
             fontWeight: 'bold'
           }}>
-            🌈 Future Nursery
+            {/* <img 
+              src="/logo.png" 
+              alt="Future Step Nursery Logo"
+              style={{
+                height: '40px',
+                width: 'auto',
+                maxWidth: '60px',
+                objectFit: 'contain',
+                filter: 'brightness(0) invert(1)'
+              }}
+            /> */}
+            {/* <span style={{ fontSize: '1.5rem' }}>
+              {locale === 'ar-SA' ? 'روضة خطوة المستقبل الأهلية' : 'Future Step Nursery'}
+            </span> */}
           </Link>
-          <span style={{ fontSize: '2rem' }}>|</span>
+          {/* <span style={{ fontSize: '2rem' }}>|</span> */}
           <h1 style={{
             fontSize: '1.8rem',
             color: 'white',

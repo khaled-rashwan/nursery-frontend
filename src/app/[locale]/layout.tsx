@@ -22,8 +22,24 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
   return (
     <header className="kindergarten-header">
       <div className="header-content">
-        <Link href={`/${locale}`} className="logo">
-          🌈 Future Nursery
+        <Link href={`/${locale}`} className="logo" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <img 
+            src="/logo.png" 
+            alt="Future Step Nursery Logo"
+            style={{
+              height: '40px',
+              width: 'auto',
+              maxWidth: '60px',
+              objectFit: 'contain'
+            }}
+          />
+          <span>
+            {locale === 'ar-SA' ? 'روضة خطوة المستقبل الأهلية' : 'Future Step Nursery'}
+          </span>
         </Link>
         
         <nav>
@@ -85,22 +101,22 @@ function Footer({locale}: {locale: string}) {
       <div className="footer-content">
         <div className="footer-section">
           <h3>📍 {locale === 'ar-SA' ? 'العنوان' : 'Address'}</h3>
-          <p>{locale === 'ar-SA' ? '123 شارع الأطفال، مدينة السعادة' : '123 Kids Street, Happy City'}</p>
+          <p>{locale === 'ar-SA' ? 'مدينة الخبر – المنطقة الشرقية' : 'Al Khobar – Eastern Province'}</p>
         </div>
         
         <div className="footer-section">
-          <h3>📞 {locale === 'ar-SA' ? 'الهاتف' : 'Phone'}</h3>
-          <p>{locale === 'ar-SA' ? '+966 (11) 123-4567' : '+1 (555) 123-4567'}</p>
+          <h3>📞 {locale === 'ar-SA' ? 'هاتف، واتساب' : 'Phone & WhatsApp'}</h3>
+          <p>{locale === 'ar-SA' ? '920016074' : '920016074'}</p>
         </div>
         
         <div className="footer-section">
           <h3>✉️ {locale === 'ar-SA' ? 'البريد الإلكتروني' : 'Email'}</h3>
-          <p>info@futurenursery.com</p>
+          <p>info@futurestep.edu.sa</p>
         </div>
         
         <div className="footer-section">
           <h3>🕐 {locale === 'ar-SA' ? 'ساعات العمل' : 'Hours'}</h3>
-          <p>{locale === 'ar-SA' ? 'الإثنين - الجمعة: 7:00 ص - 6:00 م' : 'Mon-Fri: 7:00 AM - 6:00 PM'}</p>
+          <p>{locale === 'ar-SA' ? 'الأحد - الخميس: 7:30 ص - 2:00 م' : 'Sunday to Thursday: 7:30 AM to 2:00 PM'}</p>
         </div>
       </div>
       

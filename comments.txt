@@ -1,0 +1,6 @@
+translate title, put the logo
+header should be little in height, one line for all (title, nav)
+vibration should be slower in nav
+مرحباً بكم في روضة المستقبل
+Apply now should be added.
+should add pictures
