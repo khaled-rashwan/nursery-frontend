@@ -1,0 +1,35 @@
+{
+  "Navigation": {
+    "home": "Home",
+    "aboutUs": "About Us",
+    "academicProgram": "Academic Program",
+    "admissions": "Admissions",
+    "gallery": "Gallery",
+    "careers": "Careers",
+    "contactUs": "Contact Us",
+    "parentPortal": "Parent Portal"
+  },
+  "HomePage": {
+    "title": "Welcome to Future Nursery",
+    "subtitle": "Where little minds grow big dreams!",
+    "heroText": "A magical place where children discover, learn, and flourish through play-based education",
+    "about": "Go to the about page",
+    "sections": {
+      "welcome": "Welcome",
+      "programs": "Our Programs",
+      "activities": "Fun Activities",
+      "contact": "Get in Touch"
+    }
+  },
+  "AboutUs": {
+    "title": "About Us",
+    "description": "We are a future step nursery dedicated to early childhood education."
+  },
+  "Footer": {
+    "address": "123 Kids Street, Happy City",
+    "phone": "+1 (555) 123-4567",
+    "email": "info@futurenursery.com",
+    "hours": "Mon-Fri: 7:00 AM - 6:00 PM",
+    "copyright": "© 2025 Future Nursery. All rights reserved."
+  }
+}
