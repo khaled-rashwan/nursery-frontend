@@ -885,7 +885,7 @@ function PrincipalMessageSection({ locale }: { locale: string }) {
                 marginBottom: '2rem',
                 opacity: 0.1
               }}>
-                "
+                &quot;
               </div>
 
               <p style={{
