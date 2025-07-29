@@ -8,10 +8,10 @@ if (!directusUrl) {
 }
 const directus = createDirectus(directusUrl).with(rest());
 
-function logDirectusError(error: any, context: string) {
+function logDirectusError(error: unknown, context: string) {
   console.error(`[DIRECTUS_ERROR] in ${context}:`);
-  if (error.errors) {
-    console.error(JSON.stringify(error.errors, null, 2));
+  if (typeof error === 'object' && error !== null && 'errors' in error) {
+    console.error(JSON.stringify((error as { errors: unknown }).errors, null, 2));
   } else {
     console.error(error);
   }
