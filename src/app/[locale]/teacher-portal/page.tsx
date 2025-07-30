@@ -482,7 +482,7 @@ function DashboardHeader({
 
 // Quick Stats Component
 function QuickStats({ locale, selectedClass }: { locale: string, selectedClass: string }) {
-  const currentStudents = (mockStudentsData as any)[selectedClass] || [];
+  const currentStudents = mockStudentsData[selectedClass] || [];
   const selectedClassInfo = mockClasses.find(c => c.id === selectedClass);
   const totalMessages = currentStudents.reduce((sum: number, student: Student) => sum + student.unreadMessages, 0);
   const avgAttendance = currentStudents.length > 0 
@@ -570,8 +570,8 @@ function QuickStats({ locale, selectedClass }: { locale: string, selectedClass: 
 
 // Student Roster Component
 function StudentRoster({ locale, selectedClass }: { locale: string, selectedClass: string }) {
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const currentStudents = (mockStudentsData as any)[selectedClass] || [];
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const currentStudents = mockStudentsData[selectedClass] || [];
   const selectedClassInfo = mockClasses.find(c => c.id === selectedClass);
 
   return (
@@ -1218,7 +1218,7 @@ function CommunicationCenter({ locale, selectedClass }: { locale: string, select
 function AttendanceManagement({ locale, selectedClass }: { locale: string, selectedClass: string }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendance, setAttendance] = useState<{[key: number]: 'present' | 'absent' | 'late'}>({});
-  const currentStudents = (mockStudentsData as any)[selectedClass] || [];
+  const currentStudents = mockStudentsData[selectedClass] || [];
 
   const handleAttendanceChange = (studentId: number, status: 'present' | 'absent' | 'late') => {
     setAttendance(prev => ({
@@ -1361,7 +1361,7 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
                 ].map((option) => (
                   <button
                     key={option.status}
-                    onClick={() => handleAttendanceChange(student.id, option.status as any)}
+                    onClick={() => handleAttendanceChange(student.id, option.status as 'present' | 'absent' | 'late')}
                     style={{
                       background: attendance[student.id] === option.status ? option.color : 'white',
                       color: attendance[student.id] === option.status ? 'white' : option.color,
