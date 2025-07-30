@@ -4,38 +4,112 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 // Mock data for demonstration
-const mockStudent = {
-  name: 'أحمد محمد / Ahmed Mohammed',
-  class: 'الصف الأول / Grade 1',
-  id: 'ST2025001',
-  photo: '👦',
-  attendance: 95,
-  fees: {
-    total: 12000,
-    paid: 8000,
-    remaining: 4000
+const mockChildren = [
+  {
+    id: 'ST2025001',
+    name: 'أحمد محمد',
+    nameEn: 'Ahmed Mohammed',
+    class: 'الروضة الأولى',
+    classEn: 'KG1',
+    classId: 'kg1-a',
+    photo: '👦',
+    attendance: 95,
+    fees: {
+      total: 12000,
+      paid: 8000,
+      remaining: 4000
+    }
+  },
+  {
+    id: 'ST2025002',
+    name: 'فاطمة محمد',
+    nameEn: 'Fatima Mohammed',
+    class: 'ما قبل الروضة',
+    classEn: 'Pre-KG',
+    classId: 'prekg-a',
+    photo: '👧',
+    attendance: 88,
+    fees: {
+      total: 10000,
+      paid: 10000,
+      remaining: 0
+    }
+  },
+  {
+    id: 'ST2025003',
+    name: 'عمر محمد',
+    nameEn: 'Omar Mohammed',
+    class: 'الروضة الثانية',
+    classEn: 'KG2',
+    classId: 'kg2-a',
+    photo: '👦',
+    attendance: 92,
+    fees: {
+      total: 15000,
+      paid: 7500,
+      remaining: 7500
+    }
   }
+];
+
+// Mock data organized by child ID
+const mockAttendanceData = {
+  'ST2025001': [
+    { date: '2025-01-15', status: 'present', emoji: '✅' },
+    { date: '2025-01-14', status: 'present', emoji: '✅' },
+    { date: '2025-01-13', status: 'absent', emoji: '❌' },
+    { date: '2025-01-12', status: 'present', emoji: '✅' },
+    { date: '2025-01-11', status: 'present', emoji: '✅' },
+  ],
+  'ST2025002': [
+    { date: '2025-01-15', status: 'present', emoji: '✅' },
+    { date: '2025-01-14', status: 'late', emoji: '⏰' },
+    { date: '2025-01-13', status: 'present', emoji: '✅' },
+    { date: '2025-01-12', status: 'present', emoji: '✅' },
+    { date: '2025-01-11', status: 'absent', emoji: '❌' },
+  ],
+  'ST2025003': [
+    { date: '2025-01-15', status: 'present', emoji: '✅' },
+    { date: '2025-01-14', status: 'present', emoji: '✅' },
+    { date: '2025-01-13', status: 'present', emoji: '✅' },
+    { date: '2025-01-12', status: 'late', emoji: '⏰' },
+    { date: '2025-01-11', status: 'present', emoji: '✅' },
+  ]
 };
 
-const mockAttendance = [
-  { date: '2025-01-15', status: 'present', emoji: '✅' },
-  { date: '2025-01-14', status: 'present', emoji: '✅' },
-  { date: '2025-01-13', status: 'absent', emoji: '❌' },
-  { date: '2025-01-12', status: 'present', emoji: '✅' },
-  { date: '2025-01-11', status: 'present', emoji: '✅' },
-];
+const mockHomeworkData = {
+  'ST2025001': [
+    { subject: 'الرياضيات / Math', task: 'Complete worksheet pages 12-15', dueDate: '2025-01-20', status: 'pending' },
+    { subject: 'العربية / Arabic', task: 'Read story and answer questions', dueDate: '2025-01-18', status: 'completed' },
+    { subject: 'الإنجليزية / English', task: 'Practice spelling words', dueDate: '2025-01-22', status: 'pending' },
+  ],
+  'ST2025002': [
+    { subject: 'الأنشطة الفنية / Art Activities', task: 'Draw and color your family', dueDate: '2025-01-19', status: 'pending' },
+    { subject: 'الألعاب التعليمية / Educational Games', task: 'Practice counting to 10', dueDate: '2025-01-21', status: 'completed' },
+  ],
+  'ST2025003': [
+    { subject: 'الرياضيات / Math', task: 'Addition problems worksheet', dueDate: '2025-01-18', status: 'completed' },
+    { subject: 'العلوم / Science', task: 'Observe and draw plants', dueDate: '2025-01-23', status: 'pending' },
+    { subject: 'القراءة / Reading', task: 'Read chapter 3 and discuss', dueDate: '2025-01-20', status: 'pending' },
+  ]
+};
 
-const mockHomework = [
-  { subject: 'الرياضيات / Math', task: 'Complete worksheet pages 12-15', dueDate: '2025-01-20', status: 'pending' },
-  { subject: 'العربية / Arabic', task: 'Read story and answer questions', dueDate: '2025-01-18', status: 'completed' },
-  { subject: 'الإنجليزية / English', task: 'Practice spelling words', dueDate: '2025-01-22', status: 'pending' },
-];
-
-const mockNotifications = [
-  { id: 1, type: 'homework', message: 'New homework assigned in Math', date: '2025-01-15', read: false },
-  { id: 2, type: 'announcement', message: 'School holiday on January 25th', date: '2025-01-14', read: true },
-  { id: 3, type: 'fee', message: 'Fee payment reminder', date: '2025-01-13', read: false },
-];
+const mockNotificationsData = {
+  'ST2025001': [
+    { id: 1, type: 'homework', message: 'New homework assigned in Math', date: '2025-01-15', read: false },
+    { id: 2, type: 'announcement', message: 'KG1 field trip next week', date: '2025-01-14', read: true },
+    { id: 3, type: 'fee', message: 'Fee payment reminder', date: '2025-01-13', read: false },
+  ],
+  'ST2025002': [
+    { id: 4, type: 'announcement', message: 'Pre-KG art exhibition this Friday', date: '2025-01-15', read: false },
+    { id: 5, type: 'homework', message: 'New art activity assigned', date: '2025-01-14', read: true },
+  ],
+  'ST2025003': [
+    { id: 6, type: 'achievement', message: 'Omar received a star for excellent behavior', date: '2025-01-15', read: false },
+    { id: 7, type: 'homework', message: 'Science project assigned', date: '2025-01-14', read: true },
+    { id: 8, type: 'announcement', message: 'KG2 graduation preparation meeting', date: '2025-01-13', read: false },
+  ]
+};
 
 // Login Component
 function LoginForm({ onLogin, locale }: { onLogin: () => void; locale: string }) {
@@ -345,6 +419,13 @@ function LoginForm({ onLogin, locale }: { onLogin: () => void; locale: string })
 function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedMonth, setSelectedMonth] = useState('2025-01');
+  const [selectedChildId, setSelectedChildId] = useState(mockChildren[0].id);
+
+  // Get current child data
+  const currentChild = mockChildren.find(child => child.id === selectedChildId) || mockChildren[0];
+  const currentAttendance = (mockAttendanceData as any)[selectedChildId] || [];
+  const currentHomework = (mockHomeworkData as any)[selectedChildId] || [];
+  const currentNotifications = (mockNotificationsData as any)[selectedChildId] || [];
 
   const tabs = [
     { id: 'overview', icon: '📊', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview' },
@@ -402,6 +483,47 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             {locale === 'ar-SA' ? 'بوابة أولياء الأمور' : 'Parent Portal'}
           </h1>
         </div>
+
+        {/* Child Selector */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          background: 'rgba(255,255,255,0.1)',
+          padding: '0.8rem 1.5rem',
+          borderRadius: '15px',
+          border: '2px solid rgba(255,255,255,0.2)'
+        }}>
+          <span style={{
+            color: 'white',
+            fontSize: '1.1rem',
+            fontWeight: 'bold'
+          }}>
+            {locale === 'ar-SA' ? 'اختر الطالب:' : 'Select Child:'}
+          </span>
+          <select 
+            value={selectedChildId}
+            onChange={(e) => setSelectedChildId(e.target.value)}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '10px',
+              border: '2px solid white',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              background: 'white',
+              color: 'var(--primary-purple)',
+              cursor: 'pointer',
+              minWidth: '200px'
+            }}
+          >
+            {mockChildren.map((child) => (
+              <option key={child.id} value={child.id}>
+                {locale === 'ar-SA' ? `${child.name} - ${child.class}` : `${child.nameEn} - ${child.classEn}`}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           onClick={onLogout}
           style={{
@@ -494,7 +616,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  {mockStudent.photo}
+                  {currentChild.photo}
                 </div>
                 <div style={{ flex: 1 }}>
                   <h3 style={{
@@ -502,20 +624,20 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                     color: 'var(--primary-purple)',
                     marginBottom: '0.5rem'
                   }}>
-                    {mockStudent.name}
+                    {locale === 'ar-SA' ? currentChild.name : currentChild.nameEn}
                   </h3>
                   <p style={{
                     fontSize: '1.3rem',
                     color: 'var(--primary-blue)',
                     marginBottom: '0.5rem'
                   }}>
-                    📚 {mockStudent.class}
+                    📚 {locale === 'ar-SA' ? currentChild.class : currentChild.classEn}
                   </p>
                   <p style={{
                     fontSize: '1.1rem',
                     color: '#666'
                   }}>
-                    🆔 {locale === 'ar-SA' ? 'رقم الطالب:' : 'Student ID:'} {mockStudent.id}
+                    🆔 {locale === 'ar-SA' ? 'رقم الطالب:' : 'Student ID:'} {currentChild.id}
                   </p>
                 </div>
                 <div style={{
@@ -529,7 +651,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                     color: 'var(--primary-green)',
                     fontWeight: 'bold'
                   }}>
-                    {mockStudent.attendance}%
+                    {currentChild.attendance}%
                   </div>
                   <div style={{
                     fontSize: '1.1rem',
@@ -570,7 +692,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   color: 'var(--primary-pink)',
                   fontWeight: 'bold'
                 }}>
-                  {mockHomework.filter(h => h.status === 'pending').length}
+                  {currentHomework.filter((h: any) => h.status === 'pending').length}
                 </div>
               </div>
 
@@ -595,7 +717,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   color: 'var(--primary-orange)',
                   fontWeight: 'bold'
                 }}>
-                  {locale === 'ar-SA' ? `${mockStudent.fees.remaining} ريال` : `$${mockStudent.fees.remaining}`}
+                  {locale === 'ar-SA' ? `${currentChild.fees.remaining} ريال` : `$${currentChild.fees.remaining}`}
                 </div>
               </div>
 
@@ -620,7 +742,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   color: 'var(--primary-blue)',
                   fontWeight: 'bold'
                 }}>
-                  {mockNotifications.filter(n => !n.read).length}
+                  {currentNotifications.filter((n: any) => !n.read).length}
                 </div>
               </div>
             </div>
@@ -674,7 +796,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {mockAttendance.map((record, index) => (
+                {currentAttendance.map((record: any, index: number) => (
                   <div key={index} style={{
                     display: 'flex',
                     justifyContent: 'space-between',

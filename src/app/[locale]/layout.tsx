@@ -84,6 +84,11 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
                 {locale === 'ar-SA' ? 'بوابة أولياء الأمور' : 'Parent Portal'}
               </Link>
             </li>
+            <li className="nav-item">
+              <Link href={`/${locale}/teacher-portal`} className="nav-link bounce-on-hover">
+                {locale === 'ar-SA' ? 'بوابة المعلمين' : 'Teacher Portal'}
+              </Link>
+            </li>
           </ul>
         </nav>
         
