@@ -187,8 +187,23 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
   );
 }
 
+// Program interface
+interface Program {
+  lightColor1: string;
+  lightColor2: string;
+  bgIcon1: string;
+  bgIcon2: string;
+  image: string;
+  title: string;
+  ageRange: string;
+  primaryColor: string;
+  icon: string;
+  overview: string;
+  experiences: string[];
+}
+
 // Program Detail Component
-function ProgramDetailSection({ program, locale }: { program: any; locale: string }) {
+function ProgramDetailSection({ program, locale }: { program: Program; locale: string }) {
   return (
     <section style={{
       padding: '6rem 2rem',
@@ -346,8 +361,8 @@ function ProgramDetailSection({ program, locale }: { program: any; locale: strin
                 display: 'grid',
                 gap: '1.5rem'
               }}>
-                {program.experiences.map((experience: string, index: number) => (
-                  <div key={index} style={{
+                {program.experiences.map((experience: string, expIndex: number) => (
+                  <div key={expIndex} style={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '1rem',
@@ -378,7 +393,7 @@ function ProgramDetailSection({ program, locale }: { program: any; locale: strin
                       fontSize: '0.9rem',
                       flexShrink: 0
                     }}>
-                      {index + 1}
+                      {expIndex + 1}
                     </div>
                     <p style={{
                       fontSize: '1.1rem',

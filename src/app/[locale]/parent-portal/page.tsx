@@ -4,7 +4,45 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 // Mock data for demonstration - Updated to support multiple children
-const mockChildren = [
+interface Child {
+  id: string;
+  name: string;
+  nameEn: string;
+  class: string;
+  classEn: string;
+  photo: string;
+  attendance: number;
+  fees: {
+    total: number;
+    paid: number;
+    remaining: number;
+  };
+  birthDate: string;
+  age: string;
+}
+
+interface AttendanceRecord {
+  date: string;
+  status: 'present' | 'absent' | 'late';
+  emoji: string;
+}
+
+interface HomeworkItem {
+  subject: string;
+  task: string;
+  dueDate: string;
+  status: 'pending' | 'completed';
+}
+
+interface NotificationItem {
+  id: number;
+  type: string;
+  message: string;
+  date: string;
+  read: boolean;
+}
+
+const mockChildren: Child[] = [
   {
     id: 'ST2025001',
     name: 'أحمد محمد',
@@ -56,7 +94,7 @@ const mockChildren = [
 ];
 
 // Mock attendance data per child
-const mockAttendanceData: { [key: string]: any[] } = {
+const mockAttendanceData: { [key: string]: AttendanceRecord[] } = {
   'ST2025001': [
     { date: '2025-01-15', status: 'present', emoji: '✅' },
     { date: '2025-01-14', status: 'present', emoji: '✅' },
@@ -81,7 +119,7 @@ const mockAttendanceData: { [key: string]: any[] } = {
 };
 
 // Mock homework data per child
-const mockHomeworkData: { [key: string]: any[] } = {
+const mockHomeworkData: { [key: string]: HomeworkItem[] } = {
   'ST2025001': [
     { subject: 'الرياضيات / Math', task: 'Complete worksheet pages 12-15', dueDate: '2025-01-20', status: 'pending' },
     { subject: 'العربية / Arabic', task: 'Read story and answer questions', dueDate: '2025-01-18', status: 'completed' },
@@ -99,7 +137,7 @@ const mockHomeworkData: { [key: string]: any[] } = {
 };
 
 // Mock notifications per child
-const mockNotificationsData: { [key: string]: any[] } = {
+const mockNotificationsData: { [key: string]: NotificationItem[] } = {
   'ST2025001': [
     { id: 1, type: 'homework', message: 'New homework assigned in Math', date: '2025-01-15', read: false },
     { id: 2, type: 'announcement', message: 'School holiday on January 25th', date: '2025-01-14', read: true },
@@ -785,7 +823,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   color: 'var(--primary-pink)',
                   fontWeight: 'bold'
                 }}>
-                  {currentHomework.filter((h: any) => h.status === 'pending').length}
+                  {currentHomework.filter((h: HomeworkItem) => h.status === 'pending').length}
                 </div>
               </div>
 
@@ -835,7 +873,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   color: 'var(--primary-blue)',
                   fontWeight: 'bold'
                 }}>
-                  {currentNotifications.filter((n: any) => !n.read).length}
+                  {currentNotifications.filter((n: NotificationItem) => !n.read).length}
                 </div>
               </div>
             </div>
@@ -889,7 +927,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {currentAttendance.map((record: any, index: number) => (
+                {currentAttendance.map((record: AttendanceRecord, index: number) => (
                   <div key={index} style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -927,7 +965,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {currentHomework.map((hw: any, index: number) => (
+              {currentHomework.map((hw: HomeworkItem, index: number) => (
                 <div key={index} style={{
                   background: 'white',
                   padding: '2rem',
@@ -1120,7 +1158,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {currentNotifications.map((notification: any) => (
+              {currentNotifications.map((notification: NotificationItem) => (
                 <div key={notification.id} style={{
                   background: notification.read ? 'rgba(255,255,255,0.7)' : 'white',
                   padding: '1.5rem',

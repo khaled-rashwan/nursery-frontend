@@ -1,17 +1,44 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+
+// Teacher Portal Interfaces
+interface ClassInfo {
+  id: string;
+  name: string;
+  nameAr: string;
+  studentCount: number;
+}
+
+interface Student {
+  id: number;
+  name: string;
+  nameEn: string;
+  class: string;
+  attendance: number;
+  lastReport: string;
+  parentContact: string;
+  unreadMessages: number;
+  profileImage: string;
+}
+
+interface TeacherUser {
+  name: string;
+  email: string;
+  avatar: string;
+  subject: string;
+  experience: string;
+}
 
 // Mock data for demonstration
-const mockClasses = [
+const mockClasses: ClassInfo[] = [
   { id: 'kg1-a', name: 'KG1-A', nameAr: 'الروضة الأولى - أ', studentCount: 18 },
   { id: 'kg1-b', name: 'KG1-B', nameAr: 'الروضة الأولى - ب', studentCount: 20 },
   { id: 'kg2-a', name: 'KG2-A', nameAr: 'الروضة الثانية - أ', studentCount: 16 },
   { id: 'prekg-a', name: 'Pre-KG-A', nameAr: 'ما قبل الروضة - أ', studentCount: 15 }
 ];
 
-const mockStudentsData = {
+const mockStudentsData: { [key: string]: Student[] } = {
   'kg1-a': [
     {
       id: 1,
@@ -145,7 +172,7 @@ const mockMessages = [
 ];
 
 // Authentication Component
-function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (user: any) => void }) {
+function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (user: TeacherUser) => void }) {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
 
   const handleLogin = (e: React.FormEvent) => {
@@ -153,8 +180,10 @@ function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (use
     // Mock authentication
     onLogin({
       name: locale === 'ar-SA' ? 'المعلمة سارة أحمد' : 'Teacher Sarah Ahmed',
-      class: 'KG1-A',
-      email: credentials.email || 'teacher@futurestep.edu'
+      email: credentials.email || 'teacher@futurestep.edu',
+      avatar: '👩‍🏫',
+      subject: locale === 'ar-SA' ? 'اللغة العربية والرياضيات' : 'Arabic & Mathematics',
+      experience: locale === 'ar-SA' ? '8 سنوات خبرة' : '8 years experience'
     });
   };
 
@@ -312,7 +341,7 @@ function DashboardHeader({
   onLogout 
 }: { 
   locale: string, 
-  user: any, 
+  user: TeacherUser, 
   selectedClass: string, 
   onClassChange: (classId: string) => void, 
   onLogout: () => void 
@@ -455,9 +484,9 @@ function DashboardHeader({
 function QuickStats({ locale, selectedClass }: { locale: string, selectedClass: string }) {
   const currentStudents = (mockStudentsData as any)[selectedClass] || [];
   const selectedClassInfo = mockClasses.find(c => c.id === selectedClass);
-  const totalMessages = currentStudents.reduce((sum: number, student: any) => sum + student.unreadMessages, 0);
+  const totalMessages = currentStudents.reduce((sum: number, student: Student) => sum + student.unreadMessages, 0);
   const avgAttendance = currentStudents.length > 0 
-    ? Math.round(currentStudents.reduce((sum: number, student: any) => sum + student.attendance, 0) / currentStudents.length)
+    ? Math.round(currentStudents.reduce((sum: number, student: Student) => sum + student.attendance, 0) / currentStudents.length)
     : 0;
   
   const stats = [
@@ -481,7 +510,7 @@ function QuickStats({ locale, selectedClass }: { locale: string, selectedClass: 
     },
     {
       icon: '📝',
-      value: currentStudents.filter((s: any) => 
+      value: currentStudents.filter((s: Student) => 
         new Date(s.lastReport) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       ).length.toString(),
       label: locale === 'ar-SA' ? 'تقارير معلقة' : 'Pending Reports',
@@ -642,7 +671,7 @@ function StudentRoster({ locale, selectedClass }: { locale: string, selectedClas
           gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
           gap: '1.5rem'
         }}>
-          {currentStudents.map((student: any) => (
+          {currentStudents.map((student: Student) => (
             <div key={student.id} style={{
               background: 'var(--light-blue)',
               padding: '1.5rem',
@@ -1099,7 +1128,7 @@ function CommunicationCenter({ locale, selectedClass }: { locale: string, select
                 outline: 'none'
               }}>
                 <option>{locale === 'ar-SA' ? 'اختر ولي الأمر' : 'Select Parent'}</option>
-                {((mockStudentsData as any)[selectedClass] || []).map((student: any) => (
+                {(mockStudentsData[selectedClass] || []).map((student: Student) => (
                   <option key={student.id}>
                     {locale === 'ar-SA' ? `والد/ة ${student.name}` : `${student.nameEn}'s Parent`}
                   </option>
@@ -1274,7 +1303,7 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
           display: 'grid',
           gap: '1rem'
         }}>
-          {currentStudents.map((student: any) => (
+          {currentStudents.map((student: Student) => (
             <div key={student.id} style={{
               background: 'var(--light-blue)',
               padding: '1.5rem',
@@ -1403,7 +1432,7 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
 export default function TeacherPortalPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<TeacherUser | null>(null);
   const [selectedClass, setSelectedClass] = useState('');
 
   useEffect(() => {
@@ -1420,7 +1449,7 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
     }
   }, [user, selectedClass]);
 
-  const handleLogin = (userData: any) => {
+  const handleLogin = (userData: TeacherUser) => {
     setUser(userData);
   };
 
