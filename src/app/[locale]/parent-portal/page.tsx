@@ -3,22 +3,23 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-// Mock data for demonstration
+// Mock data for demonstration - Updated to support multiple children
 const mockChildren = [
   {
     id: 'ST2025001',
     name: 'أحمد محمد',
     nameEn: 'Ahmed Mohammed',
     class: 'الروضة الأولى',
-    classEn: 'KG1',
-    classId: 'kg1-a',
+    classEn: 'KG1-A',
     photo: '👦',
     attendance: 95,
     fees: {
       total: 12000,
       paid: 8000,
       remaining: 4000
-    }
+    },
+    birthDate: '2020-05-15',
+    age: '4 years old'
   },
   {
     id: 'ST2025002',
@@ -26,34 +27,36 @@ const mockChildren = [
     nameEn: 'Fatima Mohammed',
     class: 'ما قبل الروضة',
     classEn: 'Pre-KG',
-    classId: 'prekg-a',
     photo: '👧',
     attendance: 88,
     fees: {
       total: 10000,
       paid: 10000,
       remaining: 0
-    }
+    },
+    birthDate: '2021-08-22',
+    age: '3 years old'
   },
   {
     id: 'ST2025003',
-    name: 'عمر محمد',
-    nameEn: 'Omar Mohammed',
+    name: 'يوسف محمد',
+    nameEn: 'Youssef Mohammed',
     class: 'الروضة الثانية',
-    classEn: 'KG2',
-    classId: 'kg2-a',
-    photo: '👦',
+    classEn: 'KG2-B',
+    photo: '�',
     attendance: 92,
     fees: {
       total: 15000,
-      paid: 7500,
-      remaining: 7500
-    }
+      paid: 12000,
+      remaining: 3000
+    },
+    birthDate: '2019-12-10',
+    age: '5 years old'
   }
 ];
 
-// Mock data organized by child ID
-const mockAttendanceData = {
+// Mock attendance data per child
+const mockAttendanceData: { [key: string]: any[] } = {
   'ST2025001': [
     { date: '2025-01-15', status: 'present', emoji: '✅' },
     { date: '2025-01-14', status: 'present', emoji: '✅' },
@@ -65,49 +68,51 @@ const mockAttendanceData = {
     { date: '2025-01-15', status: 'present', emoji: '✅' },
     { date: '2025-01-14', status: 'late', emoji: '⏰' },
     { date: '2025-01-13', status: 'present', emoji: '✅' },
-    { date: '2025-01-12', status: 'present', emoji: '✅' },
-    { date: '2025-01-11', status: 'absent', emoji: '❌' },
+    { date: '2025-01-12', status: 'absent', emoji: '❌' },
+    { date: '2025-01-11', status: 'present', emoji: '✅' },
   ],
   'ST2025003': [
     { date: '2025-01-15', status: 'present', emoji: '✅' },
     { date: '2025-01-14', status: 'present', emoji: '✅' },
     { date: '2025-01-13', status: 'present', emoji: '✅' },
-    { date: '2025-01-12', status: 'late', emoji: '⏰' },
-    { date: '2025-01-11', status: 'present', emoji: '✅' },
+    { date: '2025-01-12', status: 'present', emoji: '✅' },
+    { date: '2025-01-11', status: 'late', emoji: '⏰' },
   ]
 };
 
-const mockHomeworkData = {
+// Mock homework data per child
+const mockHomeworkData: { [key: string]: any[] } = {
   'ST2025001': [
     { subject: 'الرياضيات / Math', task: 'Complete worksheet pages 12-15', dueDate: '2025-01-20', status: 'pending' },
     { subject: 'العربية / Arabic', task: 'Read story and answer questions', dueDate: '2025-01-18', status: 'completed' },
     { subject: 'الإنجليزية / English', task: 'Practice spelling words', dueDate: '2025-01-22', status: 'pending' },
   ],
   'ST2025002': [
-    { subject: 'الأنشطة الفنية / Art Activities', task: 'Draw and color your family', dueDate: '2025-01-19', status: 'pending' },
-    { subject: 'الألعاب التعليمية / Educational Games', task: 'Practice counting to 10', dueDate: '2025-01-21', status: 'completed' },
+    { subject: 'الأنشطة / Activities', task: 'Color the shapes worksheet', dueDate: '2025-01-19', status: 'completed' },
+    { subject: 'اللعب التعليمي / Educational Play', task: 'Practice counting 1-10', dueDate: '2025-01-21', status: 'pending' },
   ],
   'ST2025003': [
-    { subject: 'الرياضيات / Math', task: 'Addition problems worksheet', dueDate: '2025-01-18', status: 'completed' },
-    { subject: 'العلوم / Science', task: 'Observe and draw plants', dueDate: '2025-01-23', status: 'pending' },
-    { subject: 'القراءة / Reading', task: 'Read chapter 3 and discuss', dueDate: '2025-01-20', status: 'pending' },
+    { subject: 'الرياضيات / Math', task: 'Addition problems 1-20', dueDate: '2025-01-20', status: 'pending' },
+    { subject: 'العلوم / Science', task: 'Plant observation journal', dueDate: '2025-01-23', status: 'pending' },
+    { subject: 'القراءة / Reading', task: 'Read 3 short stories', dueDate: '2025-01-18', status: 'completed' },
   ]
 };
 
-const mockNotificationsData = {
+// Mock notifications per child
+const mockNotificationsData: { [key: string]: any[] } = {
   'ST2025001': [
     { id: 1, type: 'homework', message: 'New homework assigned in Math', date: '2025-01-15', read: false },
-    { id: 2, type: 'announcement', message: 'KG1 field trip next week', date: '2025-01-14', read: true },
+    { id: 2, type: 'announcement', message: 'School holiday on January 25th', date: '2025-01-14', read: true },
     { id: 3, type: 'fee', message: 'Fee payment reminder', date: '2025-01-13', read: false },
   ],
   'ST2025002': [
-    { id: 4, type: 'announcement', message: 'Pre-KG art exhibition this Friday', date: '2025-01-15', read: false },
-    { id: 5, type: 'homework', message: 'New art activity assigned', date: '2025-01-14', read: true },
+    { id: 4, type: 'activity', message: 'Art class tomorrow - bring apron', date: '2025-01-15', read: false },
+    { id: 5, type: 'health', message: 'Health checkup scheduled next week', date: '2025-01-14', read: true },
   ],
   'ST2025003': [
-    { id: 6, type: 'achievement', message: 'Omar received a star for excellent behavior', date: '2025-01-15', read: false },
-    { id: 7, type: 'homework', message: 'Science project assigned', date: '2025-01-14', read: true },
-    { id: 8, type: 'announcement', message: 'KG2 graduation preparation meeting', date: '2025-01-13', read: false },
+    { id: 6, type: 'academic', message: 'Excellent progress in reading!', date: '2025-01-15', read: false },
+    { id: 7, type: 'event', message: 'Science fair next month', date: '2025-01-13', read: false },
+    { id: 8, type: 'fee', message: 'Monthly fee due soon', date: '2025-01-12', read: true },
   ]
 };
 
@@ -416,16 +421,131 @@ function LoginForm({ onLogin, locale }: { onLogin: () => void; locale: string })
 }
 
 // Dashboard Component
+// Child Selector Component
+function ChildSelector({ selectedChildId, onChildChange, locale }: { 
+  selectedChildId: string; 
+  onChildChange: (childId: string) => void; 
+  locale: string;
+}) {
+  const selectedChild = mockChildren.find(child => child.id === selectedChildId);
+
+  return (
+    <div style={{
+      background: 'white',
+      padding: '1.5rem',
+      borderRadius: 'var(--border-radius)',
+      boxShadow: 'var(--shadow)',
+      marginBottom: '2rem',
+      border: '4px solid var(--primary-green)'
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <div style={{
+            fontSize: '2.5rem',
+            background: 'var(--light-green)',
+            borderRadius: '50%',
+            width: '60px',
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            👨‍👩‍👧‍👦
+          </div>
+          <div>
+            <h3 style={{
+              fontSize: '1.5rem',
+              color: 'var(--primary-green)',
+              margin: 0,
+              fontWeight: 'bold'
+            }}>
+              {locale === 'ar-SA' ? 'اختر الطفل' : 'Select Child'}
+            </h3>
+            <p style={{
+              fontSize: '1rem',
+              color: '#666',
+              margin: 0
+            }}>
+              {locale === 'ar-SA' 
+                ? `المحدد حالياً: ${selectedChild?.name}` 
+                : `Currently viewing: ${selectedChild?.nameEn}`
+              }
+            </p>
+          </div>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          flexWrap: 'wrap'
+        }}>
+          {mockChildren.map((child) => (
+            <button
+              key={child.id}
+              onClick={() => onChildChange(child.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.8rem 1.2rem',
+                background: selectedChildId === child.id 
+                  ? 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))' 
+                  : 'var(--light-green)',
+                color: selectedChildId === child.id ? 'white' : 'var(--primary-green)',
+                border: `2px solid ${selectedChildId === child.id ? 'var(--primary-green)' : 'var(--primary-green)'}`,
+                borderRadius: '20px',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                minWidth: '120px',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedChildId !== child.id) {
+                  e.currentTarget.style.background = 'var(--primary-green)';
+                  e.currentTarget.style.color = 'white';
+                }
+                e.currentTarget.style.transform = 'translateY(-3px)';
+              }}
+              onMouseLeave={(e) => {
+                if (selectedChildId !== child.id) {
+                  e.currentTarget.style.background = 'var(--light-green)';
+                  e.currentTarget.style.color = 'var(--primary-green)';
+                }
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <span style={{ fontSize: '1.5rem' }}>{child.photo}</span>
+              <span>{locale === 'ar-SA' ? child.name : child.nameEn}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedMonth, setSelectedMonth] = useState('2025-01');
-  const [selectedChildId, setSelectedChildId] = useState(mockChildren[0].id);
+  const [selectedChildId, setSelectedChildId] = useState(mockChildren[0]?.id || '');
 
   // Get current child data
   const currentChild = mockChildren.find(child => child.id === selectedChildId) || mockChildren[0];
-  const currentAttendance = (mockAttendanceData as any)[selectedChildId] || [];
-  const currentHomework = (mockHomeworkData as any)[selectedChildId] || [];
-  const currentNotifications = (mockNotificationsData as any)[selectedChildId] || [];
+  const currentAttendance = mockAttendanceData[selectedChildId] || [];
+  const currentHomework = mockHomeworkData[selectedChildId] || [];
+  const currentNotifications = mockNotificationsData[selectedChildId] || [];
 
   const tabs = [
     { id: 'overview', icon: '📊', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview' },
@@ -483,47 +603,6 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             {locale === 'ar-SA' ? 'بوابة أولياء الأمور' : 'Parent Portal'}
           </h1>
         </div>
-
-        {/* Child Selector */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          background: 'rgba(255,255,255,0.1)',
-          padding: '0.8rem 1.5rem',
-          borderRadius: '15px',
-          border: '2px solid rgba(255,255,255,0.2)'
-        }}>
-          <span style={{
-            color: 'white',
-            fontSize: '1.1rem',
-            fontWeight: 'bold'
-          }}>
-            {locale === 'ar-SA' ? 'اختر الطالب:' : 'Select Child:'}
-          </span>
-          <select 
-            value={selectedChildId}
-            onChange={(e) => setSelectedChildId(e.target.value)}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '10px',
-              border: '2px solid white',
-              fontSize: '1rem',
-              fontWeight: 'bold',
-              background: 'white',
-              color: 'var(--primary-purple)',
-              cursor: 'pointer',
-              minWidth: '200px'
-            }}
-          >
-            {mockChildren.map((child) => (
-              <option key={child.id} value={child.id}>
-                {locale === 'ar-SA' ? `${child.name} - ${child.class}` : `${child.nameEn} - ${child.classEn}`}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <button
           onClick={onLogout}
           style={{
@@ -579,6 +658,13 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
 
       {/* Main Content */}
       <div style={{ padding: '2rem' }}>
+        {/* Child Selector */}
+        <ChildSelector 
+          selectedChildId={selectedChildId}
+          onChildChange={setSelectedChildId}
+          locale={locale}
+        />
+
         {activeTab === 'overview' && (
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <h2 style={{
@@ -635,9 +721,16 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   </p>
                   <p style={{
                     fontSize: '1.1rem',
-                    color: '#666'
+                    color: '#666',
+                    marginBottom: '0.5rem'
                   }}>
                     🆔 {locale === 'ar-SA' ? 'رقم الطالب:' : 'Student ID:'} {currentChild.id}
+                  </p>
+                  <p style={{
+                    fontSize: '1.1rem',
+                    color: '#666'
+                  }}>
+                    🎂 {locale === 'ar-SA' ? 'العمر:' : 'Age:'} {currentChild.age}
                   </p>
                 </div>
                 <div style={{
@@ -834,7 +927,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {mockHomework.map((hw, index) => (
+              {currentHomework.map((hw: any, index: number) => (
                 <div key={index} style={{
                   background: 'white',
                   padding: '2rem',
@@ -950,7 +1043,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                     fontWeight: 'bold',
                     color: 'var(--primary-blue)'
                   }}>
-                    {locale === 'ar-SA' ? `${mockStudent.fees.total} ريال` : `$${mockStudent.fees.total}`}
+                    {locale === 'ar-SA' ? `${currentChild.fees.total} ريال` : `$${currentChild.fees.total}`}
                   </div>
                 </div>
 
@@ -970,7 +1063,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                     fontWeight: 'bold',
                     color: 'var(--primary-green)'
                   }}>
-                    {locale === 'ar-SA' ? `${mockStudent.fees.paid} ريال` : `$${mockStudent.fees.paid}`}
+                    {locale === 'ar-SA' ? `${currentChild.fees.paid} ريال` : `$${currentChild.fees.paid}`}
                   </div>
                 </div>
 
@@ -990,7 +1083,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                     fontWeight: 'bold',
                     color: 'var(--primary-orange)'
                   }}>
-                    {locale === 'ar-SA' ? `${mockStudent.fees.remaining} ريال` : `$${mockStudent.fees.remaining}`}
+                    {locale === 'ar-SA' ? `${currentChild.fees.remaining} ريال` : `$${currentChild.fees.remaining}`}
                   </div>
                 </div>
               </div>
@@ -1027,7 +1120,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {mockNotifications.map((notification) => (
+              {currentNotifications.map((notification: any) => (
                 <div key={notification.id} style={{
                   background: notification.read ? 'rgba(255,255,255,0.7)' : 'white',
                   padding: '1.5rem',
