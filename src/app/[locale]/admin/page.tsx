@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
+import { fetchAndLogUsers } from './fetchAndLogUsers';
 
 // Admin Portal Interfaces
 interface AdminUser {
@@ -216,6 +217,7 @@ const mockUsers: User[] = [
 
 // Login Component
 function AdminLoginForm({ locale }: { locale: string }) {
+  console.log("Users", fetchAndLogUsers());
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
   const { login, loading } = useAuth();
@@ -1654,6 +1656,18 @@ function DeleteConfirmModal({
 // Admin Dashboard Component
 function AdminDashboard({ onLogout, locale }: { onLogout: () => void; locale: string }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const { user, getUserCustomClaims } = useAuth();
+  const [userClaims, setUserClaims] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUserClaims = async () => {
+      if (user && getUserCustomClaims) {
+        const claims = await getUserCustomClaims();
+        setUserClaims(claims);
+      }
+    };
+    fetchUserClaims();
+  }, [user]); // Removed getUserCustomClaims from dependency array to prevent infinite loop
 
   const StatCard = ({ icon, title, value, color }: { icon: string; title: string; value: string | number; color: string }) => (
     <div style={{
@@ -1711,30 +1725,76 @@ function AdminDashboard({ onLogout, locale }: { onLogout: () => void; locale: st
         border: '3px solid #3498db'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img 
-            src={mockAdminUser.avatar} 
-            alt="Admin Avatar"
-            style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              border: '3px solid #3498db'
-            }}
-          />
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            border: '3px solid #3498db',
+            background: user?.photoURL ? `url(${user.photoURL})` : 'linear-gradient(135deg, #3498db, #2c3e50)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '1.5rem',
+            fontWeight: 'bold'
+          }}>
+            {!user?.photoURL && (user?.displayName?.charAt(0)?.toUpperCase() || '👤')}
+          </div>
           <div>
             <h1 style={{
               fontSize: '1.8rem',
               color: '#2c3e50',
               margin: '0 0 0.5rem 0'
             }}>
-              {locale === 'ar-SA' ? 'مرحباً، ' : 'Welcome, '}{mockAdminUser.name}
+              {locale === 'ar-SA' ? 'مرحباً، ' : 'Welcome, '}
+              {user?.displayName || 'Name is missing'}
             </h1>
             <p style={{
               fontSize: '1.1rem',
               color: '#7f8c8d',
-              margin: 0
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flexWrap: 'wrap'
             }}>
-              {mockAdminUser.role} • {mockAdminUser.email}
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                padding: '0.25rem 0.5rem',
+                background: userClaims?.role ? 
+                  (userClaims.role === 'superadmin' ? '#e74c3c' :
+                   userClaims.role === 'admin' ? '#8e44ad' :
+                   userClaims.role === 'teacher' ? '#3498db' :
+                   userClaims.role === 'parent' ? '#27ae60' :
+                   userClaims.role === 'content-manager' ? '#f39c12' : '#95a5a6') : '#95a5a6',
+                color: 'white',
+                borderRadius: '12px',
+                fontSize: '0.9rem',
+                fontWeight: 'bold'
+              }}>
+                {userClaims?.role === 'superadmin' && '👑'}
+                {userClaims?.role === 'admin' && '🛡️'}
+                {userClaims?.role === 'teacher' && '👩‍🏫'}
+                {userClaims?.role === 'parent' && '👨‍👩‍👧‍👦'}
+                {userClaims?.role === 'content-manager' && '📝'}
+                {!userClaims?.role && '❓'}
+                {' '}
+                {userClaims?.role ? 
+                  (locale === 'ar-SA' ? 
+                    (userClaims.role === 'superadmin' ? 'مدير عام' :
+                     userClaims.role === 'admin' ? 'مدير' :
+                     userClaims.role === 'teacher' ? 'معلم' :
+                     userClaims.role === 'parent' ? 'ولي أمر' :
+                     userClaims.role === 'content-manager' ? 'مدير المحتوى' : userClaims.role) : 
+                    userClaims.role) : 
+                  (locale === 'ar-SA' ? 'الدور مفقود' : 'Role is missing')
+                }
+              </span>
+              • {user?.email || 'Email is missing'}
             </p>
           </div>
         </div>
@@ -2004,7 +2064,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ locale: 
     if (mounted && !authLoading) {
       checkAdminRole();
     }
-  }, [user, mounted, authLoading, getUserCustomClaims]);
+  }, [user, mounted, authLoading]); // Removed getUserCustomClaims from dependency array to prevent infinite loop
 
   if (!mounted || authLoading || isCheckingRole) {
     return (
