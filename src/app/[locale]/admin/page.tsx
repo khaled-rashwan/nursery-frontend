@@ -223,7 +223,6 @@ const mockUsers: User[] = [
 
 // Login Component
 function AdminLoginForm({ locale }: { locale: string }) {
-  console.log("Users", fetchAndLogUsers());
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
   const { login, loading } = useAuth();
@@ -1673,6 +1672,8 @@ function AdminDashboard({ onLogout, locale }: { onLogout: () => void; locale: st
       }
     };
     fetchUserClaims();
+    
+  console.log("Users", fetchAndLogUsers());
   }, [user, getUserCustomClaims]);
 
   const StatCard = ({ icon, title, value, color }: { icon: string; title: string; value: string | number; color: string }) => (
