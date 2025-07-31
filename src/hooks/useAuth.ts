@@ -38,8 +38,9 @@ export const useAuth = () => {
         error: null,
       });
       return { success: true, user: userCredential.user };
-    } catch (error: any) {
-      const errorMessage = getFirebaseErrorMessage(error.code);
+    } catch (error: unknown) {
+      const firebaseError = error as { code?: string };
+      const errorMessage = getFirebaseErrorMessage(firebaseError.code || 'unknown');
       setAuthState({
         user: null,
         loading: false,
@@ -58,8 +59,9 @@ export const useAuth = () => {
         error: null,
       });
       return { success: true };
-    } catch (error: any) {
-      const errorMessage = getFirebaseErrorMessage(error.code);
+    } catch (error: unknown) {
+      const firebaseError = error as { code?: string };
+      const errorMessage = getFirebaseErrorMessage(firebaseError.code || 'unknown');
       setAuthState(prev => ({ ...prev, error: errorMessage }));
       return { success: false, error: errorMessage };
     }

@@ -42,7 +42,7 @@ interface User {
   customClaims: {
     role: 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-manager';
     permissions?: string[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -567,8 +567,8 @@ function UserManagement({ locale }: { locale: string }) {
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue: any = a[sortBy as keyof User];
-      let bValue: any = b[sortBy as keyof User];
+      let aValue: string | number = a[sortBy as keyof User] as string | number;
+      let bValue: string | number = b[sortBy as keyof User] as string | number;
 
       if (sortBy === 'role') {
         aValue = a.customClaims.role;
@@ -595,15 +595,6 @@ function UserManagement({ locale }: { locale: string }) {
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
-    }
-  };
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -1167,7 +1158,6 @@ function UserManagement({ locale }: { locale: string }) {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <DeleteConfirmModal
-          userId={showDeleteConfirm}
           userName={users.find(u => u.id === showDeleteConfirm)?.displayName || ''}
           locale={locale}
           onConfirm={() => handleDeleteUser(showDeleteConfirm)}
@@ -1558,13 +1548,11 @@ function UserModal({
 
 // Delete Confirmation Modal
 function DeleteConfirmModal({ 
-  userId, 
   userName, 
   locale, 
   onConfirm, 
   onCancel 
 }: { 
-  userId: string; 
   userName: string; 
   locale: string; 
   onConfirm: () => void; 

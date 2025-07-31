@@ -583,7 +583,7 @@ export default function AcademicProgramPage({ params }: { params: Promise<{ loca
     }}>
       <EducationalPhilosophySection locale={locale} />
       
-      {programs.map((program, index) => (
+      {programs.map((program) => (
         <ProgramDetailSection 
           key={program.id} 
           program={program} 
