@@ -5,6 +5,7 @@ import {notFound} from 'next/navigation';
 import {routing} from '@/i18n/routing';
 import { Geist, Geist_Mono } from "next/font/google";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
+import FirebaseLogoutButton from "../../components/FirebaseLogoutButton";
 import Link from 'next/link';
 import '../globals.css';
 
@@ -89,11 +90,19 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
                 {locale === 'ar-SA' ? 'بوابة المعلمين' : 'Teacher Portal'}
               </Link>
             </li>
+            <li className="nav-item">
+              <Link href={`/${locale}/admin`} className="nav-link bounce-on-hover">
+                {locale === 'ar-SA' ? 'بوابة الإدارة' : 'Admin Portal'}
+              </Link>
+            </li>
           </ul>
         </nav>
         
-        <div className="language-switcher">
-          <LanguageSwitcher currentLocale={locale} isRTL={isRTL} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <FirebaseLogoutButton locale={locale} />
+          <div className="language-switcher">
+            <LanguageSwitcher currentLocale={locale} isRTL={isRTL} />
+          </div>
         </div>
       </div>
     </header>

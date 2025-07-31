@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '../../../hooks/useAuth';
 
 // Mock data for demonstration - Updated to support multiple children
 interface Child {
@@ -155,20 +156,27 @@ const mockNotificationsData: { [key: string]: NotificationItem[] } = {
 };
 
 // Login Component
-function LoginForm({ onLogin, locale }: { onLogin: () => void; locale: string }) {
+function LoginForm({ locale }: { locale: string }) {
   const [loginMethod, setLoginMethod] = useState<'email' | 'iqama'>('email');
   const [credentials, setCredentials] = useState({ email: '', iqama: '', password: '' });
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { login, loading } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setError(null);
     
-    // Simulate login process with a brief delay for better UX
-    setTimeout(() => {
-      setIsLoading(false);
-      onLogin();
-    }, 1000);
+    if (loginMethod === 'email') {
+      // Use Firebase authentication for email login
+      const result = await login(credentials.email, credentials.password);
+      if (!result.success) {
+        setError(result.error || 'Login failed');
+      }
+      // No need to call onLogin since Firebase auth state will handle the redirect
+    } else {
+      // Keep the mock login for Iqama method since Firebase backend is not ready
+      setError('Iqama login is not available yet. Please use email login.');
+    }
   };
 
   return (
@@ -322,13 +330,28 @@ function LoginForm({ onLogin, locale }: { onLogin: () => void; locale: string })
             />
           </div>
 
+          {error && (
+            <div style={{
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: '#ffebee',
+              border: '2px solid #f44336',
+              borderRadius: 'var(--border-radius)',
+              color: '#d32f2f',
+              fontSize: '1rem',
+              textAlign: 'center'
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={loading}
             style={{
               width: '100%',
               padding: '1.2rem',
-              background: isLoading 
+              background: loading 
                 ? '#ccc' 
                 : 'linear-gradient(135deg, var(--primary-pink), var(--primary-blue))',
               color: 'white',
@@ -336,25 +359,25 @@ function LoginForm({ onLogin, locale }: { onLogin: () => void; locale: string })
               borderRadius: 'var(--border-radius)',
               fontSize: '1.2rem',
               fontWeight: 'bold',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s var(--bounce)',
               boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
-              opacity: isLoading ? 0.7 : 1
+              opacity: loading ? 0.7 : 1
             }}
             onMouseEnter={(e) => {
-              if (!isLoading) {
+              if (!loading) {
                 e.currentTarget.style.transform = 'translateY(-3px)';
                 e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
               }
             }}
             onMouseLeave={(e) => {
-              if (!isLoading) {
+              if (!loading) {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
               }
             }}
           >
-            {isLoading ? (
+            {loading ? (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                 <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div>
                 {locale === 'ar-SA' ? 'جاري تسجيل الدخول...' : 'Logging in...'}
@@ -1214,7 +1237,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
 export default function ParentPortalPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, loading: authLoading, logout } = useAuth();
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -1223,7 +1246,7 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
     });
   }, [params]);
 
-  if (!mounted) {
+  if (!mounted || authLoading) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -1236,12 +1259,16 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
     );
   }
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <>
-      {!isLoggedIn ? (
-        <LoginForm onLogin={() => setIsLoggedIn(true)} locale={locale} />
+      {!user ? (
+        <LoginForm locale={locale} />
       ) : (
-        <Dashboard onLogout={() => setIsLoggedIn(false)} locale={locale} />
+        <Dashboard onLogout={handleLogout} locale={locale} />
       )}
     </>
   );
