@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, signInWithEmailAndPassword, signOut, onAuthStateChanged, IdTokenResult } from 'firebase/auth';
 import { auth } from '../firebase.js';
 
@@ -67,20 +67,22 @@ export const useAuth = () => {
     }
   };
 
+  const getUserCustomClaims = useCallback(async () => {
+    if (!authState.user) return null;
+    try {
+      const idTokenResult: IdTokenResult = await authState.user.getIdTokenResult();
+      return idTokenResult.claims;
+    } catch (error) {
+      console.error('Error getting custom claims:', error);
+      return null;
+    }
+  }, [authState.user]);
+
   return {
     ...authState,
     login,
     logout,
-    getUserCustomClaims: async () => {
-      if (!authState.user) return null;
-      try {
-        const idTokenResult: IdTokenResult = await authState.user.getIdTokenResult();
-        return idTokenResult.claims;
-      } catch (error) {
-        console.error('Error getting custom claims:', error);
-        return null;
-      }
-    },
+    getUserCustomClaims,
   };
 };
 

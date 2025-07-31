@@ -56,14 +56,20 @@ interface UserFormData {
   permissions: string[];
 }
 
+interface UserClaims {
+  role?: 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-manager';
+  permissions?: string[];
+  [key: string]: unknown;
+}
+
 // Mock data for demonstration
-const mockAdminUser: AdminUser = {
-  name: 'Dr. Sarah Ahmed',
-  email: 'admin@futurestep.edu.sa',
-  avatar: '/principal-image.png',
-  role: 'Super Admin',
-  permissions: ['manage_users', 'manage_classes', 'view_reports', 'manage_fees', 'system_settings']
-};
+// const mockAdminUser: AdminUser = {
+//   name: 'Dr. Sarah Ahmed',
+//   email: 'admin@futurestep.edu.sa',
+//   avatar: '/principal-image.png',
+//   role: 'Super Admin',
+//   permissions: ['manage_users', 'manage_classes', 'view_reports', 'manage_fees', 'system_settings']
+// };
 
 const mockSystemStats: SystemStats = {
   totalStudents: 156,
@@ -1657,7 +1663,7 @@ function DeleteConfirmModal({
 function AdminDashboard({ onLogout, locale }: { onLogout: () => void; locale: string }) {
   const [activeTab, setActiveTab] = useState('overview');
   const { user, getUserCustomClaims } = useAuth();
-  const [userClaims, setUserClaims] = useState<any>(null);
+  const [userClaims, setUserClaims] = useState<UserClaims | null>(null);
 
   useEffect(() => {
     const fetchUserClaims = async () => {
@@ -1667,7 +1673,7 @@ function AdminDashboard({ onLogout, locale }: { onLogout: () => void; locale: st
       }
     };
     fetchUserClaims();
-  }, [user]); // Removed getUserCustomClaims from dependency array to prevent infinite loop
+  }, [user, getUserCustomClaims]);
 
   const StatCard = ({ icon, title, value, color }: { icon: string; title: string; value: string | number; color: string }) => (
     <div style={{

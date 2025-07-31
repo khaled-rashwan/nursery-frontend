@@ -41,9 +41,9 @@ export const fetchAndLogUsers = async () => {
       typeof result === "object" &&
       result.data &&
       typeof result.data === "object" &&
-      Array.isArray((result.data as any).users)
+      Array.isArray((result.data as { users: unknown[] }).users)
     ) {
-      const data = result.data as { users: any[] };
+      const data = result.data as { users: Record<string, unknown>[] };
       console.table(data.users);
       console.log("Full response:", data);
     } else {
