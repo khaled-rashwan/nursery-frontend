@@ -3,6 +3,21 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 
+// Add CSS animation for loading spinner
+const spinnerAnimation = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+// Inject the CSS animation
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = spinnerAnimation;
+  document.head.appendChild(style);
+}
+
 // Admin Portal Interfaces
 interface SystemStats {
   totalStudents: number;
@@ -106,109 +121,6 @@ const mockRecentActivity: RecentActivity[] = [
     description: 'Daily system backup completed successfully',
     timestamp: '2025-01-30 03:00',
     user: 'system'
-  }
-];
-
-// Mock users data for demonstration
-const mockUsers: User[] = [
-  {
-    id: 'user1',
-    email: 'admin@futurestep.edu.sa',
-    displayName: 'Dr. Sarah Ahmed',
-    phoneNumber: '+966501234567',
-    photoURL: '/principal-image.png',
-    disabled: false,
-    emailVerified: true,
-    createdAt: '2024-01-15T10:30:00Z',
-    lastSignIn: '2025-01-30T14:25:00Z',
-    customClaims: {
-      role: 'superadmin',
-      permissions: ['manage_users', 'manage_classes', 'view_reports', 'manage_fees', 'system_settings']
-    }
-  },
-  {
-    id: 'user2',
-    email: 'principal@futurestep.edu.sa',
-    displayName: 'Mr. Ahmed Al-Rashid',
-    phoneNumber: '+966507654321',
-    photoURL: '/portal-image.png',
-    disabled: false,
-    emailVerified: true,
-    createdAt: '2024-02-01T09:15:00Z',
-    lastSignIn: '2025-01-30T13:45:00Z',
-    customClaims: {
-      role: 'admin',
-      permissions: ['manage_classes', 'view_reports', 'manage_fees']
-    }
-  },
-  {
-    id: 'user3',
-    email: 'teacher1@futurestep.edu.sa',
-    displayName: 'Ms. Fatima Al-Zahra',
-    phoneNumber: '+966509876543',
-    disabled: false,
-    emailVerified: true,
-    createdAt: '2024-03-10T08:00:00Z',
-    lastSignIn: '2025-01-30T12:30:00Z',
-    customClaims: {
-      role: 'teacher',
-      permissions: ['manage_classes', 'view_students']
-    }
-  },
-  {
-    id: 'user4',
-    email: 'parent1@example.com',
-    displayName: 'Mr. Mohammed Al-Sayed',
-    phoneNumber: '+966501111111',
-    disabled: false,
-    emailVerified: true,
-    createdAt: '2024-04-05T14:20:00Z',
-    lastSignIn: '2025-01-29T16:10:00Z',
-    customClaims: {
-      role: 'parent',
-      permissions: ['view_child_progress']
-    }
-  },
-  {
-    id: 'user5',
-    email: 'content@futurestep.edu.sa',
-    displayName: 'Ms. Layla Hassan',
-    phoneNumber: '+966502222222',
-    disabled: false,
-    emailVerified: false,
-    createdAt: '2024-05-15T11:45:00Z',
-    lastSignIn: '2025-01-28T10:15:00Z',
-    customClaims: {
-      role: 'content-manager',
-      permissions: ['manage_content', 'upload_media']
-    }
-  },
-  {
-    id: 'user6',
-    email: 'teacher2@futurestep.edu.sa',
-    displayName: 'Ms. Aisha Abdullah',
-    phoneNumber: '+966503333333',
-    disabled: true,
-    emailVerified: true,
-    createdAt: '2024-06-20T07:30:00Z',
-    customClaims: {
-      role: 'teacher',
-      permissions: ['manage_classes', 'view_students']
-    }
-  },
-  {
-    id: 'user7',
-    email: 'parent2@example.com',
-    displayName: 'Mrs. Nadia Al-Mansouri',
-    phoneNumber: '+966504444444',
-    disabled: false,
-    emailVerified: true,
-    createdAt: '2024-07-10T15:00:00Z',
-    lastSignIn: '2025-01-30T09:20:00Z',
-    customClaims: {
-      role: 'parent',
-      permissions: ['view_child_progress']
-    }
   }
 ];
 
@@ -519,8 +431,8 @@ function AccessDenied({ locale, onSignOut }: { locale: string; onSignOut: () => 
 
 // User Management Component
 function UserManagement({ locale }: { locale: string }) {
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -531,6 +443,8 @@ function UserManagement({ locale }: { locale: string }) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // Move useAuth hook to top-level of component
   const { user } = useAuth();
 
@@ -606,12 +520,18 @@ function UserManagement({ locale }: { locale: string }) {
     setShowUserModal(true);
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
+    // Note: In a real implementation, you would call a Firebase Function to delete the user
+    // For now, we'll just remove from local state
+    console.warn('Delete user functionality needs Firebase Function implementation');
     setUsers(users.filter(user => user.id !== userId));
     setShowDeleteConfirm(null);
   };
 
-  const handleToggleUserStatus = (userId: string) => {
+  const handleToggleUserStatus = async (userId: string) => {
+    // Note: In a real implementation, you would call a Firebase Function to update user status
+    // For now, we'll just update local state
+    console.warn('Toggle user status functionality needs Firebase Function implementation');
     setUsers(users.map(user =>
       user.id === userId ? { ...user, disabled: !user.disabled } : user
     ));
@@ -639,51 +559,85 @@ function UserManagement({ locale }: { locale: string }) {
     }
   };
 
-  // Fetch real users from Firebase Function and log to console
+  // Fetch real users from Firebase Function
   useEffect(() => {
     if (!user) return; // Only fetch if user is available
+    
     async function fetchUsers() {
+      setLoading(true);
+      setError(null);
+      
       try {
         let idToken: string | null = null;
         // Use a type guard for Firebase user with getIdToken method
         type FirebaseUserWithToken = { getIdToken: () => Promise<string> };
         if (user && typeof (user as FirebaseUserWithToken).getIdToken === 'function') {
           idToken = await (user as FirebaseUserWithToken).getIdToken();
-        } else if (typeof window !== 'undefined' && window.localStorage) {
-          idToken = window.localStorage.getItem('firebase_id_token');
         }
+        
         if (!idToken) {
           throw new Error('No auth token found. Please sign in as admin.');
         }
+        
         // Use env variables for region and project id
         const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || 'us-central1';
         const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || 'future-step-nursery';
         const functionUrl = `https://${region}-${projectId}.cloudfunctions.net/listUsers?maxResults=100`;
+        
         const response = await fetch(functionUrl, {
           headers: {
             'Authorization': `Bearer ${idToken}`,
             'Content-Type': 'application/json'
           }
         });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+        }
+        
         const data = await response.json();
         console.log('Fetched users from Firebase:', data.users);
-        // Uncomment below to use real users in UI
-        // setUsers(data.users.map(u => ({
-        //   id: u.uid,
-        //   email: u.email,
-        //   displayName: u.displayName || '',
-        //   phoneNumber: u.phoneNumber,
-        //   photoURL: u.photoURL,
-        //   disabled: u.disabled,
-        //   emailVerified: u.emailVerified,
-        //   createdAt: u.createdAt,
-        //   lastSignIn: u.lastSignIn,
-        //   customClaims: u.customClaims || {}
-        // })));
+        
+        // Transform Firebase users to match our User interface
+        const transformedUsers: User[] = data.users.map((u: {
+          uid: string;
+          email: string;
+          displayName?: string;
+          phoneNumber?: string;
+          photoURL?: string;
+          disabled: boolean;
+          emailVerified: boolean;
+          createdAt: string;
+          lastSignIn?: string;
+          customClaims?: {
+            role?: 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-manager';
+            permissions?: string[];
+            [key: string]: unknown;
+          };
+        }) => ({
+          id: u.uid,
+          email: u.email,
+          displayName: u.displayName || u.email.split('@')[0], // Fallback to email prefix if no display name
+          phoneNumber: u.phoneNumber,
+          photoURL: u.photoURL,
+          disabled: u.disabled,
+          emailVerified: u.emailVerified,
+          createdAt: u.createdAt,
+          lastSignIn: u.lastSignIn,
+          customClaims: u.customClaims || { role: 'parent' as const }
+        }));
+        
+        setUsers(transformedUsers);
       } catch (err) {
         console.error('Error fetching users:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch users');
+        // Fallback to empty array on error
+        setUsers([]);
+      } finally {
+        setLoading(false);
       }
     }
+    
     fetchUsers();
   }, [user]);
 
@@ -737,6 +691,63 @@ function UserManagement({ locale }: { locale: string }) {
             ➕ {locale === 'ar-SA' ? 'إضافة مستخدم' : 'Add User'}
           </button>
         </div>
+
+        {/* Error message */}
+        {error && (
+          <div style={{
+            padding: '1rem',
+            background: '#ffebee',
+            border: '2px solid #f44336',
+            borderRadius: '8px',
+            color: '#d32f2f',
+            fontSize: '1rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            ⚠️ {error}
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                marginLeft: 'auto',
+                padding: '0.5rem 1rem',
+                background: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              {locale === 'ar-SA' ? 'إعادة تحميل' : 'Retry'}
+            </button>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading && (
+          <div style={{
+            padding: '2rem',
+            textAlign: 'center',
+            color: '#7f8c8d',
+            fontSize: '1.1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem'
+          }}>
+            <div style={{
+              width: '20px',
+              height: '20px',
+              border: '2px solid #bdc3c7',
+              borderTop: '2px solid #3498db',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            {locale === 'ar-SA' ? 'جاري تحميل المستخدمين...' : 'Loading users...'}
+          </div>
+        )}
 
         {/* Search and filters */}
         <div style={{
@@ -869,6 +880,30 @@ function UserManagement({ locale }: { locale: string }) {
       </div>
 
       {/* Users table */}
+      {!loading && !error && users.length === 0 && (
+        <div style={{
+          background: 'white',
+          padding: '3rem',
+          borderRadius: '15px',
+          boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+          border: '3px solid #f39c12',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👤</div>
+          <h3 style={{ fontSize: '1.5rem', color: '#2c3e50', marginBottom: '1rem' }}>
+            {locale === 'ar-SA' ? 'لا توجد مستخدمين' : 'No Users Found'}
+          </h3>
+          <p style={{ fontSize: '1.1rem', color: '#7f8c8d', margin: 0 }}>
+            {locale === 'ar-SA' 
+              ? 'لم يتم العثور على أي مستخدمين في النظام حالياً'
+              : 'No users found in the system currently'
+            }
+          </p>
+        </div>
+      )}
+
+      {/* Users table */}
+      {!loading && !error && users.length > 0 && (
       <div style={{
         background: 'white',
         borderRadius: '15px',
@@ -1166,6 +1201,7 @@ function UserManagement({ locale }: { locale: string }) {
           </div>
         )}
       </div>
+      )}
 
       {/* User Modal */}
       {showUserModal && (
@@ -2111,7 +2147,7 @@ export default function AdminPortalPage({ params }: { params: Promise<{ locale: 
     if (mounted && !authLoading) {
       checkAdminRole();
     }
-  }, [user, mounted, authLoading]); // Removed getUserCustomClaims from dependency array to prevent infinite loop
+  }, [user, mounted, authLoading, getUserCustomClaims]); // Added getUserCustomClaims to dependency array
 
   if (!mounted || authLoading || isCheckingRole) {
     return (
