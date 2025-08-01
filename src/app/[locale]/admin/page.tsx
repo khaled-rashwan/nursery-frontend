@@ -2,17 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import { fetchAndLogUsers } from './fetchAndLogUsers';
 
 // Admin Portal Interfaces
-interface AdminUser {
-  name: string;
-  email: string;
-  avatar: string;
-  role: string;
-  permissions: string[];
-}
-
 interface SystemStats {
   totalStudents: number;
   totalTeachers: number;
@@ -540,6 +531,8 @@ function UserManagement({ locale }: { locale: string }) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  // Move useAuth hook to top-level of component
+  const { user } = useAuth();
 
   // Filter and sort users
   useEffect(() => {
@@ -645,6 +638,54 @@ function UserManagement({ locale }: { locale: string }) {
       default: return '👤';
     }
   };
+
+  // Fetch real users from Firebase Function and log to console
+  useEffect(() => {
+    if (!user) return; // Only fetch if user is available
+    async function fetchUsers() {
+      try {
+        let idToken: string | null = null;
+        // Use a type guard for Firebase user with getIdToken method
+        type FirebaseUserWithToken = { getIdToken: () => Promise<string> };
+        if (user && typeof (user as FirebaseUserWithToken).getIdToken === 'function') {
+          idToken = await (user as FirebaseUserWithToken).getIdToken();
+        } else if (typeof window !== 'undefined' && window.localStorage) {
+          idToken = window.localStorage.getItem('firebase_id_token');
+        }
+        if (!idToken) {
+          throw new Error('No auth token found. Please sign in as admin.');
+        }
+        // Use env variables for region and project id
+        const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || 'us-central1';
+        const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || 'future-step-nursery';
+        const functionUrl = `https://${region}-${projectId}.cloudfunctions.net/listUsers?maxResults=100`;
+        const response = await fetch(functionUrl, {
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        console.log('Fetched users from Firebase:', data.users);
+        // Uncomment below to use real users in UI
+        // setUsers(data.users.map(u => ({
+        //   id: u.uid,
+        //   email: u.email,
+        //   displayName: u.displayName || '',
+        //   phoneNumber: u.phoneNumber,
+        //   photoURL: u.photoURL,
+        //   disabled: u.disabled,
+        //   emailVerified: u.emailVerified,
+        //   createdAt: u.createdAt,
+        //   lastSignIn: u.lastSignIn,
+        //   customClaims: u.customClaims || {}
+        // })));
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      }
+    }
+    fetchUsers();
+  }, [user]);
 
   return (
     <div>
@@ -1673,7 +1714,6 @@ function AdminDashboard({ onLogout, locale }: { onLogout: () => void; locale: st
     };
     fetchUserClaims();
     
-  console.log("Users", fetchAndLogUsers());
   }, [user, getUserCustomClaims]);
 
   const StatCard = ({ icon, title, value, color }: { icon: string; title: string; value: string | number; color: string }) => (
