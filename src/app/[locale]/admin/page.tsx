@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
+import { UserRole, getRoleColor, getRoleIcon, getRoleName, canAccessAdmin } from '../../../utils/rolePermissions';
 
 // Add CSS animation for loading spinner
 const spinnerAnimation = `
@@ -47,8 +48,7 @@ interface User {
   createdAt: string;
   lastSignIn?: string;
   customClaims: {
-    role: 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-manager';
-    permissions?: string[];
+    role: UserRole;
     [key: string]: unknown;
   };
 }
@@ -58,13 +58,11 @@ interface UserFormData {
   displayName: string;
   phoneNumber: string;
   password: string;
-  role: 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-manager';
-  permissions: string[];
+  role: UserRole;
 }
 
 interface UserClaims {
-  role?: 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-manager';
-  permissions?: string[];
+  role?: UserRole;
   [key: string]: unknown;
 }
 
@@ -445,8 +443,117 @@ function UserManagement({ locale }: { locale: string }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingInProgress, setEditingInProgress] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  // Helper function to translate Firebase errors
+  const getFirebaseErrorMessage = (error: unknown, locale: string): string => {
+    const errorMessage = (error as Error)?.message || error?.toString() || '';
+    const errorCode = (error as { code?: string })?.code || '';
+    
+    // Handle specific Firebase Auth errors
+    if (errorMessage.includes('TOO_SHORT') || errorCode === 'auth/weak-password') {
+      return locale === 'ar-SA' 
+        ? 'كلمة المرور قصيرة جداً. يجب أن تكون 6 أحرف على الأقل'
+        : 'Password is too short. Must be at least 6 characters';
+    }
+    
+    if (errorMessage.includes('INVALID_EMAIL') || errorCode === 'auth/invalid-email') {
+      return locale === 'ar-SA' 
+        ? 'البريد الإلكتروني غير صحيح. يرجى التحقق من تنسيق البريد الإلكتروني'
+        : 'Invalid email format. Please check the email address';
+    }
+    
+    if (errorMessage.includes('EMAIL_EXISTS') || errorCode === 'auth/email-already-exists') {
+      return locale === 'ar-SA' 
+        ? 'البريد الإلكتروني مستخدم مسبقاً. يرجى استخدام بريد إلكتروني آخر'
+        : 'Email already exists. Please use a different email address';
+    }
+    
+    if (errorMessage.includes('INVALID_PHONE_NUMBER') || errorCode === 'invalid-phone-number') {
+      return locale === 'ar-SA' 
+        ? 'رقم الهاتف غير صحيح. يرجى استخدام التنسيق الدولي (مثال: +966501234567)'
+        : 'Invalid phone number. Please use international format (e.g., +966501234567)';
+    }
+    
+    if (errorMessage.includes('PHONE_NUMBER_EXISTS') || errorCode === 'phone-number-already-exists') {
+      return locale === 'ar-SA' 
+        ? 'رقم الهاتف مستخدم مسبقاً. يرجى استخدام رقم هاتف آخر'
+        : 'Phone number already exists. Please use a different phone number';
+    }
+    
+    if (errorMessage.includes('INVALID_DISPLAY_NAME') || errorCode === 'invalid-display-name') {
+      return locale === 'ar-SA' 
+        ? 'اسم العرض غير صحيح. يجب أن يكون من 1-100 حرف'
+        : 'Invalid display name. Must be 1-100 characters long';
+    }
+    
+    if (errorMessage.includes('INSUFFICIENT_PERMISSION') || errorCode === 'auth/insufficient-permission') {
+      return locale === 'ar-SA' 
+        ? 'ليس لديك صلاحية كافية لإجراء هذه العملية'
+        : 'Insufficient permissions to perform this operation';
+    }
+    
+    if (errorMessage.includes('INTERNAL_ERROR') || errorCode === 'auth/internal-error') {
+      return locale === 'ar-SA' 
+        ? 'خطأ داخلي في الخادم. يرجى المحاولة مرة أخرى'
+        : 'Internal server error. Please try again';
+    }
+    
+    // Handle general validation errors
+    if (errorMessage.includes('TOO_SHORT')) {
+      return locale === 'ar-SA' 
+        ? 'البيانات المدخلة قصيرة جداً. يرجى التحقق من كلمة المرور (6 أحرف على الأقل) ورقم الهاتف'
+        : 'Input too short. Please check password (min 6 characters) and phone number format';
+    }
+    
+    if (errorMessage.includes('TOO_LONG')) {
+      return locale === 'ar-SA' 
+        ? 'البيانات المدخلة طويلة جداً. يرجى التحقق من الحقول المطلوبة'
+        : 'Input too long. Please check the required fields';
+    }
+    
+    if (errorMessage.includes('INVALID_FORMAT')) {
+      return locale === 'ar-SA' 
+        ? 'تنسيق البيانات غير صحيح. يرجى التحقق من البريد الإلكتروني ورقم الهاتف'
+        : 'Invalid data format. Please check email and phone number format';
+    }
+    
+    // Return the original error message if no specific translation found
+    return errorMessage || (locale === 'ar-SA' ? 'حدث خطأ غير معروف' : 'Unknown error occurred');
+  };
+
   // Move useAuth hook to top-level of component
   const { user } = useAuth();
+
+  // Permission helper functions
+  const canCreateRole = (targetRole: string): boolean => {
+    if (!currentUserRole) return false;
+    if (currentUserRole === 'superadmin') {
+      return ['admin', 'teacher', 'parent'].includes(targetRole);
+    }
+    if (currentUserRole === 'admin') {
+      return ['teacher', 'parent'].includes(targetRole);
+    }
+    return false;
+  };
+
+  const canEditUser = (targetUser: User): boolean => {
+    if (!currentUserRole) return false;
+    const targetRole = targetUser.customClaims.role;
+    
+    if (targetRole === 'superadmin') return false;
+    if (targetRole === 'admin' && currentUserRole !== 'superadmin') return false;
+    return true;
+  };
+
+  const canDeleteUser = (targetUser: User): boolean => {
+    if (!currentUserRole) return false;
+    const targetRole = targetUser.customClaims.role;
+    
+    if (targetRole === 'superadmin') return false;
+    if (targetRole === 'admin' && currentUserRole !== 'superadmin') return false;
+    return true;
+  };
 
   // Filter and sort users
   useEffect(() => {
@@ -521,11 +628,61 @@ function UserManagement({ locale }: { locale: string }) {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    // Note: In a real implementation, you would call a Firebase Function to delete the user
-    // For now, we'll just remove from local state
-    console.warn('Delete user functionality needs Firebase Function implementation');
-    setUsers(users.filter(user => user.id !== userId));
-    setShowDeleteConfirm(null);
+    try {
+      setError(null);
+      
+      let idToken: string | null = null;
+      type FirebaseUserWithToken = { getIdToken: () => Promise<string> };
+      if (user && typeof (user as FirebaseUserWithToken).getIdToken === 'function') {
+        idToken = await (user as FirebaseUserWithToken).getIdToken();
+      }
+      
+      if (!idToken) {
+        throw new Error('No auth token found. Please sign in as admin.');
+      }
+      
+      const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || 'us-central1';
+      const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || 'future-step-nursery';
+      const functionUrl = `https://${region}-${projectId}.cloudfunctions.net/deleteUser`;
+      
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uid: userId
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to delete user: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('User deleted successfully:', result);
+      
+      // Remove user from local state
+      setUsers(users.filter(user => user.id !== userId));
+      setShowDeleteConfirm(null);
+      
+      alert(locale === 'ar-SA' 
+        ? `تم حذف المستخدم "${result.deletedUser.displayName}" بنجاح!`
+        : `User "${result.deletedUser.displayName}" deleted successfully!`
+      );
+      
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      const friendlyMessage = getFirebaseErrorMessage(error, locale);
+      setError(friendlyMessage);
+      alert(locale === 'ar-SA' 
+        ? `خطأ في حذف المستخدم: ${friendlyMessage}`
+        : `Error deleting user: ${friendlyMessage}`
+      );
+      setShowDeleteConfirm(null);
+    }
   };
 
   const handleToggleUserStatus = async (userId: string) => {
@@ -535,28 +692,6 @@ function UserManagement({ locale }: { locale: string }) {
     setUsers(users.map(user =>
       user.id === userId ? { ...user, disabled: !user.disabled } : user
     ));
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'superadmin': return '#e74c3c';
-      case 'admin': return '#8e44ad';
-      case 'teacher': return '#3498db';
-      case 'parent': return '#27ae60';
-      case 'content-manager': return '#f39c12';
-      default: return '#95a5a6';
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'superadmin': return '👑';
-      case 'admin': return '🛡️';
-      case 'teacher': return '👩‍🏫';
-      case 'parent': return '👨‍👩‍👧‍👦';
-      case 'content-manager': return '📝';
-      default: return '👤';
-    }
   };
 
   // Fetch real users from Firebase Function
@@ -578,6 +713,11 @@ function UserManagement({ locale }: { locale: string }) {
         if (!idToken) {
           throw new Error('No auth token found. Please sign in as admin.');
         }
+        
+        // Get current user's role from token
+        const decodedToken = JSON.parse(atob(idToken.split('.')[1]));
+        const userRole = decodedToken.role || (decodedToken.customClaims && decodedToken.customClaims.role);
+        setCurrentUserRole(userRole);
         
         // Use env variables for region and project id
         const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || 'us-central1';
@@ -671,22 +811,43 @@ function UserManagement({ locale }: { locale: string }) {
           
           <button
             onClick={handleCreateUser}
+            disabled={!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent'))}
             style={{
               padding: '1rem 1.5rem',
-              background: 'linear-gradient(135deg, #27ae60, #2ecc71)',
+              background: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
+                ? '#95a5a6' 
+                : 'linear-gradient(135deg, #27ae60, #2ecc71)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               fontSize: '1rem',
               fontWeight: 'bold',
-              cursor: 'pointer',
+              cursor: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
+                ? 'not-allowed' 
+                : 'pointer',
               transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              opacity: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
+                ? 0.6 
+                : 1
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            onMouseEnter={(e) => {
+              if (currentUserRole && (canCreateRole('admin') || canCreateRole('teacher') || canCreateRole('parent'))) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentUserRole && (canCreateRole('admin') || canCreateRole('teacher') || canCreateRole('parent'))) {
+                e.currentTarget.style.transform = 'translateY(0)';
+              }
+            }}
+            title={!currentUserRole ? 'Loading permissions...' : 
+              (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')) 
+                ? (locale === 'ar-SA' ? 'ليس لديك صلاحية لإنشاء مستخدمين' : 'You do not have permission to create users')
+                : (locale === 'ar-SA' ? 'إضافة مستخدم جديد' : 'Add New User')
+            }
           >
             ➕ {locale === 'ar-SA' ? 'إضافة مستخدم' : 'Add User'}
           </button>
@@ -968,9 +1129,11 @@ function UserManagement({ locale }: { locale: string }) {
                         width: '40px',
                         height: '40px',
                         borderRadius: '50%',
-                        background: user.photoURL ? `url(${user.photoURL})` : getRoleColor(user.customClaims.role),
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
+                        backgroundColor: user.photoURL ? 'transparent' : getRoleColor(user.customClaims.role),
+                        backgroundImage: user.photoURL ? `url(${user.photoURL})` : 'none',
+                        backgroundSize: user.photoURL ? 'cover' : 'auto',
+                        backgroundPosition: user.photoURL ? 'center' : 'initial',
+                        backgroundRepeat: 'no-repeat',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1008,13 +1171,7 @@ function UserManagement({ locale }: { locale: string }) {
                       fontWeight: 'bold'
                     }}>
                       {getRoleIcon(user.customClaims.role)}
-                      {locale === 'ar-SA' ? {
-                        'superadmin': 'مدير عام',
-                        'admin': 'مدير',
-                        'teacher': 'معلم',
-                        'parent': 'ولي أمر',
-                        'content-manager': 'مدير المحتوى'
-                      }[user.customClaims.role] : user.customClaims.role}
+                      {getRoleName(user.customClaims.role, locale)}
                     </div>
                   </td>
                   <td style={tableCellStyle}>
@@ -1083,31 +1240,70 @@ function UserManagement({ locale }: { locale: string }) {
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => handleEditUser(user)}
+                        disabled={editingInProgress === user.id || !canEditUser(user)}
                         style={{
-                          padding: '0.5rem',
-                          background: '#3498db',
+                          padding: '0.5rem 1rem',
+                          background: (editingInProgress === user.id || !canEditUser(user))
+                            ? '#95a5a6' 
+                            : 'linear-gradient(135deg, #3498db, #2980b9)',
                           color: 'white',
                           border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem'
+                          borderRadius: '6px',
+                          cursor: (editingInProgress === user.id || !canEditUser(user)) ? 'not-allowed' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 'bold',
+                          boxShadow: (editingInProgress === user.id || !canEditUser(user))
+                            ? 'none' 
+                            : '0 2px 4px rgba(52, 152, 219, 0.3)',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          opacity: (editingInProgress === user.id || !canEditUser(user)) ? 0.7 : 1
                         }}
-                        title={locale === 'ar-SA' ? 'تعديل' : 'Edit'}
+                        title={editingInProgress === user.id 
+                          ? (locale === 'ar-SA' ? 'جاري التحديث...' : 'Updating...')
+                          : !canEditUser(user)
+                          ? (locale === 'ar-SA' ? 'ليس لديك صلاحية لتعديل هذا المستخدم' : 'You cannot edit this user')
+                          : (locale === 'ar-SA' ? 'تعديل المستخدم' : 'Edit User')
+                        }
+                        onMouseEnter={(e) => {
+                          if (editingInProgress !== user.id && canEditUser(user)) {
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(52, 152, 219, 0.4)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (editingInProgress !== user.id && canEditUser(user)) {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(52, 152, 219, 0.3)';
+                          }
+                        }}
                       >
-                        ✏️
+                        {editingInProgress === user.id ? (
+                          <>⏳ {locale === 'ar-SA' ? 'جاري التحديث...' : 'Updating...'}</>
+                        ) : (
+                          <>✏️ {locale === 'ar-SA' ? 'تعديل' : 'Edit'}</>
+                        )}
                       </button>
                       <button
                         onClick={() => handleToggleUserStatus(user.id)}
+                        disabled={!canEditUser(user)}
                         style={{
                           padding: '0.5rem',
-                          background: user.disabled ? '#27ae60' : '#f39c12',
+                          background: !canEditUser(user) 
+                            ? '#95a5a6'
+                            : user.disabled ? '#27ae60' : '#f39c12',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem'
+                          cursor: !canEditUser(user) ? 'not-allowed' : 'pointer',
+                          fontSize: '0.8rem',
+                          opacity: !canEditUser(user) ? 0.6 : 1
                         }}
-                        title={user.disabled 
+                        title={!canEditUser(user)
+                          ? (locale === 'ar-SA' ? 'ليس لديك صلاحية لتعديل حالة هذا المستخدم' : 'You cannot modify this user status')
+                          : user.disabled 
                           ? (locale === 'ar-SA' ? 'تفعيل' : 'Enable')
                           : (locale === 'ar-SA' ? 'تعطيل' : 'Disable')
                         }
@@ -1116,16 +1312,21 @@ function UserManagement({ locale }: { locale: string }) {
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(user.id)}
+                        disabled={!canDeleteUser(user)}
                         style={{
                           padding: '0.5rem',
-                          background: '#e74c3c',
+                          background: !canDeleteUser(user) ? '#95a5a6' : '#e74c3c',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem'
+                          cursor: !canDeleteUser(user) ? 'not-allowed' : 'pointer',
+                          fontSize: '0.8rem',
+                          opacity: !canDeleteUser(user) ? 0.6 : 1
                         }}
-                        title={locale === 'ar-SA' ? 'حذف' : 'Delete'}
+                        title={!canDeleteUser(user)
+                          ? (locale === 'ar-SA' ? 'ليس لديك صلاحية لحذف هذا المستخدم' : 'You cannot delete this user')
+                          : (locale === 'ar-SA' ? 'حذف' : 'Delete')
+                        }
                       >
                         🗑️
                       </button>
@@ -1208,30 +1409,154 @@ function UserManagement({ locale }: { locale: string }) {
         <UserModal
           user={editingUser}
           locale={locale}
-          onSave={(userData) => {
+          currentUserRole={currentUserRole}
+          canEditUser={canEditUser}
+          onSave={async (userData) => {
             if (editingUser) {
-              // Update existing user
-              setUsers(users.map(user =>
-                user.id === editingUser.id
-                  ? { ...user, ...userData, customClaims: { ...user.customClaims, role: userData.role, permissions: userData.permissions } }
-                  : user
-              ));
-            } else {
-              // Create new user
-              const newUser: User = {
-                id: `user${Date.now()}`,
-                email: userData.email,
-                displayName: userData.displayName,
-                phoneNumber: userData.phoneNumber,
-                disabled: false,
-                emailVerified: false,
-                createdAt: new Date().toISOString(),
-                customClaims: {
-                  role: userData.role,
-                  permissions: userData.permissions
+              // Update existing user via Firebase Function
+              try {
+                setEditingInProgress(editingUser.id);
+                setError(null);
+                
+                let idToken: string | null = null;
+                type FirebaseUserWithToken = { getIdToken: () => Promise<string> };
+                if (user && typeof (user as FirebaseUserWithToken).getIdToken === 'function') {
+                  idToken = await (user as FirebaseUserWithToken).getIdToken();
                 }
-              };
-              setUsers([...users, newUser]);
+                
+                if (!idToken) {
+                  throw new Error('No auth token found. Please sign in as admin.');
+                }
+                
+                const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || 'us-central1';
+                const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || 'future-step-nursery';
+                const functionUrl = `https://${region}-${projectId}.cloudfunctions.net/editUser`;
+                
+                const response = await fetch(functionUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    uid: editingUser.id,
+                    userData: {
+                      email: userData.email,
+                      displayName: userData.displayName,
+                      phoneNumber: userData.phoneNumber,
+                      role: userData.role
+                    }
+                  })
+                });
+                
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || `Failed to update user: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('User updated successfully:', result);
+                
+                // Update local state with the server response
+                setUsers(users.map(u =>
+                  u.id === editingUser.id
+                    ? {
+                        ...u,
+                        email: result.user.email,
+                        displayName: result.user.displayName,
+                        phoneNumber: result.user.phoneNumber,
+                        customClaims: result.user.customClaims || { role: userData.role }
+                      }
+                    : u
+                ));
+                
+                alert(locale === 'ar-SA' ? 'تم تحديث المستخدم بنجاح!' : 'User updated successfully!');
+                
+              } catch (error) {
+                console.error('Error updating user:', error);
+                const friendlyMessage = getFirebaseErrorMessage(error, locale);
+                setError(friendlyMessage);
+                alert(locale === 'ar-SA' 
+                  ? `خطأ في تحديث المستخدم: ${friendlyMessage}`
+                  : `Error updating user: ${friendlyMessage}`
+                );
+              } finally {
+                setEditingInProgress(null);
+              }
+            } else {
+              // Create new user via Firebase Function
+              try {
+                setEditingInProgress('creating');
+                setError(null);
+                
+                let idToken: string | null = null;
+                type FirebaseUserWithToken = { getIdToken: () => Promise<string> };
+                if (user && typeof (user as FirebaseUserWithToken).getIdToken === 'function') {
+                  idToken = await (user as FirebaseUserWithToken).getIdToken();
+                }
+                
+                if (!idToken) {
+                  throw new Error('No auth token found. Please sign in as admin.');
+                }
+                
+                const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || 'us-central1';
+                const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || 'future-step-nursery';
+                const functionUrl = `https://${region}-${projectId}.cloudfunctions.net/createUser`;
+                
+                const response = await fetch(functionUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    userData: {
+                      email: userData.email,
+                      displayName: userData.displayName,
+                      phoneNumber: userData.phoneNumber,
+                      password: userData.password,
+                      role: userData.role
+                    }
+                  })
+                });
+                
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || `Failed to create user: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('User created successfully:', result);
+                
+                // Add new user to local state
+                const newUser: User = {
+                  id: result.user.uid,
+                  email: result.user.email,
+                  displayName: result.user.displayName,
+                  phoneNumber: result.user.phoneNumber,
+                  photoURL: result.user.photoURL,
+                  disabled: result.user.disabled,
+                  emailVerified: result.user.emailVerified,
+                  createdAt: result.user.createdAt,
+                  lastSignIn: result.user.lastSignIn,
+                  customClaims: result.user.customClaims || { role: userData.role }
+                };
+                
+                setUsers([newUser, ...users]);
+                
+                alert(locale === 'ar-SA' ? 'تم إنشاء المستخدم بنجاح!' : 'User created successfully!');
+                
+              } catch (error) {
+                console.error('Error creating user:', error);
+                const friendlyMessage = getFirebaseErrorMessage(error, locale);
+                setError(friendlyMessage);
+                alert(locale === 'ar-SA' 
+                  ? `خطأ في إنشاء المستخدم: ${friendlyMessage}`
+                  : `Error creating user: ${friendlyMessage}`
+                );
+              } finally {
+                setEditingInProgress(null);
+              }
             }
             setShowUserModal(false);
           }}
@@ -1272,65 +1597,85 @@ function UserModal({
   user, 
   locale, 
   onSave, 
-  onCancel 
+  onCancel,
+  currentUserRole,
+  canEditUser
 }: { 
   user: User | null; 
   locale: string; 
   onSave: (userData: UserFormData) => void; 
-  onCancel: () => void; 
+  onCancel: () => void;
+  currentUserRole: string | null;
+  canEditUser: (user: User) => boolean;
 }) {
   const [formData, setFormData] = useState<UserFormData>({
     email: user?.email || '',
     displayName: user?.displayName || '',
     phoneNumber: user?.phoneNumber || '',
     password: '',
-    role: user?.customClaims.role || 'parent',
-    permissions: user?.customClaims.permissions || []
+    role: user?.customClaims.role || 'parent'
   });
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const availablePermissions = [
-    'manage_users',
-    'manage_classes',
-    'view_reports',
-    'manage_fees',
-    'system_settings',
-    'manage_content',
-    'upload_media',
-    'view_students',
-    'view_child_progress'
-  ];
-
-  const rolePermissions = {
-    superadmin: ['manage_users', 'manage_classes', 'view_reports', 'manage_fees', 'system_settings', 'manage_content', 'upload_media'],
-    admin: ['manage_classes', 'view_reports', 'manage_fees', 'manage_content'],
-    teacher: ['manage_classes', 'view_students'],
-    parent: ['view_child_progress'],
-    'content-manager': ['manage_content', 'upload_media']
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side validation
+    const errors: string[] = [];
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      errors.push(locale === 'ar-SA' 
+        ? 'البريد الإلكتروني غير صحيح'
+        : 'Invalid email format'
+      );
+    }
+    
+    // Validate password (only for new users)
+    if (!user && formData.password.length < 6) {
+      errors.push(locale === 'ar-SA' 
+        ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
+        : 'Password must be at least 6 characters'
+      );
+    }
+    
+    // Validate display name
+    if (!formData.displayName.trim() || formData.displayName.length > 100) {
+      errors.push(locale === 'ar-SA' 
+        ? 'اسم العرض يجب أن يكون بين 1-100 حرف'
+        : 'Display name must be 1-100 characters'
+      );
+    }
+    
+    // Validate phone number format (if provided)
+    if (formData.phoneNumber) {
+      const phoneRegex = /^\+[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(formData.phoneNumber)) {
+        errors.push(locale === 'ar-SA' 
+          ? 'رقم الهاتف يجب أن يكون بالتنسيق الدولي (مثال: +966501234567)'
+          : 'Phone number must be in international format (e.g., +966501234567)'
+        );
+      }
+    }
+    
+    // Show validation errors
+    if (errors.length > 0) {
+      alert(locale === 'ar-SA' 
+        ? `يرجى إصلاح الأخطاء التالية:\n• ${errors.join('\n• ')}`
+        : `Please fix the following errors:\n• ${errors.join('\n• ')}`
+      );
+      return;
+    }
+    
     onSave(formData);
   };
 
   const handleRoleChange = (newRole: UserFormData['role']) => {
     setFormData({
       ...formData,
-      role: newRole,
-      permissions: rolePermissions[newRole] || []
-    });
-  };
-
-  const handlePermissionToggle = (permission: string) => {
-    const updatedPermissions = formData.permissions.includes(permission)
-      ? formData.permissions.filter(p => p !== permission)
-      : [...formData.permissions, permission];
-    
-    setFormData({
-      ...formData,
-      permissions: updatedPermissions
+      role: newRole
     });
   };
 
@@ -1399,8 +1744,19 @@ function UserModal({
                   fontSize: '1rem',
                   outline: 'none'
                 }}
-                placeholder="user@futurestep.edu.sa"
+                placeholder={locale === 'ar-SA' ? 'مثال: ahmed@futurestep.edu.sa' : 'e.g., user@futurestep.edu.sa'}
               />
+              <p style={{ 
+                fontSize: '0.8rem', 
+                color: '#7f8c8d', 
+                marginTop: '0.25rem',
+                marginBottom: 0 
+              }}>
+                {locale === 'ar-SA' 
+                  ? 'يجب أن يكون البريد الإلكتروني صحيح التنسيق'
+                  : 'Must be a valid email address'
+                }
+              </p>
             </div>
 
             {/* Display Name */}
@@ -1454,8 +1810,19 @@ function UserModal({
                   fontSize: '1rem',
                   outline: 'none'
                 }}
-                placeholder="+966501234567"
+                placeholder={locale === 'ar-SA' ? '+966501234567' : '+966501234567'}
               />
+              <p style={{ 
+                fontSize: '0.8rem', 
+                color: '#7f8c8d', 
+                marginTop: '0.25rem',
+                marginBottom: 0 
+              }}>
+                {locale === 'ar-SA' 
+                  ? 'يجب أن يبدأ برمز الدولة (مثال: +966 للسعودية)'
+                  : 'Must start with country code (e.g., +966 for Saudi Arabia)'
+                }
+              </p>
             </div>
 
             {/* Password (only for new users) */}
@@ -1485,7 +1852,8 @@ function UserModal({
                       outline: 'none',
                       paddingRight: '3rem'
                     }}
-                    placeholder="••••••••"
+                    placeholder={locale === 'ar-SA' ? 'كلمة المرور (6 أحرف على الأقل)' : 'Password (min 6 characters)'}
+                    minLength={6}
                   />
                   <button
                     type="button"
@@ -1504,6 +1872,17 @@ function UserModal({
                     {showPassword ? '🙈' : '👁️'}
                   </button>
                 </div>
+                <p style={{ 
+                  fontSize: '0.8rem', 
+                  color: '#7f8c8d', 
+                  marginTop: '0.25rem',
+                  marginBottom: 0 
+                }}>
+                  {locale === 'ar-SA' 
+                    ? 'يجب أن تكون كلمة المرور 6 أحرف أو أكثر'
+                    : 'Password must be at least 6 characters long'
+                  }
+                </p>
               </div>
             )}
 
@@ -1522,62 +1901,42 @@ function UserModal({
                 value={formData.role}
                 onChange={(e) => handleRoleChange(e.target.value as UserFormData['role'])}
                 required
+                disabled={user ? !canEditUser(user) : false}
                 style={{
                   width: '100%',
                   padding: '0.8rem',
                   border: '2px solid #bdc3c7',
                   borderRadius: '8px',
                   fontSize: '1rem',
-                  outline: 'none'
+                  outline: 'none',
+                  background: (user && !canEditUser(user)) ? '#f5f5f5' : 'white',
+                  cursor: (user && !canEditUser(user)) ? 'not-allowed' : 'default',
+                  opacity: (user && !canEditUser(user)) ? 0.7 : 1
                 }}
               >
-                <option value="superadmin">{locale === 'ar-SA' ? 'مدير عام' : 'Super Admin'}</option>
-                <option value="admin">{locale === 'ar-SA' ? 'مدير' : 'Admin'}</option>
-                <option value="teacher">{locale === 'ar-SA' ? 'معلم' : 'Teacher'}</option>
-                <option value="parent">{locale === 'ar-SA' ? 'ولي أمر' : 'Parent'}</option>
-                <option value="content-manager">{locale === 'ar-SA' ? 'مدير المحتوى' : 'Content Manager'}</option>
+                {/* Show role options based on current user's permissions */}
+                {currentUserRole === 'superadmin' && (
+                  <>
+                    <option value="superadmin">{locale === 'ar-SA' ? 'مدير عام' : 'Super Admin'}</option>
+                    <option value="admin">{locale === 'ar-SA' ? 'مدير' : 'Admin'}</option>
+                    <option value="teacher">{locale === 'ar-SA' ? 'معلم' : 'Teacher'}</option>
+                    <option value="parent">{locale === 'ar-SA' ? 'ولي أمر' : 'Parent'}</option>
+                    <option value="content-manager">{locale === 'ar-SA' ? 'مدير المحتوى' : 'Content Manager'}</option>
+                  </>
+                )}
+                {currentUserRole === 'admin' && (
+                  <>
+                    <option value="teacher">{locale === 'ar-SA' ? 'معلم' : 'Teacher'}</option>
+                    <option value="parent">{locale === 'ar-SA' ? 'ولي أمر' : 'Parent'}</option>
+                    <option value="content-manager">{locale === 'ar-SA' ? 'مدير المحتوى' : 'Content Manager'}</option>
+                  </>
+                )}
+                {(currentUserRole === 'teacher' || currentUserRole === 'parent') && (
+                  <option value="parent">{locale === 'ar-SA' ? 'ولي أمر' : 'Parent'}</option>
+                )}
               </select>
             </div>
 
-            {/* Permissions */}
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '1rem',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                color: '#2c3e50'
-              }}>
-                {locale === 'ar-SA' ? 'الصلاحيات' : 'Permissions'}
-              </label>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '0.5rem',
-                padding: '1rem',
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                border: '2px solid #e9ecef'
-              }}>
-                {availablePermissions.map(permission => (
-                  <label key={permission} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.permissions.includes(permission)}
-                      onChange={() => handlePermissionToggle(permission)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    {permission.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </label>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Actions */}
@@ -1848,32 +2207,16 @@ function AdminDashboard({ onLogout, locale }: { onLogout: () => void; locale: st
                 alignItems: 'center',
                 gap: '0.25rem',
                 padding: '0.25rem 0.5rem',
-                background: userClaims?.role ? 
-                  (userClaims.role === 'superadmin' ? '#e74c3c' :
-                   userClaims.role === 'admin' ? '#8e44ad' :
-                   userClaims.role === 'teacher' ? '#3498db' :
-                   userClaims.role === 'parent' ? '#27ae60' :
-                   userClaims.role === 'content-manager' ? '#f39c12' : '#95a5a6') : '#95a5a6',
+                background: userClaims?.role ? getRoleColor(userClaims.role) : '#95a5a6',
                 color: 'white',
                 borderRadius: '12px',
                 fontSize: '0.9rem',
                 fontWeight: 'bold'
               }}>
-                {userClaims?.role === 'superadmin' && '👑'}
-                {userClaims?.role === 'admin' && '🛡️'}
-                {userClaims?.role === 'teacher' && '👩‍🏫'}
-                {userClaims?.role === 'parent' && '👨‍👩‍👧‍👦'}
-                {userClaims?.role === 'content-manager' && '📝'}
-                {!userClaims?.role && '❓'}
+                {userClaims?.role ? getRoleIcon(userClaims.role) : '❓'}
                 {' '}
                 {userClaims?.role ? 
-                  (locale === 'ar-SA' ? 
-                    (userClaims.role === 'superadmin' ? 'مدير عام' :
-                     userClaims.role === 'admin' ? 'مدير' :
-                     userClaims.role === 'teacher' ? 'معلم' :
-                     userClaims.role === 'parent' ? 'ولي أمر' :
-                     userClaims.role === 'content-manager' ? 'مدير المحتوى' : userClaims.role) : 
-                    userClaims.role) : 
+                  getRoleName(userClaims.role, locale) : 
                   (locale === 'ar-SA' ? 'الدور مفقود' : 'Role is missing')
                 }
               </span>
@@ -2126,10 +2469,10 @@ export default function AdminPortalPage({ params }: { params: Promise<{ locale: 
         setIsCheckingRole(true);
         try {
           const claims = await getUserCustomClaims();
-          const userRole = claims?.role;
+          const userRole = claims?.role as UserRole;
           
-          // Check if user has admin or superadmin role
-          const hasAccess = userRole === 'admin' || userRole === 'superadmin';
+          // Check if user has admin access using utility function
+          const hasAccess = canAccessAdmin(userRole);
           setHasAdminAccess(hasAccess);
         } catch (error) {
           console.error('Error checking admin role:', error);
