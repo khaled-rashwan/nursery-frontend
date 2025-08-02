@@ -2,7 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { User } from 'firebase/auth';
 import { useAuth } from '../../../hooks/useAuth';
+import { UserRole, getRoleName } from '../../../utils/rolePermissions';
+import { 
+  logSecurityEvent 
+} from '../../../utils/parentPortalSecurity';
 
 // Mock data for demonstration - Updated to support multiple children
 interface Child {
@@ -154,6 +159,199 @@ const mockNotificationsData: { [key: string]: NotificationItem[] } = {
     { id: 8, type: 'fee', message: 'Monthly fee due soon', date: '2025-01-12', read: true },
   ]
 };
+
+// Access Denied Component
+function AccessDenied({ locale, onLogout, currentRole }: { 
+  locale: string; 
+  onLogout: () => void; 
+  currentRole?: UserRole | null;
+}) {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, var(--light-pink), var(--light-blue))',
+      padding: '2rem'
+    }}>
+      <div style={{
+        background: 'white',
+        padding: '3rem',
+        borderRadius: 'var(--border-radius)',
+        boxShadow: 'var(--shadow)',
+        width: '100%',
+        maxWidth: '600px',
+        border: '4px solid var(--primary-pink)',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '5rem', marginBottom: '2rem' }}>🚫</div>
+        
+        <h1 style={{
+          fontSize: '2.5rem',
+          color: 'var(--primary-purple)',
+          marginBottom: '1rem',
+          textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          {locale === 'ar-SA' ? 'الوصول مرفوض' : 'Access Denied'}
+        </h1>
+        
+        <p style={{
+          fontSize: '1.4rem',
+          color: 'var(--primary-blue)',
+          marginBottom: '1rem',
+          lineHeight: '1.6'
+        }}>
+          {locale === 'ar-SA' 
+            ? 'عذراً، هذه الصفحة مخصصة لأولياء الأمور فقط. يبدو أن حسابك لا يملك صلاحيات ولي أمر.'
+            : 'Sorry, this page is exclusively for parents. It appears your account does not have parent privileges.'
+          }
+        </p>
+
+        {/* Show current role for debugging purposes */}
+        {currentRole && (
+          <div style={{
+            background: 'var(--light-red)',
+            padding: '1rem',
+            borderRadius: 'var(--border-radius)',
+            marginBottom: '2rem',
+            border: '2px solid var(--primary-red)'
+          }}>
+            <p style={{
+              fontSize: '1.1rem',
+              color: 'var(--primary-red)',
+              margin: 0,
+              fontWeight: 'bold'
+            }}>
+              {locale === 'ar-SA' 
+                ? `دورك الحالي: ${getRoleName(currentRole, locale)}`
+                : `Your current role: ${getRoleName(currentRole, locale)}`
+              }
+            </p>
+          </div>
+        )}
+
+        <div style={{
+          background: 'var(--light-yellow)',
+          padding: '1.5rem',
+          borderRadius: 'var(--border-radius)',
+          marginBottom: '2rem',
+          border: '3px solid var(--primary-yellow)'
+        }}>
+          <h3 style={{
+            fontSize: '1.3rem',
+            color: 'var(--primary-orange)',
+            marginBottom: '1rem'
+          }}>
+            {locale === 'ar-SA' ? 'ماذا يمكنك فعله؟' : 'What can you do?'}
+          </h3>
+          <ul style={{
+            fontSize: '1.1rem',
+            color: '#666',
+            textAlign: locale === 'ar-SA' ? 'right' : 'left',
+            listStyle: 'none',
+            padding: 0,
+            margin: 0
+          }}>
+            <li style={{ marginBottom: '0.5rem' }}>
+              {locale === 'ar-SA' 
+                ? '• تسجيل الخروج والدخول بحساب ولي أمر'
+                : '• Logout and login with a parent account'
+              }
+            </li>
+            <li style={{ marginBottom: '0.5rem' }}>
+              {locale === 'ar-SA' 
+                ? '• التواصل مع الإدارة لتحديث صلاحياتك'
+                : '• Contact administration to update your permissions'
+              }
+            </li>
+            <li>
+              {locale === 'ar-SA' 
+                ? '• الانتقال إلى الصفحة الرئيسية'
+                : '• Go back to the main page'
+              }
+            </li>
+          </ul>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          <button
+            onClick={onLogout}
+            style={{
+              padding: '1.2rem 2rem',
+              background: 'linear-gradient(135deg, var(--primary-pink), var(--primary-blue))',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--border-radius)',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.3s var(--bounce)',
+              boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-3px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+            }}
+          >
+            🚪 {locale === 'ar-SA' ? 'تسجيل الخروج' : 'Logout'}
+          </button>
+
+          <Link 
+            href={`/${locale}`}
+            style={{
+              display: 'inline-block',
+              padding: '1.2rem 2rem',
+              background: 'var(--primary-green)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--border-radius)',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              textDecoration: 'none',
+              transition: 'all 0.3s var(--bounce)',
+              boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-3px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+            }}
+          >
+            🏠 {locale === 'ar-SA' ? 'الصفحة الرئيسية' : 'Home Page'}
+          </Link>
+        </div>
+
+        <div style={{
+          textAlign: 'center',
+          marginTop: '2rem',
+          padding: '1rem',
+          background: 'var(--light-blue)',
+          borderRadius: 'var(--border-radius)'
+        }}>
+          <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
+            {locale === 'ar-SA' 
+              ? 'للمساعدة، اتصل بالإدارة على: 123-4567'
+              : 'For assistance, contact administration at: 123-4567'
+            }
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Login Component
 function LoginForm({ locale }: { locale: string }) {
@@ -477,6 +675,121 @@ function LoginForm({ locale }: { locale: string }) {
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Session Monitor Component
+function SessionMonitor({ 
+  user, 
+  onLogout, 
+  locale 
+}: { 
+  user: User | null; 
+  onLogout: () => void; 
+  locale: string; 
+}) {
+  const [showWarning, setShowWarning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const checkSession = async () => {
+      try {
+        const token = await user.getIdTokenResult();
+        const expirationTime = token.expirationTime;
+        const currentTime = Date.now();
+        const timeUntilExpiry = new Date(expirationTime).getTime() - currentTime;
+        
+        // Show warning 5 minutes before expiry
+        if (timeUntilExpiry > 0 && timeUntilExpiry <= 5 * 60 * 1000) {
+          setShowWarning(true);
+          setTimeLeft(Math.floor(timeUntilExpiry / 1000));
+        } else if (timeUntilExpiry <= 0) {
+          // Session expired, logout immediately
+          onLogout();
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      }
+    };
+
+    // Check session every minute
+    const interval = setInterval(checkSession, 60000);
+    
+    // Initial check
+    checkSession();
+
+    return () => clearInterval(interval);
+  }, [user, onLogout]);
+
+  // Update countdown every second when warning is shown
+  useEffect(() => {
+    if (!showWarning) return;
+
+    const countdown = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          onLogout(); // Auto logout when time runs out
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdown);
+  }, [showWarning, onLogout]);
+
+  if (!showWarning) return null;
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      background: 'var(--primary-orange)',
+      color: 'white',
+      padding: '1rem',
+      borderRadius: 'var(--border-radius)',
+      boxShadow: 'var(--shadow)',
+      zIndex: 9999,
+      maxWidth: '300px',
+      border: '3px solid var(--primary-red)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+        <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+        <strong>
+          {locale === 'ar-SA' ? 'تحذير انتهاء الجلسة' : 'Session Expiry Warning'}
+        </strong>
+      </div>
+      
+      <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem' }}>
+        {locale === 'ar-SA' 
+          ? `ستنتهي جلستك خلال ${minutes}:${seconds.toString().padStart(2, '0')}`
+          : `Your session will expire in ${minutes}:${seconds.toString().padStart(2, '0')}`
+        }
+      </p>
+      
+      <button
+        onClick={() => setShowWarning(false)}
+        style={{
+          padding: '0.5rem 1rem',
+          background: 'white',
+          color: 'var(--primary-orange)',
+          border: 'none',
+          borderRadius: 'calc(var(--border-radius) / 2)',
+          fontSize: '0.8rem',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          width: '100%'
+        }}
+      >
+        {locale === 'ar-SA' ? 'إغلاق التحذير' : 'Dismiss Warning'}
+      </button>
     </div>
   );
 }
@@ -1237,7 +1550,10 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
 export default function ParentPortalPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
-  const { user, loading: authLoading, logout } = useAuth();
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
+  const [roleError, setRoleError] = useState<string | null>(null);
+  const { user, loading: authLoading, logout, getUserCustomClaims } = useAuth();
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -1246,30 +1562,258 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
     });
   }, [params]);
 
-  if (!mounted || authLoading) {
+  // Check user role when user is authenticated
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (user) {
+        setRoleLoading(true);
+        setRoleError(null);
+        
+        try {
+          const claims = await getUserCustomClaims();
+          const role = claims?.role as UserRole;
+          
+          console.log('[DEBUG] Role check result:', { 
+            userId: user.uid, 
+            email: user.email,
+            role, 
+            claims 
+          });
+          
+          // Simple role check - just verify the user has 'parent' role
+          if (!role) {
+            setRoleError('No role assigned to this account');
+            setUserRole(null);
+          } else if (role !== 'parent') {
+            // Log security event for role mismatch
+            logSecurityEvent('role_mismatch', {
+              userId: user.uid,
+              userRole: role,
+              expectedRole: 'parent',
+              timestamp: new Date(),
+              userAgent: navigator.userAgent
+            });
+            
+            setRoleError(`Access denied. Your role is: ${role}`);
+            setUserRole(role); // Set the actual role so it shows in access denied screen
+          } else {
+            // User has parent role - allow access
+            setUserRole(role);
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          
+          // Log security event for failed role check
+          logSecurityEvent('unauthorized_access', {
+            userId: user.uid,
+            userRole: null,
+            expectedRole: 'parent',
+            timestamp: new Date(),
+            userAgent: navigator.userAgent
+          });
+          
+          setRoleError('Failed to verify account permissions');
+          setUserRole(null);
+        } finally {
+          setRoleLoading(false);
+        }
+      } else {
+        setUserRole(null);
+        setRoleLoading(false);
+        setRoleError(null);
+      }
+    };
+
+    checkUserRole();
+  }, [user, getUserCustomClaims]);
+
+  // Show loading spinner while checking authentication and role
+  if (!mounted || authLoading || (user && roleLoading)) {
     return (
       <div style={{ 
         display: 'flex', 
+        flexDirection: 'column',
         justifyContent: 'center', 
         alignItems: 'center', 
-        height: '100vh' 
+        height: '100vh',
+        background: 'linear-gradient(135deg, var(--light-pink), var(--light-blue))'
       }}>
-        <div className="loading-spinner"></div>
+        <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+        <p style={{ 
+          fontSize: '1.2rem', 
+          color: 'var(--primary-purple)',
+          fontWeight: 'bold'
+        }}>
+          {locale === 'ar-SA' ? 'جاري التحقق من الصلاحيات...' : 'Checking permissions...'}
+        </p>
       </div>
     );
   }
 
   const handleLogout = async () => {
     await logout();
+    setUserRole(null); // Reset role state on logout
+    setRoleError(null);
   };
 
+  const handleRetryRoleCheck = async () => {
+    if (user) {
+      setRoleLoading(true);
+      setRoleError(null);
+      
+      try {
+        const claims = await getUserCustomClaims();
+        const role = claims?.role as UserRole;
+        
+        console.log('[DEBUG] Retry role check result:', { 
+          userId: user.uid, 
+          email: user.email,
+          role, 
+          claims 
+        });
+        
+        // Simple role check - just verify the user has 'parent' role
+        if (!role) {
+          setRoleError('No role assigned to this account');
+          setUserRole(null);
+        } else if (role !== 'parent') {
+          // Log security event for role mismatch
+          logSecurityEvent('role_mismatch', {
+            userId: user.uid,
+            userRole: role,
+            expectedRole: 'parent',
+            timestamp: new Date(),
+            userAgent: navigator.userAgent
+          });
+          
+          setRoleError(`Access denied. Your role is: ${role}`);
+          setUserRole(role); // Set the actual role so it shows in access denied screen
+        } else {
+          // User has parent role - allow access
+          setUserRole(role);
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        
+        // Log security event for failed role check
+        logSecurityEvent('unauthorized_access', {
+          userId: user.uid,
+          userRole: null,
+          expectedRole: 'parent',
+          timestamp: new Date(),
+          userAgent: navigator.userAgent
+        });
+        
+        setRoleError('Failed to verify account permissions');
+        setUserRole(null);
+      } finally {
+        setRoleLoading(false);
+      }
+    }
+  };
+
+  // If user is not authenticated, show login form
+  if (!user) {
+    return <LoginForm locale={locale} />;
+  }
+
+  // If there was an error checking role, show error with retry option
+  if (roleError && !roleLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, var(--light-pink), var(--light-blue))',
+        padding: '2rem'
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '3rem',
+          borderRadius: 'var(--border-radius)',
+          boxShadow: 'var(--shadow)',
+          width: '100%',
+          maxWidth: '500px',
+          border: '4px solid var(--primary-red)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>⚠️</div>
+          
+          <h2 style={{
+            fontSize: '2rem',
+            color: 'var(--primary-red)',
+            marginBottom: '1rem'
+          }}>
+            {locale === 'ar-SA' ? 'خطأ في التحقق من الصلاحيات' : 'Permission Check Error'}
+          </h2>
+          
+          <p style={{
+            fontSize: '1.2rem',
+            color: '#666',
+            marginBottom: '2rem'
+          }}>
+            {locale === 'ar-SA' 
+              ? 'حدث خطأ أثناء التحقق من صلاحيات حسابك. يرجى المحاولة مرة أخرى.'
+              : 'An error occurred while checking your account permissions. Please try again.'
+            }
+          </p>
+
+          <div style={{
+            display: 'flex',
+            gap: '1rem',
+            flexWrap: 'wrap',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={handleRetryRoleCheck}
+              style={{
+                padding: '1rem 2rem',
+                background: 'var(--primary-green)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--border-radius)',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              🔄 {locale === 'ar-SA' ? 'إعادة المحاولة' : 'Retry'}
+            </button>
+            
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '1rem 2rem',
+                background: 'var(--primary-orange)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--border-radius)',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              🚪 {locale === 'ar-SA' ? 'تسجيل الخروج' : 'Logout'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated but doesn't have parent role, show access denied
+  if (userRole !== 'parent') {
+    return <AccessDenied locale={locale} onLogout={handleLogout} currentRole={userRole} />;
+  }
+
+  // If user is authenticated and has parent role, show dashboard
   return (
     <>
-      {!user ? (
-        <LoginForm locale={locale} />
-      ) : (
-        <Dashboard onLogout={handleLogout} locale={locale} />
-      )}
+      <SessionMonitor user={user} onLogout={handleLogout} locale={locale} />
+      <Dashboard onLogout={handleLogout} locale={locale} />
     </>
   );
 }
