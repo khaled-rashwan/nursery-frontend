@@ -7,6 +7,7 @@ import { UserClaims } from '../../types/admin.types';
 import { mockSystemStats, mockRecentActivity } from '../../data/mockData';
 import { UserManagement } from '../user-management/UserManagement';
 import { StudentManagement } from '../student-management/StudentManagement';
+import { EnrollmentManagement } from '../enrollment-management/EnrollmentManagement';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -177,6 +178,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             { id: 'overview', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview', icon: '📊' },
             { id: 'users', label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', icon: '👥' },
             { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓' },
+            { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚' },
             { id: 'classes', label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', icon: '🏫' },
             { id: 'reports', label: locale === 'ar-SA' ? 'التقارير' : 'Reports', icon: '📈' },
             { id: 'settings', label: locale === 'ar-SA' ? 'الإعدادات' : 'Settings', icon: '⚙️' }
@@ -334,7 +336,11 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <StudentManagement locale={locale} />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && (
+      {activeTab === 'enrollments' && (
+        <EnrollmentManagement locale={locale} />
+      )}
+
+      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && (
         <div style={{
           background: 'white',
           padding: '3rem',

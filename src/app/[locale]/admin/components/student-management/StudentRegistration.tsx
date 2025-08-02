@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface StudentRegistrationProps {
   locale: string;
   onSubmit: (studentData: StudentData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
+  initialData?: StudentData;
+  isEditing?: boolean;
 }
 
 interface StudentData {
@@ -16,7 +18,14 @@ interface StudentData {
   parentUID: string;
 }
 
-export function StudentRegistration({ locale, onSubmit, onCancel, loading = false }: StudentRegistrationProps) {
+export function StudentRegistration({ 
+  locale, 
+  onSubmit, 
+  onCancel, 
+  loading = false, 
+  initialData,
+  isEditing = false 
+}: StudentRegistrationProps) {
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
     dateOfBirth: '',
@@ -25,6 +34,13 @@ export function StudentRegistration({ locale, onSubmit, onCancel, loading = fals
   });
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  // Initialize form data with initial data if provided
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    }
+  }, [initialData]);
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -63,14 +79,17 @@ export function StudentRegistration({ locale, onSubmit, onCancel, loading = fals
 
     try {
       await onSubmit(formData);
-      // Reset form on success
-      setFormData({
-        fullName: '',
-        dateOfBirth: '',
-        gender: 'Male',
-        parentUID: ''
-      });
-      setErrors({});
+      
+      // Reset form only for new registration, not editing
+      if (!isEditing) {
+        setFormData({
+          fullName: '',
+          dateOfBirth: '',
+          gender: 'Male',
+          parentUID: ''
+        });
+        setErrors({});
+      }
     } catch (error) {
       console.error('Error submitting form:', error);
     }
@@ -101,7 +120,11 @@ export function StudentRegistration({ locale, onSubmit, onCancel, loading = fals
         alignItems: 'center',
         gap: '0.5rem'
       }}>
-        👨‍🎓 {locale === 'ar-SA' ? 'تسجيل طالب جديد' : 'Register New Student'}
+        {isEditing ? '✏️' : '👨‍🎓'} {
+          isEditing 
+            ? (locale === 'ar-SA' ? 'تعديل بيانات الطالب' : 'Edit Student Information')
+            : (locale === 'ar-SA' ? 'تسجيل طالب جديد' : 'Register New Student')
+        }
       </h2>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -287,7 +310,11 @@ export function StudentRegistration({ locale, onSubmit, onCancel, loading = fals
               </>
             ) : (
               <>
-                💾 {locale === 'ar-SA' ? 'حفظ الطالب' : 'Save Student'}
+                💾 {
+                  isEditing 
+                    ? (locale === 'ar-SA' ? 'حفظ التغييرات' : 'Save Changes')
+                    : (locale === 'ar-SA' ? 'حفظ الطالب' : 'Save Student')
+                }
               </>
             )}
           </button>

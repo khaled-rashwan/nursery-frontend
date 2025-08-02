@@ -45,3 +45,34 @@ export interface UserClaims {
   role?: UserRole;
   [key: string]: unknown;
 }
+
+export interface ParentInfo {
+  uid: string;
+  email: string;
+  displayName: string;
+  phoneNumber?: string;
+  role: string;
+}
+
+export interface Student {
+  id: string;
+  fullName: string;
+  dateOfBirth: string;
+  gender: 'Male' | 'Female';
+  parentUID: string;
+  parentInfo: ParentInfo;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
+export interface StudentFormData {
+  fullName: string;
+  dateOfBirth: string;
+  gender: 'Male' | 'Female';
+  parentUID: string;
+}
