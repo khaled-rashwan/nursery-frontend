@@ -76,8 +76,20 @@ export function ClassManagement({ locale }: ClassManagementProps) {
     setError(null);
 
     try {
-      const data = await classAPI.list(user, filters);
-      setClasses(data.classes || []);
+      // Fetch all classes first, then filter client-side to avoid index requirements
+      const data = await classAPI.list(user, {});
+      let filteredClasses = data.classes || [];
+
+      // Apply client-side filtering
+      if (filters.academicYear) {
+        filteredClasses = filteredClasses.filter((cls: Class) => cls.academicYear === filters.academicYear);
+      }
+      
+      if (filters.level) {
+        filteredClasses = filteredClasses.filter((cls: Class) => cls.level === filters.level);
+      }
+
+      setClasses(filteredClasses);
     } catch (error) {
       console.error('Error fetching classes:', error);
       setError(handleAPIError(error, locale));
