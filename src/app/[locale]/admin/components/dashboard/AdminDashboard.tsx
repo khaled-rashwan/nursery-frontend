@@ -8,6 +8,7 @@ import { mockSystemStats, mockRecentActivity } from '../../data/mockData';
 import { UserManagement } from '../user-management/UserManagement';
 import { StudentManagement } from '../student-management/StudentManagement';
 import { EnrollmentManagement } from '../enrollment-management/EnrollmentManagement';
+import { ClassManagement } from '../class-management/ClassManagement';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -340,7 +341,11 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <EnrollmentManagement locale={locale} />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && (
+      {activeTab === 'classes' && (
+        <ClassManagement locale={locale} />
+      )}
+
+      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && (
         <div style={{
           background: 'white',
           padding: '3rem',

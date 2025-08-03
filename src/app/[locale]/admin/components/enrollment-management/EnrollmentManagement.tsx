@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { EnrollmentRegistration } from './EnrollmentRegistration';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
+import { enrollmentAPI, handleAPIError } from '../../services/api';
 
 interface StudentInfo {
   uid: string;
@@ -70,8 +71,8 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [classFilter, setClassFilter] = useState('all');
   const [academicYearFilter, setAcademicYearFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<keyof Enrollment>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy] = useState<keyof Enrollment>('createdAt');
+  const [sortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingEnrollment, setEditingEnrollment] = useState<Enrollment | null>(null);
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
@@ -100,52 +101,25 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
     setError(null);
 
     try {
-      const token = await user.getIdToken();
-      if (!token) throw new Error('No authentication token');
-
-      const response = await fetch(
-        `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/listEnrollments?limit=100&includeDeleted=false`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch enrollments');
-      }
-
-      const data = await response.json();
+      const data = await enrollmentAPI.list(user, { limit: 100, includeDeleted: false });
       setEnrollments(data.enrollments || []);
 
       // Fetch statistics
-      const statsResponse = await fetch(
-        `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/getEnrollmentStats`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
+      try {
+        const statsData = await enrollmentAPI.getStats(user);
         setStatistics(statsData.statistics);
+      } catch (statsError) {
+        console.warn('Failed to fetch statistics:', statsError);
+        // Don't fail the main operation if stats fail
       }
 
     } catch (error) {
       console.error('Error fetching enrollments:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch enrollments');
+      setError(handleAPIError(error, locale));
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, locale]);
 
   // Create enrollment
   const handleCreateEnrollment = async (enrollmentData: EnrollmentFormData) => {
@@ -158,27 +132,7 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
     setError(null);
 
     try {
-      const token = await user.getIdToken();
-      if (!token) throw new Error('No authentication token');
-
-      const response = await fetch(
-        `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/createEnrollment`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ enrollmentData })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create enrollment');
-      }
-
-      const data = await response.json();
+      const data = await enrollmentAPI.create(user, enrollmentData);
       setEnrollments(prev => [data.enrollment, ...prev]);
       setActiveSubTab('list');
 
@@ -187,7 +141,7 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
 
     } catch (error) {
       console.error('Error creating enrollment:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create enrollment');
+      setError(handleAPIError(error, locale));
     } finally {
       setEditingInProgress(null);
     }
@@ -204,30 +158,7 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
     setError(null);
 
     try {
-      const token = await user.getIdToken();
-      if (!token) throw new Error('No authentication token');
-
-      const response = await fetch(
-        `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/updateEnrollment`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            enrollmentId,
-            enrollmentData
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update enrollment');
-      }
-
-      const data = await response.json();
+      const data = await enrollmentAPI.update(user, enrollmentId, enrollmentData);
       
       // Update the enrollment in the list
       setEnrollments(prev => prev.map(enrollment =>
@@ -242,7 +173,7 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
 
     } catch (error) {
       console.error('Error updating enrollment:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update enrollment');
+      setError(handleAPIError(error, locale));
     } finally {
       setEditingInProgress(null);
     }
@@ -259,27 +190,7 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
     setError(null);
 
     try {
-      const token = await user.getIdToken();
-      if (!token) throw new Error('No authentication token');
-
-      const response = await fetch(
-        `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/deleteEnrollment`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ enrollmentId })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete enrollment');
-      }
-
-      const data = await response.json();
+      const data = await enrollmentAPI.delete(user, enrollmentId);
 
       // Remove the enrollment from the list
       setEnrollments(prev => prev.filter(enrollment => enrollment.id !== enrollmentId));
@@ -294,7 +205,7 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
 
     } catch (error) {
       console.error('Error deleting enrollment:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete enrollment');
+      setError(handleAPIError(error, locale));
     } finally {
       setEditingInProgress(null);
     }

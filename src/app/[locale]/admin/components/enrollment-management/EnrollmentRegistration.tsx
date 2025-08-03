@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
+import { studentAPI, userAPI, classAPI } from '../../services/api';
 
 interface Student {
   id: string;
@@ -24,6 +25,23 @@ interface Teacher {
   displayName: string;
   phoneNumber?: string;
   role: string;
+}
+
+interface Class {
+  id: string;
+  name: string;
+  level: 'Pre-KG' | 'KG1' | 'KG2';
+  academicYear: string;
+  teacherUID: string;
+  teacherInfo: {
+    uid: string;
+    email: string;
+    displayName: string;
+    phoneNumber?: string;
+    role: string;
+  };
+  capacity: number;
+  notes: string;
 }
 
 interface EnrollmentFormData {
@@ -65,15 +83,27 @@ export function EnrollmentRegistration({
 
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const { user } = useAuth();
 
-  const validClasses = ['Pre-KG', 'KG1-A', 'KG1-B', 'KG2-A', 'KG2-B'];
   const validStatuses = ['enrolled', 'withdrawn', 'graduated', 'pending'];
-  const validPreviousClasses = ['Pre-KG', 'KG1-A', 'KG1-B', 'KG2-A', 'KG2-B', 'External'];
+
+  // Get class names for current academic year
+  const getClassNamesForYear = (academicYear: string) => {
+    return classes
+      .filter(cls => cls.academicYear === academicYear)
+      .map(cls => cls.name);
+  };
+
+  // Get all class names for previous class options
+  const getAllClassNames = () => {
+    const allClassNames = [...new Set(classes.map(cls => cls.name))];
+    return [...allClassNames, 'External'];
+  };
 
   // Generate academic year options (current year and next 2 years)
   const generateAcademicYears = () => {
@@ -88,63 +118,39 @@ export function EnrollmentRegistration({
 
   const academicYears = generateAcademicYears();
 
-  // Fetch students and teachers
+  // Fetch students, teachers, and classes
   const fetchData = useCallback(async () => {
     if (!user) return;
 
     setLoadingData(true);
 
     try {
-      const token = await user.getIdToken();
-      if (!token) throw new Error('No authentication token');
-
       // Fetch students
-      const studentsResponse = await fetch(
-        `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/listStudents?limit=100`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const studentsData = await studentAPI.list(user, { limit: 100 });
+      setStudents(studentsData.students || []);
 
-      if (studentsResponse.ok) {
-        const studentsData = await studentsResponse.json();
-        setStudents(studentsData.students || []);
-
-        // Find selected student if editing
-        if (initialData?.studentUID) {
-          const student = studentsData.students.find((s: Student) => s.id === initialData.studentUID);
-          setSelectedStudent(student || null);
-        }
+      // Find selected student if editing
+      if (initialData?.studentUID) {
+        const student = studentsData.students.find((s: Student) => s.id === initialData.studentUID);
+        setSelectedStudent(student || null);
       }
 
       // Fetch teachers (users with teacher role)
-      const usersResponse = await fetch(
-        `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/listUsers?role=teacher`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const usersData = await userAPI.list(user, 'teacher');
+      const teacherUsers = usersData.users?.filter((user: { role: string }) => user.role === 'teacher') || [];
+      setTeachers(teacherUsers);
 
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        const teacherUsers = usersData.users?.filter((user: { role: string }) => user.role === 'teacher') || [];
-        setTeachers(teacherUsers);
-      }
+      // Fetch classes
+      const classesData = await classAPI.list(user);
+      setClasses(classesData.classes || []);
 
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Handle errors gracefully - you might want to show a user-friendly message
     } finally {
       setLoadingData(false);
     }
-  }, [user]);
+  }, [user, initialData?.studentUID]);
 
   useEffect(() => {
     fetchData();
@@ -381,7 +387,7 @@ export function EnrollmentRegistration({
               <option value="">
                 {locale === 'ar-SA' ? 'اختر فصل' : 'Select Class'}
               </option>
-              {validClasses.map(className => (
+              {getClassNamesForYear(formData.academicYear).map((className: string) => (
                 <option key={className} value={className}>{className}</option>
               ))}
             </select>
@@ -488,7 +494,7 @@ export function EnrollmentRegistration({
               <option value="">
                 {locale === 'ar-SA' ? 'لا يوجد / غير محدد' : 'None / Not specified'}
               </option>
-              {validPreviousClasses.map(className => (
+              {getAllClassNames().map((className: string) => (
                 <option key={className} value={className}>{className}</option>
               ))}
             </select>

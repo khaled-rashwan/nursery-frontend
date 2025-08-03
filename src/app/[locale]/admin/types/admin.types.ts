@@ -76,3 +76,70 @@ export interface StudentFormData {
   gender: 'Male' | 'Female';
   parentUID: string;
 }
+
+export interface Class {
+  id: string;
+  className: string;
+  level: string;
+  academicYear: string;
+  teacherUID: string;
+  teacherName?: string;
+  capacity: number;
+  currentEnrollment: number;
+  schedule?: {
+    startTime: string;
+    endTime: string;
+    daysOfWeek: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
+export interface ClassFormData {
+  className: string;
+  level: string;
+  academicYear: string;
+  teacherUID: string;
+  capacity: number;
+  schedule?: {
+    startTime: string;
+    endTime: string;
+    daysOfWeek: string[];
+  };
+}
+
+export interface Enrollment {
+  id: string;
+  studentUID: string;
+  studentName?: string;
+  academicYear: string;
+  class: string;
+  teacherUID: string;
+  teacherName?: string;
+  status: 'enrolled' | 'withdrawn' | 'graduated' | 'pending';
+  enrollmentDate: string;
+  notes?: string;
+  previousClass?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
+export interface EnrollmentFormData {
+  studentUID: string;
+  academicYear: string;
+  class: string;
+  teacherUID: string;
+  status?: 'enrolled' | 'withdrawn' | 'graduated' | 'pending';
+  notes?: string;
+  previousClass?: string;
+}

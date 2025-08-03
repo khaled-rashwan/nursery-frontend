@@ -139,7 +139,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
     } finally {
       setLoading(false);
     }
-  }, [user, searchTerm, genderFilter, currentPage, nextPageInfo]);
+  }, [user, searchTerm, genderFilter, parentFilter, sortBy, sortOrder, studentsPerPage, currentPage, nextPageInfo]);
 
   // Create student
   const handleCreateStudent = async (studentData: StudentFormData) => {
