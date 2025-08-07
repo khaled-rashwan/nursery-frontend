@@ -3,7 +3,8 @@ import {
   UserFormData, 
   StudentFormData, 
   ClassFormData, 
-  EnrollmentFormData 
+  EnrollmentFormData,
+  AttendanceRecord
 } from '../types/admin.types';
 
 // Base configuration for API calls
@@ -196,6 +197,53 @@ export const enrollmentAPI = {
   getByYear: async (user: User, academicYear: string) => {
     return makeAPICall('getEnrollmentsByYear', user, {
       queryParams: { academicYear }
+    });
+  }
+};
+
+// Attendance management API functions
+export const attendanceAPI = {
+  // Save attendance for a specific enrollment and date
+  save: async (user: User, enrollmentId: string, date: string, attendanceRecords: AttendanceRecord[]) => {
+    return makeAPICall('saveAttendance', user, {
+      method: 'POST',
+      body: { enrollmentId, date, attendanceRecords }
+    });
+  },
+
+  // Get attendance records for an enrollment
+  get: async (user: User, enrollmentId: string, options?: { 
+    date?: string; 
+    startDate?: string; 
+    endDate?: string; 
+    limit?: number; 
+  }) => {
+    const queryParams: Record<string, string> = { enrollmentId };
+    if (options?.date) queryParams.date = options.date;
+    if (options?.startDate) queryParams.startDate = options.startDate;
+    if (options?.endDate) queryParams.endDate = options.endDate;
+    if (options?.limit) queryParams.limit = options.limit.toString();
+    
+    return makeAPICall('getAttendance', user, { queryParams });
+  },
+
+  // Get attendance statistics for an enrollment
+  getStats: async (user: User, enrollmentId: string, options?: { 
+    startDate?: string; 
+    endDate?: string; 
+  }) => {
+    const queryParams: Record<string, string> = { enrollmentId };
+    if (options?.startDate) queryParams.startDate = options.startDate;
+    if (options?.endDate) queryParams.endDate = options.endDate;
+    
+    return makeAPICall('getAttendanceStats', user, { queryParams });
+  },
+
+  // Delete attendance record (Admin only)
+  delete: async (user: User, enrollmentId: string, date: string) => {
+    return makeAPICall('deleteAttendance', user, {
+      method: 'POST',
+      body: { enrollmentId, date }
     });
   }
 };

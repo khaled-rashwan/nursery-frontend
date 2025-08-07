@@ -832,7 +832,7 @@ function PrincipalMessageSection({ locale }: { locale: string }) {
                   borderRadius: '20px'
                 }}
               />
-              <div style={{
+              {/* <div style={{
                 position: 'absolute',
                 bottom: '1rem',
                 left: '1rem',
@@ -847,7 +847,7 @@ function PrincipalMessageSection({ locale }: { locale: string }) {
                 boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
               }}>
                 {locale === 'ar-SA' ? 'المديرة العامة' : 'General Manager'}
-              </div>
+              </div> */}
             </div>
           </div>
 

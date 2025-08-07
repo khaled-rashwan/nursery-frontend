@@ -143,3 +143,60 @@ export interface EnrollmentFormData {
   notes?: string;
   previousClass?: string;
 }
+
+// Attendance Management Types
+export interface AttendanceRecord {
+  studentId: string;
+  studentName?: string;
+  status: 'present' | 'absent' | 'late';
+  notes?: string;
+  recordedAt?: string;
+}
+
+export interface AttendanceData {
+  id?: string;
+  date: string;
+  enrollmentId: string;
+  academicYear: string;
+  className: string;
+  teacherUID: string;
+  records: AttendanceRecord[];
+  totalStudents: number;
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
+
+export interface AttendanceStats {
+  enrollmentId: string;
+  totalDays: number;
+  totalPresent: number;
+  totalAbsent: number;
+  totalLate: number;
+  overallAttendanceRate: string;
+  studentStats: StudentAttendanceStats[];
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+}
+
+export interface StudentAttendanceStats {
+  studentId: string;
+  studentName: string;
+  present: number;
+  absent: number;
+  late: number;
+  total: number;
+  attendanceRate: string;
+}
+
+// API Response types
+export interface AttendanceResponse {
+  success: boolean;
+  message: string;
+  data: AttendanceData | AttendanceData[] | AttendanceStats | null;
+}

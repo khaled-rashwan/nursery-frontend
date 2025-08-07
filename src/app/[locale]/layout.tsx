@@ -26,7 +26,8 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
         <Link href={`/${locale}`} className="logo" style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem'
+          gap: '1rem',
+          flexDirection: isRTL ? 'row-reverse' : 'row'
         }}>
           <img 
             src="/logo.png" 
@@ -35,12 +36,67 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
               height: '40px',
               width: 'auto',
               maxWidth: '60px',
-              objectFit: 'contain'
+              objectFit: 'contain',
+              flexShrink: 0
             }}
           />
-          <span>
-            {locale === 'ar-SA' ? 'روضة خطوة المستقبل الأهلية' : 'Future Step Nursery'}
-          </span>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            lineHeight: '1.1',
+            gap: '0.1rem'
+          }}>
+            {locale === 'ar-SA' ? (
+              <>
+                <span style={{ 
+                  color: 'var(--primary-blue-dark)', 
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  روضة
+                </span>
+                <span style={{ 
+                  color: 'var(--primary-blue-dark)', 
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  خطوة المستقبل
+                </span>
+                <span style={{ 
+                  color: 'var(--primary-orange-dark)', 
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  العالمية
+                </span>
+              </>
+            ) : (
+              <>
+                <span style={{ 
+                  color: 'var(--primary-blue-dark)', 
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  Future
+                </span>
+                <span style={{ 
+                  color: 'var(--primary-blue-dark)', 
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  Step
+                </span>
+                <span style={{ 
+                  color: 'var(--primary-orange-dark)', 
+                  fontWeight: '600',
+                  fontSize: '1rem'
+                }}>
+                  Kindergarten
+                </span>
+              </>
+            )}
+          </div>
         </Link>
         
         <nav>
@@ -135,7 +191,7 @@ function Footer({locale}: {locale: string}) {
       </div>
       
       <div className="footer-bottom">
-        <p>{locale === 'ar-SA' ? '© 2025 روضة المستقبل. جميع الحقوق محفوظة.' : '© 2025 Future Nursery. All rights reserved.'}</p>
+        <p>{locale === 'ar-SA' ? '© 2025 روضة المستقبل. جميع الحقوق محفوظة.' : '© 2025 Future Step Kindergarten. All rights reserved.'}</p>
       </div>
     </footer>
   );

@@ -1,13 +1,196 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../../hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { User } from 'firebase/auth';
+import { useAttendance } from './hooks/useAttendance';
+import { AttendanceRecord } from '../admin/types/admin.types';
+import { attendanceUtils } from './services/api';
+
+// API functions for classes
+const API_BASE_URL = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net`;
+
+const makeAPICall = async (
+  endpoint: string,
+  user: User,
+  options: {
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    body?: Record<string, unknown>;
+    queryParams?: Record<string, string>;
+  } = {}
+) => {
+  const { method = 'GET', body, queryParams } = options;
+  
+  const token = await user.getIdToken();
+  if (!token) throw new Error('No authentication token');
+
+  let url = `${API_BASE_URL}/${endpoint}`;
+  
+  if (queryParams && Object.keys(queryParams).length > 0) {
+    const params = new URLSearchParams(queryParams);
+    url += `?${params.toString()}`;
+  }
+
+  const fetchOptions: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  };
+
+  if (body && (method === 'POST' || method === 'PUT')) {
+    fetchOptions.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url, fetchOptions);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    try {
+      const errorData = JSON.parse(errorText);
+      throw new Error(errorData.error || `HTTP ${response.status}: Request failed`);
+    } catch {
+      throw new Error(`HTTP ${response.status}: ${errorText || 'Request failed'}`);
+    }
+  }
+
+  return await response.json();
+};
+
+const classAPI = {
+  list: async (user: User, filters?: { academicYear?: string; level?: string }) => {
+    const queryParams: Record<string, string> = { operation: 'list' };
+    if (filters?.academicYear) queryParams.academicYear = filters.academicYear;
+    if (filters?.level) queryParams.level = filters.level;
+    
+    return makeAPICall('manageClasses', user, { queryParams });
+  }
+};
+
+const enrollmentAPI = {
+  list: async (user: User, filters?: { academicYear?: string; class?: string; teacherUID?: string }) => {
+    const queryParams: Record<string, string> = {};
+    if (filters?.academicYear) queryParams.academicYear = filters.academicYear;
+    if (filters?.class) queryParams.class = filters.class;
+    if (filters?.teacherUID) queryParams.teacherUID = filters.teacherUID;
+    
+    return makeAPICall('listEnrollments', user, { queryParams });
+  }
+};
+
+// Helper function to convert Firestore class to our ClassInfo interface
+const convertFirestoreClassToClassInfo = (firestoreClass: any, enrollments: EnrollmentStudent[] = []): ClassInfo => {
+  // Generate Arabic name based on level and class name
+  const getArabicName = (name: string, level: string) => {
+    const levelMap: Record<string, string> = {
+      'Pre-KG': 'ما قبل الروضة',
+      'KG1': 'الروضة الأولى',
+      'KG2': 'الروضة الثانية'
+    };
+    
+    const levelAr = levelMap[level] || level;
+    const classLetter = name.split('-').pop() || '';
+    return `${levelAr} - ${classLetter}`;
+  };
+
+  // Convert enrollments to Student format for compatibility with existing components
+  const students: Student[] = enrollments
+    .filter(enrollment => enrollment.status === 'enrolled') // Only active enrollments
+    .map((enrollment, index) => ({
+      id: index + 1, // Generate sequential ID for display
+      name: enrollment.studentInfo?.fullName || 'Unknown Student',
+      nameEn: enrollment.studentInfo?.fullName || 'Unknown Student', // Use same for now
+      class: enrollment.class,
+      attendance: 95, // Mock data - would come from attendance system
+      lastReport: new Date(enrollment.updatedAt).toISOString().split('T')[0], // Use enrollment update date
+      parentContact: enrollment.studentInfo?.parentInfo?.email || 'No contact',
+      unreadMessages: 0, // Mock data - would come from messaging system
+      profileImage: getProfileImageByLevel(firestoreClass.level)
+    }));
+
+  return {
+    id: firestoreClass.id,
+    name: firestoreClass.name,
+    nameAr: getArabicName(firestoreClass.name, firestoreClass.level),
+    level: firestoreClass.level,
+    academicYear: firestoreClass.academicYear,
+    teacherUID: firestoreClass.teacherUID,
+    teacherInfo: firestoreClass.teacherInfo,
+    capacity: firestoreClass.capacity,
+    notes: firestoreClass.notes,
+    studentCount: students.length, // Actual count from enrollments
+    students: students // Real students from enrollment data
+  };
+};
+
+// Helper function to get profile image based on level
+const getProfileImageByLevel = (level: string): string => {
+  switch (level) {
+    case 'Pre-KG':
+      return '/prekg.avif';
+    case 'KG1':
+      return '/kg1.png';
+    case 'KG2':
+      return '/kg2.png';
+    default:
+      return '/kg1.png';
+  }
+};
 
 // Teacher Portal Interfaces
 interface ClassInfo {
   id: string;
   name: string;
   nameAr: string;
-  studentCount: number;
+  level: 'Pre-KG' | 'KG1' | 'KG2';
+  academicYear: string;
+  teacherUID: string;
+  teacherInfo: {
+    uid: string;
+    email: string;
+    displayName: string;
+    phoneNumber?: string;
+    role: string;
+  };
+  capacity: number;
+  notes: string;
+  studentCount: number; // Now calculated from real enrollments
+  students: Student[]; // Real students from enrollment data
+}
+
+interface EnrollmentStudent {
+  id: string;
+  studentUID: string;
+  academicYear: string;
+  class: string;
+  teacherUID: string;
+  status: 'enrolled' | 'withdrawn' | 'graduated' | 'pending';
+  notes: string;
+  studentInfo: {
+    uid: string;
+    fullName: string;
+    dateOfBirth: string | null;
+    gender: string;
+    parentUID: string | null;
+    parentInfo: {
+      uid: string;
+      email: string;
+      displayName: string;
+      phoneNumber?: string;
+    } | null;
+  };
+  teacherInfo: {
+    uid: string;
+    email: string;
+    displayName: string;
+    phoneNumber?: string;
+    role: string;
+  };
+  enrollmentDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Student {
@@ -29,14 +212,6 @@ interface TeacherUser {
   subject: string;
   experience: string;
 }
-
-// Mock data for demonstration
-const mockClasses: ClassInfo[] = [
-  { id: 'kg1-a', name: 'KG1-A', nameAr: 'الروضة الأولى - أ', studentCount: 18 },
-  { id: 'kg1-b', name: 'KG1-B', nameAr: 'الروضة الأولى - ب', studentCount: 20 },
-  { id: 'kg2-a', name: 'KG2-A', nameAr: 'الروضة الثانية - أ', studentCount: 16 },
-  { id: 'prekg-a', name: 'Pre-KG-A', nameAr: 'ما قبل الروضة - أ', studentCount: 15 }
-];
 
 const mockStudentsData: { [key: string]: Student[] } = {
   'kg1-a': [
@@ -172,19 +347,29 @@ const mockMessages = [
 ];
 
 // Authentication Component
-function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (user: TeacherUser) => void }) {
-  const [credentials, setCredentials] = useState({ email: '', password: '' });
+function AuthenticationForm({ locale }: { locale: string }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login, error } = useAuth();
+  const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock authentication
-    onLogin({
-      name: locale === 'ar-SA' ? 'المعلمة سارة أحمد' : 'Teacher Sarah Ahmed',
-      email: credentials.email || 'teacher@futurestep.edu',
-      avatar: '👩‍🏫',
-      subject: locale === 'ar-SA' ? 'اللغة العربية والرياضيات' : 'Arabic & Mathematics',
-      experience: locale === 'ar-SA' ? '8 سنوات خبرة' : '8 years experience'
-    });
+    if (!email || !password) return;
+    
+    setLoading(true);
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        // The useAuth hook will handle the state change
+        console.log('Teacher logged in successfully');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -242,8 +427,8 @@ function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (use
             </label>
             <input
               type="email"
-              value={credentials.email}
-              onChange={(e) => setCredentials({...credentials, email: e.target.value})}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               style={{
                 width: '100%',
                 padding: '1rem',
@@ -271,8 +456,8 @@ function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (use
             </label>
             <input
               type="password"
-              value={credentials.password}
-              onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               style={{
                 width: '100%',
                 padding: '1rem',
@@ -290,43 +475,56 @@ function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (use
 
           <button
             type="submit"
+            disabled={loading || !email || !password}
             style={{
               width: '100%',
               padding: '1.5rem',
-              background: 'linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark))',
+              background: loading 
+                ? '#cccccc' 
+                : 'linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark))',
               color: 'white',
               border: 'none',
               borderRadius: '15px',
               fontSize: '1.3rem',
               fontWeight: 'bold',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s ease',
               boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.boxShadow = '0 12px 35px rgba(0,0,0,0.3)';
+              if (!loading) {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 12px 35px rgba(0,0,0,0.3)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.2)';
+              if (!loading) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.2)';
+              }
             }}
           >
-            {locale === 'ar-SA' ? 'تسجيل الدخول' : 'Login'}
+            {loading 
+              ? (locale === 'ar-SA' ? 'جاري تسجيل الدخول...' : 'Logging in...') 
+              : (locale === 'ar-SA' ? 'تسجيل الدخول' : 'Login')
+            }
           </button>
-        </form>
 
-        <div style={{
-          marginTop: '2rem',
-          padding: '1rem',
-          background: 'var(--light-yellow)',
-          borderRadius: '15px',
-          fontSize: '0.9rem',
-          color: '#666'
-        }}>
-          <strong>{locale === 'ar-SA' ? 'للتجربة:' : 'Demo:'}</strong><br />
-          {locale === 'ar-SA' ? 'اضغط تسجيل الدخول مباشرة' : 'Click Login directly to demo'}
-        </div>
+          {error && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              background: '#ffe6e6',
+              border: '1px solid #ff9999',
+              borderRadius: '10px',
+              color: '#d63031',
+              textAlign: 'center',
+              fontSize: '1rem'
+            }}>
+              {error}
+            </div>
+          )}
+        </form>
       </div>
     </div>
   );
@@ -336,13 +534,17 @@ function AuthenticationForm({ locale, onLogin }: { locale: string, onLogin: (use
 function DashboardHeader({ 
   locale, 
   user, 
-  selectedClass, 
+  selectedClass,
+  classes,
+  loadingClasses,
   onClassChange, 
   onLogout 
 }: { 
   locale: string, 
   user: TeacherUser, 
-  selectedClass: string, 
+  selectedClass: string,
+  classes: ClassInfo[],
+  loadingClasses: boolean,
   onClassChange: (classId: string) => void, 
   onLogout: () => void 
 }) {
@@ -410,28 +612,48 @@ function DashboardHeader({
             }}>
               {locale === 'ar-SA' ? 'اختر الصف:' : 'Select Class:'}
             </label>
-            <select
-              value={selectedClass}
-              onChange={(e) => onClassChange(e.target.value)}
-              style={{
-                width: '100%',
+            {loadingClasses ? (
+              <div style={{
                 padding: '0.5rem',
                 fontSize: '1rem',
-                border: 'none',
-                borderRadius: '10px',
-                background: 'white',
-                color: 'var(--primary-blue-dark)',
-                fontWeight: 'bold',
-                outline: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              {mockClasses.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {locale === 'ar-SA' ? cls.nameAr : cls.name} ({cls.studentCount} {locale === 'ar-SA' ? 'طالب' : 'students'})
-                </option>
-              ))}
-            </select>
+                color: 'white',
+                textAlign: 'center'
+              }}>
+                {locale === 'ar-SA' ? 'جاري التحميل...' : 'Loading classes...'}
+              </div>
+            ) : classes.length === 0 ? (
+              <div style={{
+                padding: '0.5rem',
+                fontSize: '1rem',
+                color: 'white',
+                textAlign: 'center'
+              }}>
+                {locale === 'ar-SA' ? 'لا توجد فصول مخصصة' : 'No classes assigned'}
+              </div>
+            ) : (
+              <select
+                value={selectedClass}
+                onChange={(e) => onClassChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  fontSize: '1rem',
+                  border: 'none',
+                  borderRadius: '10px',
+                  background: 'white',
+                  color: 'var(--primary-blue-dark)',
+                  fontWeight: 'bold',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {classes.map((cls: ClassInfo) => (
+                  <option key={cls.id} value={cls.id}>
+                    {locale === 'ar-SA' ? cls.nameAr : cls.name} ({cls.studentCount || 0} {locale === 'ar-SA' ? 'طالب' : 'students'})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div style={{
@@ -445,9 +667,11 @@ function DashboardHeader({
               {locale === 'ar-SA' ? 'الصف الحالي' : 'Current Class'}
             </div>
             <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-              {locale === 'ar-SA' 
-                ? mockClasses.find(c => c.id === selectedClass)?.nameAr 
-                : mockClasses.find(c => c.id === selectedClass)?.name
+              {selectedClass && classes.length > 0
+                ? locale === 'ar-SA' 
+                  ? classes.find((c: ClassInfo) => c.id === selectedClass)?.nameAr 
+                  : classes.find((c: ClassInfo) => c.id === selectedClass)?.name
+                : locale === 'ar-SA' ? 'لا يوجد' : 'None'
               }
             </div>
           </div>
@@ -481,9 +705,9 @@ function DashboardHeader({
 }
 
 // Quick Stats Component
-function QuickStats({ locale, selectedClass }: { locale: string, selectedClass: string }) {
-  const currentStudents = mockStudentsData[selectedClass] || [];
-  const selectedClassInfo = mockClasses.find(c => c.id === selectedClass);
+function QuickStats({ locale, selectedClass, classes }: { locale: string, selectedClass: string, classes: ClassInfo[] }) {
+  const selectedClassInfo = classes.find((c: ClassInfo) => c.id === selectedClass);
+  const currentStudents = selectedClassInfo?.students || [];
   const totalMessages = currentStudents.reduce((sum: number, student: Student) => sum + student.unreadMessages, 0);
   const avgAttendance = currentStudents.length > 0 
     ? Math.round(currentStudents.reduce((sum: number, student: Student) => sum + student.attendance, 0) / currentStudents.length)
@@ -492,7 +716,7 @@ function QuickStats({ locale, selectedClass }: { locale: string, selectedClass: 
   const stats = [
     {
       icon: '👥',
-      value: selectedClassInfo?.studentCount.toString() || '0',
+      value: (selectedClassInfo?.studentCount || 0).toString(),
       label: locale === 'ar-SA' ? 'طالب' : 'Students',
       color: 'var(--primary-blue)'
     },
@@ -569,10 +793,10 @@ function QuickStats({ locale, selectedClass }: { locale: string, selectedClass: 
 }
 
 // Student Roster Component
-function StudentRoster({ locale, selectedClass }: { locale: string, selectedClass: string }) {
+function StudentRoster({ locale, selectedClass, classes }: { locale: string, selectedClass: string, classes: ClassInfo[] }) {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const currentStudents = mockStudentsData[selectedClass] || [];
-  const selectedClassInfo = mockClasses.find(c => c.id === selectedClass);
+  const selectedClassInfo = classes.find((c: ClassInfo) => c.id === selectedClass);
+  const currentStudents = selectedClassInfo?.students || [];
 
   return (
     <div style={{
@@ -913,8 +1137,10 @@ function StudentRoster({ locale, selectedClass }: { locale: string, selectedClas
 }
 
 // Communication Center Component
-function CommunicationCenter({ locale, selectedClass }: { locale: string, selectedClass: string }) {
+function CommunicationCenter({ locale, selectedClass, classes }: { locale: string, selectedClass: string, classes: ClassInfo[] }) {
   const [activeTab, setActiveTab] = useState('messages');
+  const selectedClassInfo = classes.find((c: ClassInfo) => c.id === selectedClass);
+  const currentStudents = selectedClassInfo?.students || [];
 
   return (
     <div style={{
@@ -1215,16 +1441,85 @@ function CommunicationCenter({ locale, selectedClass }: { locale: string, select
 }
 
 // Attendance Management Component
-function AttendanceManagement({ locale, selectedClass }: { locale: string, selectedClass: string }) {
+function AttendanceManagement({ locale, selectedClass, classes, user }: { locale: string, selectedClass: string, classes: ClassInfo[], user: User | null }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendance, setAttendance] = useState<{[key: number]: 'present' | 'absent' | 'late'}>({});
-  const currentStudents = mockStudentsData[selectedClass] || [];
+  const selectedClassInfo = classes.find((c: ClassInfo) => c.id === selectedClass);
+  const currentStudents = selectedClassInfo?.students || [];
+  
+  // Use our new attendance hook
+  const {
+    currentAttendance,
+    loading,
+    saving,
+    error,
+    lastSavedDate,
+    updateStudentAttendance,
+    saveAttendance,
+    loadAttendance,
+    clearCurrentAttendance
+  } = useAttendance(user, locale);
 
+  // Load existing attendance when date or class changes
+  useEffect(() => {
+    if (selectedClass && selectedDate && user && classes.length > 0) {
+      // Get class info to extract academic year
+      const classInfo = classes.find(c => c.id === selectedClass);
+      if (classInfo) {
+        // Use centralized approach with real class data - pass class name, not ID
+        loadAttendance(classInfo.name, classInfo.academicYear, selectedDate);
+      }
+    }
+  }, [selectedClass, selectedDate, user, classes]); // Added classes dependency
+
+  // Handle attendance change for individual students
   const handleAttendanceChange = (studentId: number, status: 'present' | 'absent' | 'late') => {
-    setAttendance(prev => ({
-      ...prev,
-      [studentId]: status
+    updateStudentAttendance(studentId.toString(), status);
+  };
+
+  // Handle save attendance
+  const handleSaveAttendance = async () => {
+    if (!selectedClass || !user || currentStudents.length === 0 || classes.length === 0) {
+      return;
+    }
+
+    // Get class info for academic year
+    const classInfo = classes.find(c => c.id === selectedClass);
+    if (!classInfo) {
+      alert(locale === 'ar-SA' ? 'معلومات الصف غير متوفرة' : 'Class information not available');
+      return;
+    }
+
+    // Convert current attendance state to AttendanceRecord array
+    const attendanceRecords: AttendanceRecord[] = currentStudents.map(student => ({
+      studentId: student.id.toString(),
+      enrollmentId: `${classInfo.academicYear}_${student.id}`, // Use proper enrollment ID format
+      studentName: locale === 'ar-SA' ? student.name : student.nameEn,
+      status: (currentAttendance[student.id.toString()] as 'present' | 'absent' | 'late') || 'absent',
+      notes: ''
     }));
+
+    // Validate that at least some attendance is recorded
+    const hasAttendance = attendanceRecords.some(record => 
+      record.status === 'present' || record.status === 'late' || record.status === 'absent'
+    );
+
+    if (!hasAttendance) {
+      alert(locale === 'ar-SA' 
+        ? 'يرجى تسجيل حضور الطلاب قبل الحفظ'
+        : 'Please record student attendance before saving'
+      );
+      return;
+    }
+
+    // Use centralized approach with real class data - pass class name, not ID
+    const success = await saveAttendance(classInfo.name, classInfo.academicYear, selectedDate, attendanceRecords);
+    
+    if (success) {
+      alert(locale === 'ar-SA' 
+        ? 'تم حفظ الحضور بنجاح!'
+        : 'Attendance saved successfully!'
+      );
+    }
   };
 
   return (
@@ -1269,17 +1564,65 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
           <input
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => {
+              setSelectedDate(e.target.value);
+              clearCurrentAttendance(); // Clear current state when date changes
+            }}
+            max={new Date().toISOString().split('T')[0]} // Prevent future dates
             style={{
               padding: '0.8rem',
               fontSize: '1rem',
               border: '2px solid var(--primary-blue)',
               borderRadius: '15px',
-              outline: 'none'
+              outline: 'none',
+              color: 'var(--primary-blue-dark)'
             }}
           />
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div style={{
+          background: 'var(--primary-red)',
+          color: 'white',
+          padding: '1rem',
+          borderRadius: '10px',
+          marginBottom: '1rem',
+          textAlign: 'center'
+        }}>
+          ❌ {error}
+        </div>
+      )}
+
+      {/* Success Message */}
+      {lastSavedDate === selectedDate && !error && (
+        <div style={{
+          background: 'var(--primary-green)',
+          color: 'white',
+          padding: '1rem',
+          borderRadius: '10px',
+          marginBottom: '1rem',
+          textAlign: 'center'
+        }}>
+          ✅ {locale === 'ar-SA' 
+            ? `تم حفظ الحضور بنجاح للتاريخ ${selectedDate}`
+            : `Attendance saved successfully for ${selectedDate}`
+          }
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div style={{
+          textAlign: 'center',
+          padding: '2rem',
+          color: 'var(--primary-blue)'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+          <p>{locale === 'ar-SA' ? 'جاري تحميل بيانات الحضور...' : 'Loading attendance data...'}</p>
+        </div>
+      )}
 
       {currentStudents.length === 0 ? (
         <div style={{
@@ -1363,8 +1706,8 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
                     key={option.status}
                     onClick={() => handleAttendanceChange(student.id, option.status as 'present' | 'absent' | 'late')}
                     style={{
-                      background: attendance[student.id] === option.status ? option.color : 'white',
-                      color: attendance[student.id] === option.status ? 'white' : option.color,
+                      background: currentAttendance[student.id.toString()] === option.status ? option.color : 'white',
+                      color: currentAttendance[student.id.toString()] === option.status ? 'white' : option.color,
                       border: `2px solid ${option.color}`,
                       padding: '0.8rem 1.2rem',
                       borderRadius: '10px',
@@ -1377,13 +1720,13 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
                       gap: '0.3rem'
                     }}
                     onMouseEnter={(e) => {
-                      if (attendance[student.id] !== option.status) {
+                      if (currentAttendance[student.id.toString()] !== option.status) {
                         e.currentTarget.style.background = option.color;
                         e.currentTarget.style.color = 'white';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (attendance[student.id] !== option.status) {
+                      if (currentAttendance[student.id.toString()] !== option.status) {
                         e.currentTarget.style.background = 'white';
                         e.currentTarget.style.color = option.color;
                       }
@@ -1402,26 +1745,41 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
         marginTop: '2rem',
         textAlign: 'center'
       }}>
-        <button style={{
-          background: 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))',
-          color: 'white',
-          border: 'none',
-          padding: '1.5rem 3rem',
-          borderRadius: '15px',
-          fontSize: '1.2rem',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          transition: 'all 0.3s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-3px)';
-          e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = 'none';
-        }}>
-          💾 {locale === 'ar-SA' ? 'حفظ الحضور' : 'Save Attendance'}
+        <button 
+          onClick={handleSaveAttendance}
+          disabled={saving || currentStudents.length === 0}
+          style={{
+            background: saving 
+              ? '#ccc' 
+              : 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))',
+            color: 'white',
+            border: 'none',
+            padding: '1.5rem 3rem',
+            borderRadius: '15px',
+            fontSize: '1.2rem',
+            fontWeight: 'bold',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s ease',
+            opacity: saving ? 0.7 : 1
+          }}
+          onMouseEnter={(e) => {
+            if (!saving) {
+              e.currentTarget.style.transform = 'translateY(-3px)';
+              e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!saving) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }
+          }}
+        >
+          {saving ? (
+            <>⏳ {locale === 'ar-SA' ? 'جاري الحفظ...' : 'Saving...'}</>
+          ) : (
+            <>💾 {locale === 'ar-SA' ? 'حفظ الحضور' : 'Save Attendance'}</>
+          )}
         </button>
       </div>
     </div>
@@ -1432,8 +1790,11 @@ function AttendanceManagement({ locale, selectedClass }: { locale: string, selec
 export default function TeacherPortalPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
-  const [user, setUser] = useState<TeacherUser | null>(null);
   const [selectedClass, setSelectedClass] = useState('');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const { user, loading, getUserCustomClaims, logout } = useAuth();
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
@@ -1443,18 +1804,94 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
   }, [params]);
 
   useEffect(() => {
+    // Get user role when user is authenticated
+    const checkUserRole = async () => {
+      if (user) {
+        console.log('Teacher Portal: Checking user role for:', user.email);
+        const customClaims = await getUserCustomClaims();
+        console.log('Teacher Portal: Custom claims:', customClaims);
+        const role = customClaims && typeof customClaims === 'object' && 'role' in customClaims 
+          ? (customClaims.role as string) 
+          : null;
+        console.log('Teacher Portal: Extracted role:', role);
+        setUserRole(role);
+      } else {
+        setUserRole(null);
+      }
+    };
+    
+    checkUserRole();
+  }, [user, getUserCustomClaims]);
+
+  // Fetch classes when user is authenticated and has teacher role
+  useEffect(() => {
+    const fetchClassesAndEnrollments = async () => {
+      if (!user || userRole !== 'teacher') return;
+      
+      setLoadingClasses(true);
+      try {
+        // Fetch classes assigned to this teacher
+        const classesResponse = await classAPI.list(user);
+        const firestoreClasses = classesResponse.classes || [];
+        
+        // Filter classes assigned to the current teacher
+        const teacherClasses = firestoreClasses.filter(
+          (cls: any) => cls.teacherUID === user.uid
+        );
+
+        if (teacherClasses.length === 0) {
+          setClasses([]);
+          setLoadingClasses(false);
+          return;
+        }
+
+        // Fetch enrollments for all teacher's classes
+        const enrollmentsResponse = await enrollmentAPI.list(user, {
+          teacherUID: user.uid // This will automatically filter to teacher's classes due to backend security
+        });
+        const enrollments: EnrollmentStudent[] = enrollmentsResponse.enrollments || [];
+
+        // Group enrollments by class
+        const enrollmentsByClass = enrollments.reduce((acc: Record<string, EnrollmentStudent[]>, enrollment) => {
+          if (!acc[enrollment.class]) {
+            acc[enrollment.class] = [];
+          }
+          acc[enrollment.class].push(enrollment);
+          return acc;
+        }, {});
+
+        // Convert classes with their enrollment data
+        const convertedClasses = teacherClasses.map((firestoreClass: any) => {
+          const classEnrollments = enrollmentsByClass[firestoreClass.name] || [];
+          return convertFirestoreClassToClassInfo(firestoreClass, classEnrollments);
+        });
+        
+        setClasses(convertedClasses);
+        
+        // Auto-select first class if none selected
+        if (convertedClasses.length > 0 && !selectedClass) {
+          setSelectedClass(convertedClasses[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching classes and enrollments:', error);
+        setClasses([]);
+      } finally {
+        setLoadingClasses(false);
+      }
+    };
+
+    fetchClassesAndEnrollments();
+  }, [user, userRole, selectedClass]);
+
+  useEffect(() => {
     // Initialize with first available class when user is logged in
-    if (user && mockClasses.length > 0 && !selectedClass) {
-      setSelectedClass(mockClasses[0].id);
+    if (user && classes.length > 0 && !selectedClass) {
+      setSelectedClass(classes[0].id);
     }
-  }, [user, selectedClass]);
+  }, [user, classes, selectedClass]);
 
-  const handleLogin = (userData: TeacherUser) => {
-    setUser(userData);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    await logout();
     setSelectedClass('');
   };
 
@@ -1462,7 +1899,7 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
     setSelectedClass(classId);
   };
 
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -1488,9 +1925,131 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
     );
   }
 
+  // Show login form if user is not authenticated
   if (!user) {
-    return <AuthenticationForm locale={locale} onLogin={handleLogin} />;
+    return <AuthenticationForm locale={locale} />;
   }
+
+  // Wait for role to be loaded before allowing access
+  if (user && userRole === null) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        background: 'linear-gradient(135deg, var(--light-blue), var(--light-orange))'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          color: 'var(--primary-blue-dark)'
+        }}>
+          <div className="loading-spinner" style={{
+            width: '60px',
+            height: '60px',
+            margin: '0 auto 2rem'
+          }}></div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+            {locale === 'ar-SA' ? 'جاري التحقق من الصلاحيات...' : 'Checking permissions...'}
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has teacher role - ONLY teachers can access teacher portal
+  if (userRole !== 'teacher') {
+    console.log('Teacher Portal: Access denied. User role:', userRole, 'Expected: teacher');
+    return (
+      <div style={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, var(--light-blue), var(--light-orange))',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '3rem',
+          borderRadius: '20px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+          textAlign: 'center',
+          maxWidth: '500px'
+        }}>
+          <div style={{ fontSize: '4rem', marginBottom: '2rem' }}>🚫</div>
+          <h2 style={{ 
+            fontSize: '2rem', 
+            fontWeight: 'bold',
+            color: 'var(--primary-blue-dark)',
+            marginBottom: '1rem'
+          }}>
+            {locale === 'ar-SA' ? 'وصول مرفوض' : 'Access Denied'}
+          </h2>
+          <p style={{ 
+            fontSize: '1.2rem', 
+            color: '#666',
+            marginBottom: '2rem'
+          }}>
+            {locale === 'ar-SA' 
+              ? 'هذا القسم مخصص للمعلمين فقط. المدراء لديهم بوابة منفصلة في قسم الإدارة.'
+              : 'This portal is exclusively for teachers. Administrators have a separate admin portal.'
+            }
+            <br />
+            <small style={{ color: '#999' }}>
+              {locale === 'ar-SA' 
+                ? `دورك الحالي: ${userRole || 'غير محدد'}`
+                : `Your current role: ${userRole || 'undefined'}`
+              }
+            </small>
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark))',
+                color: 'white',
+                border: 'none',
+                padding: '1rem 2rem',
+                borderRadius: '10px',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              {locale === 'ar-SA' ? 'تسجيل الخروج' : 'Logout'}
+            </button>
+            
+            {(userRole === 'admin' || userRole === 'superadmin') && (
+              <button
+                onClick={() => window.location.href = `/${locale}/admin`}
+                style={{
+                  background: 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))',
+                  color: 'white',
+                  border: 'none',
+                  padding: '1rem 2rem',
+                  borderRadius: '10px',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                {locale === 'ar-SA' ? 'الذهاب للوحة الإدارة' : 'Go to Admin Portal'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Create teacher user object from Firebase user
+  const teacherUser: TeacherUser = {
+    name: user.displayName || user.email?.split('@')[0] || 'Teacher',
+    email: user.email || '',
+    avatar: '👩‍🏫',
+    subject: locale === 'ar-SA' ? 'المواد الدراسية' : 'Academic Subjects',
+    experience: locale === 'ar-SA' ? 'معلم متمرس' : 'Experienced Teacher'
+  };
 
   return (
     <div style={{ 
@@ -1500,8 +2059,10 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
     }}>
       <DashboardHeader 
         locale={locale} 
-        user={user} 
+        user={teacherUser} 
         selectedClass={selectedClass}
+        classes={classes}
+        loadingClasses={loadingClasses}
         onClassChange={handleClassChange}
         onLogout={handleLogout} 
       />
@@ -1511,10 +2072,10 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
         margin: '0 auto',
         padding: '0 2rem'
       }}>
-        <QuickStats locale={locale} selectedClass={selectedClass} />
-        <StudentRoster locale={locale} selectedClass={selectedClass} />
-        <AttendanceManagement locale={locale} selectedClass={selectedClass} />
-        <CommunicationCenter locale={locale} selectedClass={selectedClass} />
+        <QuickStats locale={locale} selectedClass={selectedClass} classes={classes} />
+        <StudentRoster locale={locale} selectedClass={selectedClass} classes={classes} />
+        <AttendanceManagement locale={locale} selectedClass={selectedClass} classes={classes} user={user} />
+        <CommunicationCenter locale={locale} selectedClass={selectedClass} classes={classes} />
       </div>
     </div>
   );
