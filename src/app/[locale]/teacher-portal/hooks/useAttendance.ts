@@ -26,7 +26,7 @@ interface UseAttendanceActions {
   updateStudentAttendance: (studentId: string, status: string) => void;
   clearCurrentAttendance: () => void;
   setCurrentAttendanceFromRecords: (records: AttendanceRecord[]) => void;
-  getAttendanceStats: (classId: string, academicYear: string, startDate?: string, endDate?: string) => Promise<AttendanceStats | null>;
+  getAttendanceStats: () => Promise<AttendanceStats | null>;
 }
 
 export interface UseAttendanceReturn extends UseAttendanceState, UseAttendanceActions {}
@@ -206,12 +206,7 @@ export const useAttendance = (user: User | null, locale: string = 'en-US'): UseA
   }, [updateState]);
 
   // Get attendance statistics (to be implemented with centralized approach)
-  const getAttendanceStats = useCallback(async (
-    classId: string,
-    academicYear: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<AttendanceStats | null> => {
+  const getAttendanceStats = useCallback(async (): Promise<AttendanceStats | null> => {
     if (!user) {
       updateState({ error: 'User not authenticated' });
       return null;
@@ -235,7 +230,7 @@ export const useAttendance = (user: User | null, locale: string = 'en-US'): UseA
       console.error('Error loading attendance stats:', error);
       return null;
     }
-  }, [user, locale]);
+  }, [user, locale, updateState]);
 
   return {
     // State

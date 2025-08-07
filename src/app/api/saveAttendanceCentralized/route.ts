@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       let errorData;
       try {
         errorData = JSON.parse(errorText);
-      } catch (e) {
+      } catch {
         errorData = { error: errorText };
       }
       return NextResponse.json({ error: errorData.error || 'Failed to save attendance' }, { status: response.status });

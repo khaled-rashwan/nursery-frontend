@@ -5,12 +5,9 @@ import {
   getDocs, 
   getDoc, 
   setDoc, 
-  deleteDoc, 
   query, 
   where, 
-  orderBy, 
-  serverTimestamp,
-  writeBatch 
+  orderBy
 } from 'firebase/firestore';
 import { db } from '../../../../firebase';
 import { 
@@ -19,6 +16,11 @@ import {
   AttendanceStats,
   AttendanceResponse 
 } from '../../admin/types/admin.types';
+
+// Custom error type for Firebase errors
+interface FirebaseError extends Error {
+  code?: string;
+}
 
 // Direct Firestore operations for teacher attendance management
 export const teacherAttendanceAPI = {
@@ -191,7 +193,7 @@ export const teacherAttendanceAPI = {
       console.error('❌ Error saving attendance:', error);
       
       // Provide specific error messages for common issues
-      const firebaseError = error as any;
+      const firebaseError = error as FirebaseError;
       if (firebaseError?.code === 'permission-denied') {
         return {
           success: false,

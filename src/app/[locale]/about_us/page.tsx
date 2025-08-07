@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 export default function AboutUsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -152,13 +153,12 @@ export default function AboutUsPage({ params }: { params: Promise<{ locale: stri
           justifyContent: 'center',
           alignItems: 'center'
         }}>
-          <img 
+          <Image
             src="/logo.png" 
             alt="Future Step Nursery Logo"
+            width={200}
+            height={120}
             style={{
-              height: '120px',
-              width: 'auto',
-              maxWidth: '200px',
               objectFit: 'contain',
               filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.1))'
             }}

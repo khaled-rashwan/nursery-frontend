@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Educational Philosophy Section
 function EducationalPhilosophySection({ locale }: { locale: string }) {
@@ -266,9 +267,11 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'rotate(-3deg) scale(1)';
             }}>
-              <img 
+              <Image
                 src={program.image} 
                 alt={program.title}
+                width={450}
+                height={450}
                 style={{
                   width: '100%',
                   height: 'auto',

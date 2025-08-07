@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Hero Section Component with Image
 function HeroSection({ locale }: { locale: string }) {
@@ -211,9 +212,11 @@ function HeroSection({ locale }: { locale: string }) {
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'rotate(3deg) scale(1)';
           }}>
-            <img 
+            <Image
               src="/her-image.png" 
               alt={locale === 'ar-SA' ? 'صورة روضة خطوة المستقبل' : 'Future Step Nursery Hero Image'}
+              width={500}
+              height={500}
               style={{
                 width: '100%',
                 height: 'auto',
@@ -407,12 +410,12 @@ function AcademicProgramSection({ locale }: { locale: string }) {
                   boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
                   animation: `bounce 2s infinite ${index * 0.5}s`
                 }}>
-                  <img 
+                  <Image
                     src={program.image} 
                     alt={`${program.title} ${program.age}`}
+                    width={65}
+                    height={65}
                     style={{
-                      width: '65px',
-                      height: '65px',
                       objectFit: 'contain'
                     }}
                   />
@@ -821,9 +824,11 @@ function PrincipalMessageSection({ locale }: { locale: string }) {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'rotate(-2deg) scale(1)';
             }}>
-              <img 
+              <Image
                 src="/principal-image.png" 
                 alt={locale === 'ar-SA' ? 'صورة المديرة العامة' : 'Principal Image'}
+                width={400}
+                height={400}
                 style={{
                   width: '100%',
                   height: 'auto',
@@ -1094,9 +1099,11 @@ function CTASection({ locale }: { locale: string }) {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'rotate(-3deg) scale(1)';
             }}>
-              <img 
+              <Image
                 src="/portal-image.png" 
                 alt={locale === 'ar-SA' ? 'صورة بوابة أولياء الأمور' : 'Parent Portal Image'}
+                width={450}
+                height={450}
                 style={{
                   width: '100%',
                   height: 'auto',

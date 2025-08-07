@@ -7,6 +7,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import FirebaseLogoutButton from "../../components/FirebaseLogoutButton";
 import Link from 'next/link';
+import Image from 'next/image';
 import '../globals.css';
 
 const geistSans = Geist({
@@ -29,13 +30,12 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
           gap: '1rem',
           flexDirection: isRTL ? 'row-reverse' : 'row'
         }}>
-          <img 
+          <Image
             src="/logo.png" 
             alt="Future Step Nursery Logo"
+            width={60}
+            height={40}
             style={{
-              height: '40px',
-              width: 'auto',
-              maxWidth: '60px',
               objectFit: 'contain',
               flexShrink: 0
             }}

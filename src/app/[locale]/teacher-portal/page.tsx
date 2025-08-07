@@ -2,11 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import { useRouter } from 'next/navigation';
 import { User } from 'firebase/auth';
 import { useAttendance } from './hooks/useAttendance';
 import { AttendanceRecord } from '../admin/types/admin.types';
-import { attendanceUtils } from './services/api';
 
 // API functions for classes
 const API_BASE_URL = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net`;
@@ -81,7 +79,7 @@ const enrollmentAPI = {
 };
 
 // Helper function to convert Firestore class to our ClassInfo interface
-const convertFirestoreClassToClassInfo = (firestoreClass: any, enrollments: EnrollmentStudent[] = []): ClassInfo => {
+const convertFirestoreClassToClassInfo = (firestoreClass: FirestoreClass, enrollments: EnrollmentStudent[] = []): ClassInfo => {
   // Generate Arabic name based on level and class name
   const getArabicName = (name: string, level: string) => {
     const levelMap: Record<string, string> = {
@@ -114,7 +112,7 @@ const convertFirestoreClassToClassInfo = (firestoreClass: any, enrollments: Enro
     id: firestoreClass.id,
     name: firestoreClass.name,
     nameAr: getArabicName(firestoreClass.name, firestoreClass.level),
-    level: firestoreClass.level,
+    level: firestoreClass.level as 'Pre-KG' | 'KG1' | 'KG2',
     academicYear: firestoreClass.academicYear,
     teacherUID: firestoreClass.teacherUID,
     teacherInfo: firestoreClass.teacherInfo,
@@ -140,6 +138,23 @@ const getProfileImageByLevel = (level: string): string => {
 };
 
 // Teacher Portal Interfaces
+interface FirestoreClass {
+  id: string;
+  name: string;
+  level: string;
+  academicYear: string;
+  teacherUID: string;
+  teacherInfo: {
+    uid: string;
+    email: string;
+    displayName: string;
+    phoneNumber?: string;
+    role: string;
+  };
+  capacity: number;
+  notes: string;
+}
+
 interface ClassInfo {
   id: string;
   name: string;
@@ -352,7 +367,6 @@ function AuthenticationForm({ locale }: { locale: string }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, error } = useAuth();
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1137,10 +1151,8 @@ function StudentRoster({ locale, selectedClass, classes }: { locale: string, sel
 }
 
 // Communication Center Component
-function CommunicationCenter({ locale, selectedClass, classes }: { locale: string, selectedClass: string, classes: ClassInfo[] }) {
+function CommunicationCenter({ locale, selectedClass }: { locale: string, selectedClass: string }) {
   const [activeTab, setActiveTab] = useState('messages');
-  const selectedClassInfo = classes.find((c: ClassInfo) => c.id === selectedClass);
-  const currentStudents = selectedClassInfo?.students || [];
 
   return (
     <div style={{
@@ -1469,7 +1481,7 @@ function AttendanceManagement({ locale, selectedClass, classes, user }: { locale
         loadAttendance(classInfo.name, classInfo.academicYear, selectedDate);
       }
     }
-  }, [selectedClass, selectedDate, user, classes]); // Added classes dependency
+  }, [selectedClass, selectedDate, user, classes, loadAttendance]); // Added classes dependency
 
   // Handle attendance change for individual students
   const handleAttendanceChange = (studentId: number, status: 'present' | 'absent' | 'late') => {
@@ -1836,7 +1848,7 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
         
         // Filter classes assigned to the current teacher
         const teacherClasses = firestoreClasses.filter(
-          (cls: any) => cls.teacherUID === user.uid
+          (cls: FirestoreClass) => cls.teacherUID === user.uid
         );
 
         if (teacherClasses.length === 0) {
@@ -1861,7 +1873,7 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
         }, {});
 
         // Convert classes with their enrollment data
-        const convertedClasses = teacherClasses.map((firestoreClass: any) => {
+        const convertedClasses = teacherClasses.map((firestoreClass: FirestoreClass) => {
           const classEnrollments = enrollmentsByClass[firestoreClass.name] || [];
           return convertFirestoreClassToClassInfo(firestoreClass, classEnrollments);
         });
@@ -2075,7 +2087,7 @@ export default function TeacherPortalPage({ params }: { params: Promise<{ locale
         <QuickStats locale={locale} selectedClass={selectedClass} classes={classes} />
         <StudentRoster locale={locale} selectedClass={selectedClass} classes={classes} />
         <AttendanceManagement locale={locale} selectedClass={selectedClass} classes={classes} user={user} />
-        <CommunicationCenter locale={locale} selectedClass={selectedClass} classes={classes} />
+        <CommunicationCenter locale={locale} selectedClass={selectedClass} />
       </div>
     </div>
   );
