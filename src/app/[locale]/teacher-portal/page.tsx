@@ -98,7 +98,6 @@ const convertFirestoreClassToClassInfo = (firestoreClass: FirestoreClass, enroll
     .filter(enrollment => enrollment.status === 'enrolled' && enrollment.studentInfo?.uid) // Only active enrollments with student UID
     .map((enrollment) => ({
       id: enrollment.studentInfo!.uid, // Use unique student UID
-      enrollmentId: enrollment.id, // Store the enrollment ID
       name: enrollment.studentInfo!.fullName || 'Unknown Student',
       nameEn: enrollment.studentInfo!.fullName || 'Unknown Student', // Use same for now
       class: enrollment.class,
@@ -211,7 +210,6 @@ interface EnrollmentStudent {
 
 interface Student {
   id: string; // Changed to hold student UID
-  enrollmentId: string; // Added to hold the enrollment document ID
   name: string;
   nameEn: string;
   class: string;
@@ -1505,8 +1503,8 @@ function AttendanceManagement({ locale, selectedClass, classes, user }: { locale
 
     // Convert current attendance state to AttendanceRecord array
     const attendanceRecords: AttendanceRecord[] = currentStudents.map(student => ({
-      studentId: student.id, // This is now the student UID
-      enrollmentId: student.enrollmentId, // This is now the correct enrollment ID
+      studentId: student.id, // This is the student UID
+      enrollmentId: `${classInfo.academicYear}_${student.id}`, // Construct enrollmentId as academicYear_studentUID
       studentName: locale === 'ar-SA' ? student.name : student.nameEn,
       status: (currentAttendance[student.id] as 'present' | 'absent' | 'late') || 'absent',
       notes: ''
