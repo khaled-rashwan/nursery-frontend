@@ -29,26 +29,6 @@ interface Child {
   parentUID?: string;
 }
 
-interface AttendanceRecord {
-  date: string;
-  status: 'present' | 'absent' | 'late';
-  emoji?: string; // made optional for backward compatibility; new data won't include it
-}
-
-interface HomeworkItem {
-  subject: string;
-  task: string;
-  dueDate: string;
-  status: 'pending' | 'completed';
-}
-
-interface NotificationItem {
-  id: number;
-  type: string;
-  message: string;
-  date: string;
-  read: boolean;
-}
 
 // Access Denied Component
 function AccessDenied({ locale, onLogout, currentRole }: { 
@@ -686,13 +666,13 @@ function SessionMonitor({
 
 // Dashboard Component
 // Child Selector Component
-function ChildSelector({ selectedChildId, onChildChange, locale, children }: { 
+function ChildSelector({ selectedChildId, onChildChange, locale, childList }: {
   selectedChildId: string; 
   onChildChange: (childId: string) => void; 
   locale: string;
-  children: Child[];
+  childList: Child[];
 }) {
-  const selectedChild = children.find(child => child.id === selectedChildId);
+  const selectedChild = childList.find(child => child.id === selectedChildId);
 
   return (
     <div style={{
@@ -754,7 +734,7 @@ function ChildSelector({ selectedChildId, onChildChange, locale, children }: {
           gap: '0.5rem',
           flexWrap: 'wrap'
         }}>
-          {children.map((child) => (
+          {childList.map((child) => (
             <button
               key={child.id}
               onClick={() => onChildChange(child.id)}
@@ -810,7 +790,6 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
   const [attendanceMap, setAttendanceMap] = useState<Record<string, StudentAttendanceHistoryResponse>>({});
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const { user } = useAuth();
-  const [childrenError, setChildrenError] = useState<string | null>(null);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
 
   // Fetch children from backend (Step 1 integration)
@@ -819,7 +798,6 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     async function loadChildren() {
       if (!user) return;
       setLoadingChildren(true);
-      setChildrenError(null);
       try {
         const token = await user.getIdToken();
         const fetched: ChildEnriched[] = await fetchChildrenService(token, user.uid);
@@ -838,10 +816,9 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
         if (mapped.length > 0) {
           setSelectedChildId(prev => prev || mapped[0].id);
         }
-      } catch (e:any) {
+      } catch (e:unknown) {
         if (!cancelled) {
           console.error('Failed to load children', e);
-          setChildrenError(e.message || 'Failed to load children');
           setChildren([]);
         }
       } finally {
@@ -868,10 +845,14 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
           // Update child attendanceRate
           setChildren(prev => prev.map(ch => ch.id === selectedChildId ? { ...ch, attendanceRate: data.stats.attendanceRate } : ch));
         }
-      } catch (e:any) {
+      } catch (e:unknown) {
         if (!cancelled) {
           console.error('Failed to load attendance', e);
+          if (e instanceof Error) {
             setAttendanceError(e.message || 'Failed to load attendance');
+          } else {
+            setAttendanceError('An unknown error occurred while fetching attendance.');
+          }
         }
       } finally {
         if (!cancelled) setLoadingAttendance(false);
@@ -1028,7 +1009,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                 setSelectedChildId(id);
               }}
               locale={locale}
-              children={children}
+              childList={children}
             />
             {activeTab === 'overview' && (
               <div style={{ maxWidth: '1200px', margin: '0 auto' }}>

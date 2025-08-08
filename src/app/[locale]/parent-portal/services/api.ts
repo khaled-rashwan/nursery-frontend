@@ -70,7 +70,15 @@ export async function fetchChildren(token: string, parentUID: string): Promise<C
     throw new Error(`Failed to fetch children (${res.status}) ${text}`);
   }
   const data = await res.json();
-  const children = (data.children || []) as any[];
+  interface RawChild {
+    id: string;
+    fullName?: string;
+    name?: string;
+    dateOfBirth?: string;
+    parentUID?: string;
+    gender?: string;
+  }
+  const children = (data.children || []) as RawChild[];
   return children.map(c => ({
     id: c.id,
     name: c.fullName || c.name || c.id,
