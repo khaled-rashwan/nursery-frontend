@@ -8,29 +8,31 @@ import { UserRole, getRoleName } from '../../../utils/rolePermissions';
 import { 
   logSecurityEvent 
 } from '../../../utils/parentPortalSecurity';
+import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, ChildEnriched, StudentAttendanceHistoryResponse } from './services/api';
 
-// Mock data for demonstration - Updated to support multiple children
+// Child interface - updated to match Firestore data
 interface Child {
   id: string;
   name: string;
   nameEn: string;
-  class: string;
-  classEn: string;
-  photo: string;
-  attendance: number;
-  fees: {
+  class?: string;
+  classEn?: string;
+  photo?: string;
+  attendanceRate?: string; // derived from attendance stats
+  fees?: {
     total: number;
     paid: number;
     remaining: number;
   };
-  birthDate: string;
-  age: string;
+  birthDate?: string;
+  age?: string;
+  parentUID?: string;
 }
 
 interface AttendanceRecord {
   date: string;
   status: 'present' | 'absent' | 'late';
-  emoji: string;
+  emoji?: string; // made optional for backward compatibility; new data won't include it
 }
 
 interface HomeworkItem {
@@ -47,118 +49,6 @@ interface NotificationItem {
   date: string;
   read: boolean;
 }
-
-const mockChildren: Child[] = [
-  {
-    id: 'ST2025001',
-    name: 'أحمد محمد',
-    nameEn: 'Ahmed Mohammed',
-    class: 'الروضة الأولى',
-    classEn: 'KG1-A',
-    photo: '👦',
-    attendance: 95,
-    fees: {
-      total: 12000,
-      paid: 8000,
-      remaining: 4000
-    },
-    birthDate: '2020-05-15',
-    age: '4 years old'
-  },
-  {
-    id: 'ST2025002',
-    name: 'فاطمة محمد',
-    nameEn: 'Fatima Mohammed',
-    class: 'ما قبل الروضة',
-    classEn: 'Pre-KG',
-    photo: '👧',
-    attendance: 88,
-    fees: {
-      total: 10000,
-      paid: 10000,
-      remaining: 0
-    },
-    birthDate: '2021-08-22',
-    age: '3 years old'
-  },
-  {
-    id: 'ST2025003',
-    name: 'يوسف محمد',
-    nameEn: 'Youssef Mohammed',
-    class: 'الروضة الثانية',
-    classEn: 'KG2-B',
-    photo: '�',
-    attendance: 92,
-    fees: {
-      total: 15000,
-      paid: 12000,
-      remaining: 3000
-    },
-    birthDate: '2019-12-10',
-    age: '5 years old'
-  }
-];
-
-// Mock attendance data per child
-const mockAttendanceData: { [key: string]: AttendanceRecord[] } = {
-  'ST2025001': [
-    { date: '2025-01-15', status: 'present', emoji: '✅' },
-    { date: '2025-01-14', status: 'present', emoji: '✅' },
-    { date: '2025-01-13', status: 'absent', emoji: '❌' },
-    { date: '2025-01-12', status: 'present', emoji: '✅' },
-    { date: '2025-01-11', status: 'present', emoji: '✅' },
-  ],
-  'ST2025002': [
-    { date: '2025-01-15', status: 'present', emoji: '✅' },
-    { date: '2025-01-14', status: 'late', emoji: '⏰' },
-    { date: '2025-01-13', status: 'present', emoji: '✅' },
-    { date: '2025-01-12', status: 'absent', emoji: '❌' },
-    { date: '2025-01-11', status: 'present', emoji: '✅' },
-  ],
-  'ST2025003': [
-    { date: '2025-01-15', status: 'present', emoji: '✅' },
-    { date: '2025-01-14', status: 'present', emoji: '✅' },
-    { date: '2025-01-13', status: 'present', emoji: '✅' },
-    { date: '2025-01-12', status: 'present', emoji: '✅' },
-    { date: '2025-01-11', status: 'late', emoji: '⏰' },
-  ]
-};
-
-// Mock homework data per child
-const mockHomeworkData: { [key: string]: HomeworkItem[] } = {
-  'ST2025001': [
-    { subject: 'الرياضيات / Math', task: 'Complete worksheet pages 12-15', dueDate: '2025-01-20', status: 'pending' },
-    { subject: 'العربية / Arabic', task: 'Read story and answer questions', dueDate: '2025-01-18', status: 'completed' },
-    { subject: 'الإنجليزية / English', task: 'Practice spelling words', dueDate: '2025-01-22', status: 'pending' },
-  ],
-  'ST2025002': [
-    { subject: 'الأنشطة / Activities', task: 'Color the shapes worksheet', dueDate: '2025-01-19', status: 'completed' },
-    { subject: 'اللعب التعليمي / Educational Play', task: 'Practice counting 1-10', dueDate: '2025-01-21', status: 'pending' },
-  ],
-  'ST2025003': [
-    { subject: 'الرياضيات / Math', task: 'Addition problems 1-20', dueDate: '2025-01-20', status: 'pending' },
-    { subject: 'العلوم / Science', task: 'Plant observation journal', dueDate: '2025-01-23', status: 'pending' },
-    { subject: 'القراءة / Reading', task: 'Read 3 short stories', dueDate: '2025-01-18', status: 'completed' },
-  ]
-};
-
-// Mock notifications per child
-const mockNotificationsData: { [key: string]: NotificationItem[] } = {
-  'ST2025001': [
-    { id: 1, type: 'homework', message: 'New homework assigned in Math', date: '2025-01-15', read: false },
-    { id: 2, type: 'announcement', message: 'School holiday on January 25th', date: '2025-01-14', read: true },
-    { id: 3, type: 'fee', message: 'Fee payment reminder', date: '2025-01-13', read: false },
-  ],
-  'ST2025002': [
-    { id: 4, type: 'activity', message: 'Art class tomorrow - bring apron', date: '2025-01-15', read: false },
-    { id: 5, type: 'health', message: 'Health checkup scheduled next week', date: '2025-01-14', read: true },
-  ],
-  'ST2025003': [
-    { id: 6, type: 'academic', message: 'Excellent progress in reading!', date: '2025-01-15', read: false },
-    { id: 7, type: 'event', message: 'Science fair next month', date: '2025-01-13', read: false },
-    { id: 8, type: 'fee', message: 'Monthly fee due soon', date: '2025-01-12', read: true },
-  ]
-};
 
 // Access Denied Component
 function AccessDenied({ locale, onLogout, currentRole }: { 
@@ -796,12 +686,13 @@ function SessionMonitor({
 
 // Dashboard Component
 // Child Selector Component
-function ChildSelector({ selectedChildId, onChildChange, locale }: { 
+function ChildSelector({ selectedChildId, onChildChange, locale, children }: { 
   selectedChildId: string; 
   onChildChange: (childId: string) => void; 
   locale: string;
+  children: Child[];
 }) {
-  const selectedChild = mockChildren.find(child => child.id === selectedChildId);
+  const selectedChild = children.find(child => child.id === selectedChildId);
 
   return (
     <div style={{
@@ -863,7 +754,7 @@ function ChildSelector({ selectedChildId, onChildChange, locale }: {
           gap: '0.5rem',
           flexWrap: 'wrap'
         }}>
-          {mockChildren.map((child) => (
+          {children.map((child) => (
             <button
               key={child.id}
               onClick={() => onChildChange(child.id)}
@@ -900,7 +791,7 @@ function ChildSelector({ selectedChildId, onChildChange, locale }: {
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              <span style={{ fontSize: '1.5rem' }}>{child.photo}</span>
+              <span style={{ fontSize: '1.5rem' }}>{child.photo || '👧'}</span>
               <span>{locale === 'ar-SA' ? child.name : child.nameEn}</span>
             </button>
           ))}
@@ -912,14 +803,90 @@ function ChildSelector({ selectedChildId, onChildChange, locale }: {
 
 function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string }) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedMonth, setSelectedMonth] = useState('2025-01');
-  const [selectedChildId, setSelectedChildId] = useState(mockChildren[0]?.id || '');
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0,7));
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState('');
+  const [loadingChildren, setLoadingChildren] = useState(true);
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, StudentAttendanceHistoryResponse>>({});
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const { user } = useAuth();
+  const [childrenError, setChildrenError] = useState<string | null>(null);
+  const [attendanceError, setAttendanceError] = useState<string | null>(null);
+
+  // Fetch children from backend (Step 1 integration)
+  useEffect(() => {
+    let cancelled = false;
+    async function loadChildren() {
+      if (!user) return;
+      setLoadingChildren(true);
+      setChildrenError(null);
+      try {
+        const token = await user.getIdToken();
+        const fetched: ChildEnriched[] = await fetchChildrenService(token, user.uid);
+        if (cancelled) return;
+        // Map to Child shape (class info to be added later when enrollment endpoints used)
+        const mapped: Child[] = fetched.map(c => ({
+          id: c.id,
+          name: c.name,
+          nameEn: c.nameEn,
+          birthDate: c.birthDate,
+          age: c.age ? `${c.age} ${locale === 'ar-SA' ? 'سنة' : 'yrs'}` : undefined,
+          parentUID: c.parentUID,
+          photo: c.photo
+        }));
+        setChildren(mapped);
+        if (mapped.length > 0) {
+          setSelectedChildId(prev => prev || mapped[0].id);
+        }
+      } catch (e:any) {
+        if (!cancelled) {
+          console.error('Failed to load children', e);
+          setChildrenError(e.message || 'Failed to load children');
+          setChildren([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingChildren(false);
+      }
+    }
+    loadChildren();
+    return () => { cancelled = true; };
+  }, [user, locale]);
+
+  // Fetch attendance for selected child
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAttendance() {
+      if (!user || !selectedChildId || attendanceMap[selectedChildId]) return; // already loaded
+      setLoadingAttendance(true);
+      setAttendanceError(null);
+      try {
+        const token = await user.getIdToken();
+        const data = await fetchStudentAttendanceHistory(token, selectedChildId);
+        if (cancelled) return;
+        if (data) {
+          setAttendanceMap(prev => ({ ...prev, [selectedChildId]: data }));
+          // Update child attendanceRate
+          setChildren(prev => prev.map(ch => ch.id === selectedChildId ? { ...ch, attendanceRate: data.stats.attendanceRate } : ch));
+        }
+      } catch (e:any) {
+        if (!cancelled) {
+          console.error('Failed to load attendance', e);
+            setAttendanceError(e.message || 'Failed to load attendance');
+        }
+      } finally {
+        if (!cancelled) setLoadingAttendance(false);
+      }
+    }
+    loadAttendance();
+    return () => { cancelled = true; };
+  }, [user, selectedChildId, attendanceMap]);
 
   // Get current child data
-  const currentChild = mockChildren.find(child => child.id === selectedChildId) || mockChildren[0];
-  const currentAttendance = mockAttendanceData[selectedChildId] || [];
-  const currentHomework = mockHomeworkData[selectedChildId] || [];
-  const currentNotifications = mockNotificationsData[selectedChildId] || [];
+  const currentChild = children.find(child => child.id === selectedChildId) || children[0];
+  const attendanceHistory = currentChild ? attendanceMap[currentChild.id] : undefined;
+  // Filter attendance records by selected month (YYYY-MM)
+  const currentAttendance = attendanceHistory ? attendanceHistory.records.filter(r => r.date.startsWith(selectedMonth)) : [];
+  const attendanceRateDisplay = currentChild?.attendanceRate || (attendanceHistory?.stats.attendanceRate ? attendanceHistory.stats.attendanceRate : '--');
 
   const tabs = [
     { id: 'overview', icon: '📊', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview' },
@@ -1032,514 +999,496 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
 
       {/* Main Content */}
       <div style={{ padding: '2rem' }}>
-        {/* Child Selector */}
-        <ChildSelector 
-          selectedChildId={selectedChildId}
-          onChildChange={setSelectedChildId}
-          locale={locale}
-        />
-
-        {activeTab === 'overview' && (
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: '2.5rem',
-              color: 'var(--primary-purple)',
-              textAlign: 'center',
-              marginBottom: '2rem',
-              textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              📊 {locale === 'ar-SA' ? 'نظرة عامة' : 'Dashboard Overview'}
-            </h2>
-
-            {/* Student Info Card */}
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: 'var(--border-radius)',
-              boxShadow: 'var(--shadow)',
-              marginBottom: '2rem',
-              border: '4px solid var(--primary-blue)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '2rem',
-                flexWrap: 'wrap'
-              }}>
-                <div style={{
-                  fontSize: '5rem',
-                  background: 'var(--light-blue)',
-                  borderRadius: '50%',
-                  width: '120px',
-                  height: '120px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {currentChild.photo}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{
-                    fontSize: '2rem',
-                    color: 'var(--primary-purple)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    {locale === 'ar-SA' ? currentChild.name : currentChild.nameEn}
-                  </h3>
-                  <p style={{
-                    fontSize: '1.3rem',
-                    color: 'var(--primary-blue)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    📚 {locale === 'ar-SA' ? currentChild.class : currentChild.classEn}
-                  </p>
-                  <p style={{
-                    fontSize: '1.1rem',
-                    color: '#666',
-                    marginBottom: '0.5rem'
-                  }}>
-                    🆔 {locale === 'ar-SA' ? 'رقم الطالب:' : 'Student ID:'} {currentChild.id}
-                  </p>
-                  <p style={{
-                    fontSize: '1.1rem',
-                    color: '#666'
-                  }}>
-                    🎂 {locale === 'ar-SA' ? 'العمر:' : 'Age:'} {currentChild.age}
-                  </p>
-                </div>
-                <div style={{
+        {/* Show loading state while fetching children */}
+        {loadingChildren ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+            <p style={{ fontSize: '1.2rem', color: 'var(--primary-purple)' }}>
+              {locale === 'ar-SA' ? 'جاري تحميل بيانات الأطفال...' : 'Loading children data...'}
+            </p>
+          </div>
+        ) : children.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👶</div>
+            <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-purple)', marginBottom: '1rem' }}>
+              {locale === 'ar-SA' ? 'لا توجد أطفال مسجلين' : 'No Children Found'}
+            </h3>
+            <p style={{ fontSize: '1.1rem', color: '#666' }}>
+              {locale === 'ar-SA' 
+                ? 'لا توجد أطفال مرتبطين بحسابك. يرجى التواصل مع الإدارة.'
+                : 'No children are associated with your account. Please contact administration.'
+              }
+            </p>
+          </div>
+        ) : (
+          <>
+            <ChildSelector 
+              selectedChildId={selectedChildId}
+              onChildChange={(id) => {
+                setSelectedChildId(id);
+              }}
+              locale={locale}
+              children={children}
+            />
+            {activeTab === 'overview' && (
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <h2 style={{
+                  fontSize: '2.5rem',
+                  color: 'var(--primary-purple)',
                   textAlign: 'center',
-                  background: 'var(--light-green)',
-                  padding: '1.5rem',
-                  borderRadius: 'var(--border-radius)'
+                  marginBottom: '2rem',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
                 }}>
-                  <div style={{
-                    fontSize: '3rem',
-                    color: 'var(--primary-green)',
-                    fontWeight: 'bold'
-                  }}>
-                    {currentChild.attendance}%
-                  </div>
-                  <div style={{
-                    fontSize: '1.1rem',
-                    color: 'var(--primary-green)',
-                    fontWeight: 'bold'
-                  }}>
-                    {locale === 'ar-SA' ? 'نسبة الحضور' : 'Attendance Rate'}
-                  </div>
-                </div>
-              </div>
-            </div>
+                  📊 {locale === 'ar-SA' ? 'نظرة عامة' : 'Dashboard Overview'}
+                </h2>
 
-            {/* Quick Stats Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{
-                background: 'linear-gradient(135deg, var(--light-pink), white)',
-                padding: '2rem',
-                borderRadius: 'var(--border-radius)',
-                textAlign: 'center',
-                border: '3px solid var(--primary-pink)',
-                boxShadow: 'var(--shadow)'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📚</div>
-                <h4 style={{
-                  fontSize: '1.3rem',
-                  color: 'var(--primary-purple)',
-                  marginBottom: '0.5rem'
-                }}>
-                  {locale === 'ar-SA' ? 'الواجبات المعلقة' : 'Pending Homework'}
-                </h4>
+                {/* Student Info Card */}
                 <div style={{
-                  fontSize: '2rem',
-                  color: 'var(--primary-pink)',
-                  fontWeight: 'bold'
-                }}>
-                  {currentHomework.filter((h: HomeworkItem) => h.status === 'pending').length}
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135deg, var(--light-yellow), white)',
-                padding: '2rem',
-                borderRadius: 'var(--border-radius)',
-                textAlign: 'center',
-                border: '3px solid var(--primary-yellow)',
-                boxShadow: 'var(--shadow)'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💳</div>
-                <h4 style={{
-                  fontSize: '1.3rem',
-                  color: 'var(--primary-purple)',
-                  marginBottom: '0.5rem'
-                }}>
-                  {locale === 'ar-SA' ? 'الرسوم المتبقية' : 'Outstanding Fees'}
-                </h4>
-                <div style={{
-                  fontSize: '1.5rem',
-                  color: 'var(--primary-orange)',
-                  fontWeight: 'bold'
-                }}>
-                  {locale === 'ar-SA' ? `${currentChild.fees.remaining} ريال` : `$${currentChild.fees.remaining}`}
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135ds, var(--light-blue), white)',
-                padding: '2rem',
-                borderRadius: 'var(--border-radius)',
-                textAlign: 'center',
-                border: '3px solid var(--primary-blue)',
-                boxShadow: 'var(--shadow)'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔔</div>
-                <h4 style={{
-                  fontSize: '1.3rem',
-                  color: 'var(--primary-purple)',
-                  marginBottom: '0.5rem'
-                }}>
-                  {locale === 'ar-SA' ? 'إشعارات جديدة' : 'New Notifications'}
-                </h4>
-                <div style={{
-                  fontSize: '2rem',
-                  color: 'var(--primary-blue)',
-                  fontWeight: 'bold'
-                }}>
-                  {currentNotifications.filter((n: NotificationItem) => !n.read).length}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'attendance' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: '2.5rem',
-              color: 'var(--primary-purple)',
-              textAlign: 'center',
-              marginBottom: '2rem'
-            }}>
-              📅 {locale === 'ar-SA' ? 'سجل الحضور' : 'Attendance Log'}
-            </h2>
-
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: 'var(--border-radius)',
-              boxShadow: 'var(--shadow)',
-              border: '4px solid var(--primary-green)'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '2rem',
-                flexWrap: 'wrap',
-                gap: '1rem'
-              }}>
-                <h3 style={{
-                  fontSize: '1.5rem',
-                  color: 'var(--primary-purple)',
-                  margin: 0
-                }}>
-                  {locale === 'ar-SA' ? 'فلتر الشهر:' : 'Filter by Month:'}
-                </h3>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  style={{
-                    padding: '0.75rem',
-                    fontSize: '1rem',
-                    border: '3px solid var(--primary-blue)',
-                    borderRadius: 'var(--border-radius)'
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {currentAttendance.map((record: AttendanceRecord, index: number) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '1rem',
-                    background: record.status === 'present' ? 'var(--light-green)' : 'var(--light-pink)',
-                    borderRadius: 'var(--border-radius)',
-                    border: `3px solid ${record.status === 'present' ? 'var(--primary-green)' : 'var(--primary-pink)'}`
-                  }}>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                      📅 {record.date}
-                    </span>
-                    <span style={{ fontSize: '1.5rem' }}>
-                      {record.emoji} {locale === 'ar-SA' 
-                        ? (record.status === 'present' ? 'حاضر' : 'غائب')
-                        : (record.status === 'present' ? 'Present' : 'Absent')
-                      }
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'homework' && (
-          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: '2.5rem',
-              color: 'var(--primary-purple)',
-              textAlign: 'center',
-              marginBottom: '2rem'
-            }}>
-              📚 {locale === 'ar-SA' ? 'الواجبات والملاحظات' : 'Homework & Notes'}
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {currentHomework.map((hw: HomeworkItem, index: number) => (
-                <div key={index} style={{
                   background: 'white',
                   padding: '2rem',
                   borderRadius: 'var(--border-radius)',
                   boxShadow: 'var(--shadow)',
-                  border: `4px solid ${hw.status === 'completed' ? 'var(--primary-green)' : 'var(--primary-orange)'}`
+                  marginBottom: '2rem',
+                  border: '4px solid var(--primary-blue)'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2rem',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{
+                      fontSize: '5rem',
+                      background: 'var(--light-blue)',
+                      borderRadius: '50%',
+                      width: '120px',
+                      height: '120px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {currentChild.photo}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{
+                        fontSize: '2rem',
+                        color: 'var(--primary-purple)',
+                        marginBottom: '0.5rem'
+                      }}>
+                        {locale === 'ar-SA' ? currentChild.name : currentChild.nameEn}
+                      </h3>
+                      <p style={{
+                        fontSize: '1.3rem',
+                        color: 'var(--primary-blue)',
+                        marginBottom: '0.5rem'
+                      }}>
+                        📚 {locale === 'ar-SA' ? currentChild.class : currentChild.classEn}
+                      </p>
+                      <p style={{
+                        fontSize: '1.1rem',
+                        color: '#666',
+                        marginBottom: '0.5rem'
+                      }}>
+                        🆔 {locale === 'ar-SA' ? 'رقم الطالب:' : 'Student ID:'} {currentChild.id}
+                      </p>
+                      <p style={{
+                        fontSize: '1.1rem',
+                        color: '#666'
+                      }}>
+                        🎂 {locale === 'ar-SA' ? 'العمر:' : 'Age:'} {currentChild?.age || '--'}
+                      </p>
+                    </div>
+                    <div style={{
+                      textAlign: 'center',
+                      background: 'var(--light-green)',
+                      padding: '1.5rem',
+                      borderRadius: 'var(--border-radius)'
+                    }}>
+                      <div style={{
+                        fontSize: '3rem',
+                        color: 'var(--primary-green)',
+                        fontWeight: 'bold'
+                      }}>
+                        {attendanceRateDisplay}{attendanceRateDisplay !== '--' ? '%' : ''}
+                      </div>
+                      <div style={{
+                        fontSize: '1.1rem',
+                        color: 'var(--primary-green)',
+                        fontWeight: 'bold'
+                      }}>
+                        {locale === 'ar-SA' ? 'نسبة الحضور' : 'Attendance Rate'}
+                      </div>
+                      {loadingAttendance && <div style={{ fontSize: '0.8rem', color: '#555', marginTop: '0.5rem' }}>{locale==='ar-SA'?'جاري التحميل...':'Loading...'}</div>}
+                      {attendanceError && <div style={{ fontSize: '0.8rem', color: 'var(--primary-red)', marginTop: '0.5rem' }}>{attendanceError}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: '1.5rem',
+                  marginBottom: '2rem'
+                }}>
+                  <div style={{
+                    background: 'linear-gradient(135deg, var(--light-pink), white)',
+                    padding: '2rem',
+                    borderRadius: 'var(--border-radius)',
+                    textAlign: 'center',
+                    border: '3px solid var(--primary-pink)',
+                    boxShadow: 'var(--shadow)'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📚</div>
+                    <h4 style={{
+                      fontSize: '1.3rem',
+                      color: 'var(--primary-purple)',
+                      marginBottom: '0.5rem'
+                    }}>
+                      {locale === 'ar-SA' ? 'الواجبات المعلقة' : 'Pending Homework'}
+                    </h4>
+                    <div style={{
+                      fontSize: '2rem',
+                      color: 'var(--primary-pink)',
+                      fontWeight: 'bold'
+                    }}>
+                      {currentChild.id}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: 'linear-gradient(135deg, var(--light-yellow), white)',
+                    padding: '2rem',
+                    borderRadius: 'var(--border-radius)',
+                    textAlign: 'center',
+                    border: '3px solid var(--primary-yellow)',
+                    boxShadow: 'var(--shadow)'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💳</div>
+                    <h4 style={{
+                      fontSize: '1.3rem',
+                      color: 'var(--primary-purple)',
+                      marginBottom: '0.5rem'
+                    }}>
+                      {locale === 'ar-SA' ? 'الرسوم المتبقية' : 'Outstanding Fees'}
+                    </h4>
+                    <div style={{
+                      fontSize: '1.5rem',
+                      color: 'var(--primary-orange)',
+                      fontWeight: 'bold'
+                    }}>
+                      {locale === 'ar-SA' ? `${currentChild.fees?.remaining || 0} ريال` : `$${currentChild.fees?.remaining || 0}`}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: 'linear-gradient(135ds, var(--light-blue), white)',
+                    padding: '2rem',
+                    borderRadius: 'var(--border-radius)',
+                    textAlign: 'center',
+                    border: '3px solid var(--primary-blue)',
+                    boxShadow: 'var(--shadow)'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔔</div>
+                    <h4 style={{
+                      fontSize: '1.3rem',
+                      color: 'var(--primary-purple)',
+                      marginBottom: '0.5rem'
+                    }}>
+                      {locale === 'ar-SA' ? 'إشعارات جديدة' : 'New Notifications'}
+                    </h4>
+                    <div style={{
+                      fontSize: '2rem',
+                      color: 'var(--primary-blue)',
+                      fontWeight: 'bold'
+                    }}>
+                      {currentChild.id}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'attendance' && (
+              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <h2 style={{
+                  fontSize: '2.5rem',
+                  color: 'var(--primary-purple)',
+                  textAlign: 'center',
+                  marginBottom: '2rem'
+                }}>
+                  📅 {locale === 'ar-SA' ? 'سجل الحضور' : 'Attendance Log'}
+                </h2>
+
+                <div style={{
+                  background: 'white',
+                  padding: '2rem',
+                  borderRadius: 'var(--border-radius)',
+                  boxShadow: 'var(--shadow)',
+                  border: '4px solid var(--primary-green)'
                 }}>
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'flex-start',
+                    alignItems: 'center',
+                    marginBottom: '2rem',
                     flexWrap: 'wrap',
                     gap: '1rem'
                   }}>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{
-                        fontSize: '1.5rem',
-                        color: 'var(--primary-purple)',
-                        marginBottom: '1rem'
-                      }}>
-                        📖 {hw.subject}
-                      </h3>
-                      <p style={{
-                        fontSize: '1.2rem',
-                        color: '#666',
-                        marginBottom: '1rem',
-                        lineHeight: '1.6'
-                      }}>
-                        {hw.task}
-                      </p>
-                      <p style={{
-                        fontSize: '1.1rem',
-                        color: 'var(--primary-blue)',
-                        fontWeight: 'bold'
-                      }}>
-                        📅 {locale === 'ar-SA' ? 'تاريخ التسليم:' : 'Due Date:'} {hw.dueDate}
-                      </p>
-                    </div>
-                    <div style={{
-                      padding: '1rem',
-                      background: hw.status === 'completed' ? 'var(--light-green)' : 'var(--light-orange)',
-                      borderRadius: 'var(--border-radius)',
-                      textAlign: 'center'
+                    <h3 style={{
+                      fontSize: '1.5rem',
+                      color: 'var(--primary-purple)',
+                      margin: 0
                     }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-                        {hw.status === 'completed' ? '✅' : '⏰'}
-                      </div>
-                      <div style={{
+                      {locale === 'ar-SA' ? 'فلتر الشهر:' : 'Filter by Month:'}
+                    </h3>
+                    <input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      style={{
+                        padding: '0.75rem',
                         fontSize: '1rem',
-                        fontWeight: 'bold',
-                        color: hw.status === 'completed' ? 'var(--primary-green)' : 'var(--primary-orange)'
+                        border: '3px solid var(--primary-blue)',
+                        borderRadius: 'var(--border-radius)'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {currentAttendance.map((record, index) => (
+                      <div key={index} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1rem',
+                        background: record.status === 'present' ? 'var(--light-green)' : record.status === 'late' ? 'var(--light-yellow)' : 'var(--light-pink)',
+                        borderRadius: 'var(--border-radius)',
+                        border: `3px solid ${record.status === 'present' ? 'var(--primary-green)' : record.status === 'late' ? 'var(--primary-yellow)' : 'var(--primary-pink)'}`
                       }}>
-                        {locale === 'ar-SA' 
-                          ? (hw.status === 'completed' ? 'مكتمل' : 'معلق')
-                          : (hw.status === 'completed' ? 'Completed' : 'Pending')
-                        }
+                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                          📅 {record.date}
+                        </span>
+                        <span style={{ fontSize: '1.2rem' }}>
+                          {record.status === 'present' ? (locale==='ar-SA'?'حاضر':'Present') : record.status === 'late' ? (locale==='ar-SA'?'متأخر':'Late') : (locale==='ar-SA'?'غائب':'Absent')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'homework' && (
+              <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                <h2 style={{
+                  fontSize: '2.5rem',
+                  color: 'var(--primary-purple)',
+                  textAlign: 'center',
+                  marginBottom: '2rem'
+                }}>
+                  📚 {locale === 'ar-SA' ? 'الواجبات والملاحظات' : 'Homework & Notes'}
+                </h2>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {/* {currentHomework.map((hw: HomeworkItem, index: number) => (
+                    <div key={index} style={{
+                      background: 'white',
+                      padding: '2rem',
+                      borderRadius: 'var(--border-radius)',
+                      boxShadow: 'var(--shadow)',
+                      border: `4px solid ${hw.status === 'completed' ? 'var(--primary-green)' : 'var(--primary-orange)'}`
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        flexWrap: 'wrap',
+                        gap: '1rem'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{
+                            fontSize: '1.5rem',
+                            color: 'var(--primary-purple)',
+                            marginBottom: '1rem'
+                          }}>
+                            📖 {hw.subject}
+                          </h3>
+                          <p style={{
+                            fontSize: '1.2rem',
+                            color: '#666',
+                            marginBottom: '1rem',
+                            lineHeight: '1.6'
+                          }}>
+                            {hw.task}
+                          </p>
+                          <p style={{
+                            fontSize: '1.1rem',
+                            color: 'var(--primary-blue)',
+                            fontWeight: 'bold'
+                          }}>
+                            📅 {locale === 'ar-SA' ? 'تاريخ التسليم:' : 'Due Date:'} {hw.dueDate}
+                          </p>
+                        </div>
+                        <div style={{
+                          padding: '1rem',
+                          background: hw.status === 'completed' ? 'var(--light-green)' : 'var(--light-orange)',
+                          borderRadius: 'var(--border-radius)',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                            {hw.status === 'completed' ? '✅' : '⏰'}
+                          </div>
+                          <div style={{
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            color: hw.status === 'completed' ? 'var(--primary-green)' : 'var(--primary-orange)'
+                          }}>
+                            {locale === 'ar-SA' 
+                              ? (hw.status === 'completed' ? 'مكتمل' : 'معلق')
+                              : (hw.status === 'completed' ? 'Completed' : 'Pending')
+                            }
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'fees' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: '2.5rem',
-              color: 'var(--primary-purple)',
-              textAlign: 'center',
-              marginBottom: '2rem'
-            }}>
-              💳 {locale === 'ar-SA' ? 'تتبع الرسوم والدفع' : 'Fee Tracking & Payment'}
-            </h2>
-
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: 'var(--border-radius)',
-              boxShadow: 'var(--shadow)',
-              border: '4px solid var(--primary-blue)',
-              marginBottom: '2rem'
-            }}>
-              <h3 style={{
-                fontSize: '1.8rem',
-                color: 'var(--primary-purple)',
-                marginBottom: '2rem',
-                textAlign: 'center'
-              }}>
-                💰 {locale === 'ar-SA' ? 'ملخص الرسوم' : 'Fee Summary'}
-              </h3>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '1.5rem',
-                marginBottom: '2rem'
-              }}>
-                <div style={{
-                  background: 'var(--light-blue)',
-                  padding: '1.5rem',
-                  borderRadius: 'var(--border-radius)',
-                  textAlign: 'center',
-                  border: '3px solid var(--primary-blue)'
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💰</div>
-                  <div style={{ fontSize: '1.1rem', color: '#666' }}>
-                    {locale === 'ar-SA' ? 'إجمالي الرسوم' : 'Total Fees'}
-                  </div>
-                  <div style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: 'var(--primary-blue)'
-                  }}>
-                    {locale === 'ar-SA' ? `${currentChild.fees.total} ريال` : `$${currentChild.fees.total}`}
-                  </div>
-                </div>
-
-                <div style={{
-                  background: 'var(--light-green)',
-                  padding: '1.5rem',
-                  borderRadius: 'var(--border-radius)',
-                  textAlign: 'center',
-                  border: '3px solid var(--primary-green)'
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-                  <div style={{ fontSize: '1.1rem', color: '#666' }}>
-                    {locale === 'ar-SA' ? 'المبلغ المدفوع' : 'Amount Paid'}
-                  </div>
-                  <div style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: 'var(--primary-green)'
-                  }}>
-                    {locale === 'ar-SA' ? `${currentChild.fees.paid} ريال` : `$${currentChild.fees.paid}`}
-                  </div>
-                </div>
-
-                <div style={{
-                  background: 'var(--light-orange)',
-                  padding: '1.5rem',
-                  borderRadius: 'var(--border-radius)',
-                  textAlign: 'center',
-                  border: '3px solid var(--primary-orange)'
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏰</div>
-                  <div style={{ fontSize: '1.1rem', color: '#666' }}>
-                    {locale === 'ar-SA' ? 'المبلغ المتبقي' : 'Remaining Balance'}
-                  </div>
-                  <div style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: 'var(--primary-orange)'
-                  }}>
-                    {locale === 'ar-SA' ? `${currentChild.fees.remaining} ريال` : `$${currentChild.fees.remaining}`}
-                  </div>
+                  ))} */}
                 </div>
               </div>
+            )}
 
-              <div style={{ textAlign: 'center' }}>
-                <button style={{
-                  padding: '1.2rem 2rem',
-                  background: 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 'var(--border-radius)',
-                  fontSize: '1.2rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s var(--bounce)',
-                  boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+            {activeTab === 'fees' && (
+              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <h2 style={{
+                  fontSize: '2.5rem',
+                  color: 'var(--primary-purple)',
+                  textAlign: 'center',
+                  marginBottom: '2rem'
                 }}>
-                  💳 {locale === 'ar-SA' ? 'دفع الآن' : 'Pay Now'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+                  💳 {locale === 'ar-SA' ? 'تتبع الرسوم والدفع' : 'Fee Tracking & Payment'}
+                </h2>
 
-        {activeTab === 'notifications' && (
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{
-              fontSize: '2.5rem',
-              color: 'var(--primary-purple)',
-              textAlign: 'center',
-              marginBottom: '2rem'
-            }}>
-              🔔 {locale === 'ar-SA' ? 'لوحة الإشعارات' : 'Notifications Panel'}
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {currentNotifications.map((notification: NotificationItem) => (
-                <div key={notification.id} style={{
-                  background: notification.read ? 'rgba(255,255,255,0.7)' : 'white',
-                  padding: '1.5rem',
+                <div style={{
+                  background: 'white',
+                  padding: '2rem',
                   borderRadius: 'var(--border-radius)',
                   boxShadow: 'var(--shadow)',
-                  border: `3px solid ${notification.read ? '#ddd' : 'var(--primary-pink)'}`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '1rem'
+                  border: '4px solid var(--primary-blue)',
+                  marginBottom: '2rem'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                    <div style={{ fontSize: '2rem' }}>
-                      {notification.type === 'homework' ? '📚' :
-                       notification.type === 'announcement' ? '📢' :
-                       notification.type === 'fee' ? '💳' : '🔔'}
+                  <h3 style={{
+                    fontSize: '1.8rem',
+                    color: 'var(--primary-purple)',
+                    marginBottom: '2rem',
+                    textAlign: 'center'
+                  }}>
+                    💰 {locale === 'ar-SA' ? 'ملخص الرسوم' : 'Fee Summary'}
+                  </h3>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '1.5rem',
+                    marginBottom: '2rem'
+                  }}>
+                    <div style={{
+                      background: 'var(--light-blue)',
+                      padding: '1.5rem',
+                      borderRadius: 'var(--border-radius)',
+                      textAlign: 'center',
+                      border: '3px solid var(--primary-blue)'
+                    }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💰</div>
+                      <div style={{ fontSize: '1.1rem', color: '#666' }}>
+                        {locale === 'ar-SA' ? 'إجمالي الرسوم' : 'Total Fees'}
+                      </div>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold',
+                        color: 'var(--primary-blue)'
+                      }}>
+                        {locale === 'ar-SA' ? `${currentChild.fees?.total || 0} ريال` : `$${currentChild.fees?.total || 0}`}
+                      </div>
                     </div>
-                    <div>
-                      <p style={{
-                        fontSize: '1.2rem',
-                        color: 'var(--primary-purple)',
-                        margin: '0 0 0.5rem 0',
-                        fontWeight: notification.read ? 'normal' : 'bold'
+
+                    <div style={{
+                      background: 'var(--light-green)',
+                      padding: '1.5rem',
+                      borderRadius: 'var(--border-radius)',
+                      textAlign: 'center',
+                      border: '3px solid var(--primary-green)'
+                    }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+                      <div style={{ fontSize: '1.1rem', color: '#666' }}>
+                        {locale === 'ar-SA' ? 'المبلغ المدفوع' : 'Amount Paid'}
+                      </div>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold',
+                        color: 'var(--primary-green)'
                       }}>
-                        {notification.message}
-                      </p>
-                      <p style={{
-                        fontSize: '1rem',
-                        color: '#666',
-                        margin: 0
+                        {locale === 'ar-SA' ? `${currentChild.fees?.paid || 0} ريال` : `$${currentChild.fees?.paid || 0}`}
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: 'var(--light-orange)',
+                      padding: '1.5rem',
+                      borderRadius: 'var(--border-radius)',
+                      textAlign: 'center',
+                      border: '3px solid var(--primary-orange)'
+                    }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏰</div>
+                      <div style={{ fontSize: '1.1rem', color: '#666' }}>
+                        {locale === 'ar-SA' ? 'المبلغ المتبقي' : 'Remaining Balance'}
+                      </div>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold',
+                        color: 'var(--primary-orange)'
                       }}>
-                        📅 {notification.date}
-                      </p>
+                        {locale === 'ar-SA' ? `${currentChild.fees?.remaining || 0} ريال` : `$${currentChild.fees?.remaining || 0}`}
+                      </div>
                     </div>
                   </div>
-                  <div style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    background: notification.read ? '#ddd' : 'var(--primary-pink)'
-                  }} />
+
+                  <div style={{ textAlign: 'center' }}>
+                    <button style={{
+                      padding: '1.2rem 2rem',
+                      background: 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 'var(--border-radius)',
+                      fontSize: '1.2rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s var(--bounce)',
+                      boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+                    }}>
+                      💳 {locale === 'ar-SA' ? 'دفع الآن' : 'Pay Now'}
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <h2 style={{
+                  fontSize: '2.5rem',
+                  color: 'var(--primary-purple)',
+                  textAlign: 'center',
+                  marginBottom: '2rem'
+                }}>
+                  🔔 {locale === 'ar-SA' ? 'لوحة الإشعارات' : 'Notifications Panel'}
+                </h2>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {currentChild.id}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

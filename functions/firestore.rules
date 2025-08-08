@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user has a specific role
+    function hasRole(role) {
+      return request.auth != null && 
+             request.auth.token != null && 
+             request.auth.token.role == role;
+    }
+    
+    // Helper function to check if user has any of the specified roles
+    function hasAnyRole(roles) {
+      return request.auth != null && 
+             request.auth.token != null && 
+             request.auth.token.role in roles;
+    }
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users collection - users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if hasAnyRole(['admin', 'superadmin', 'teacher']);
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      allow read: if hasRole('teacher');
+      // Parents can read their own child's data (implement parent-child relationship check)
+      allow read: if hasRole('parent');
+    }
+
+    // Teachers collection
+    match /teachers/{teacherId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      allow read: if hasRole('teacher') && request.auth.uid == teacherId;
+    }
+
+    // Classes collection
+    match /classes/{classId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      allow read: if hasRole('teacher');
+    }
+
+    // Enrollments collection - main focus for attendance
+    match /enrollments/{enrollmentId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      allow read: if hasRole('teacher');
+      allow read: if hasRole('parent'); // Parents can view their child's enrollment
+      
+      // Attendance subcollection within enrollments
+      match /attendance/{attendanceDate} {
+        allow read, write: if hasAnyRole(['admin', 'superadmin']);
+        // Teachers can read and write attendance for their classes
+        allow read, write: if hasRole('teacher');
+        // Parents can read attendance for their children
+        allow read: if hasRole('parent');
+      }
+    }
+
+    // Messages/Communications
+    match /messages/{messageId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin', 'teacher']);
+      // Allow parents to read messages sent to them
+      allow read: if hasRole('parent') && request.auth.uid in resource.data.recipients;
+    }
+
+    // Reports and academic records
+    match /reports/{reportId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin', 'teacher']);
+      allow read: if hasRole('parent'); // Parents can view their child's reports
+    }
+
+    // Fees and payments
+    match /fees/{feeId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      allow read: if hasRole('parent'); // Parents can view their fees
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      allow read: if hasRole('teacher') && request.auth.uid == resource.data.recipientId;
+      allow read: if hasRole('parent') && request.auth.uid == resource.data.recipientId;
+    }
+
+    // System settings and configurations
+    match /settings/{settingId} {
+      allow read, write: if hasRole('superadmin');
+      allow read: if hasAnyRole(['admin', 'teacher']);
+    }
+
+    // Content management
+    match /content/{contentId} {
+      allow read, write: if hasAnyRole(['superadmin', 'admin', 'content-manager']);
+      allow read: if hasAnyRole(['teacher', 'parent']);
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
