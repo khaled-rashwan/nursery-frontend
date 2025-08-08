@@ -231,7 +231,7 @@ interface TeacherUser {
 const mockStudentsData: { [key: string]: Student[] } = {
   'kg1-a': [
     {
-      id: 1,
+      id: '1',
       name: 'أحمد محمد',
       nameEn: 'Ahmed Mohamed',
       class: 'KG1-A',
@@ -242,7 +242,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
       profileImage: '/kg1.png'
     },
     {
-      id: 2,
+      id: '2',
       name: 'فاطمة علي',
       nameEn: 'Fatima Ali',
       class: 'KG1-A',
@@ -253,7 +253,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
       profileImage: '/kg1.png'
     },
     {
-      id: 3,
+      id: '3',
       name: 'سارة أحمد',
       nameEn: 'Sara Ahmed',
       class: 'KG1-A',
@@ -266,7 +266,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
   ],
   'kg1-b': [
     {
-      id: 4,
+      id: '4',
       name: 'محمد أحمد',
       nameEn: 'Mohamed Ahmed',
       class: 'KG1-B',
@@ -277,7 +277,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
       profileImage: '/kg1.png'
     },
     {
-      id: 5,
+      id: '5',
       name: 'نور خالد',
       nameEn: 'Nour Khaled',
       class: 'KG1-B',
@@ -290,7 +290,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
   ],
   'kg2-a': [
     {
-      id: 6,
+      id: '6',
       name: 'عمر سالم',
       nameEn: 'Omar Salem',
       class: 'KG2-A',
@@ -301,7 +301,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
       profileImage: '/kg2.png'
     },
     {
-      id: 7,
+      id: '7',
       name: 'مريم عبدالله',
       nameEn: 'Mariam Abdullah',
       class: 'KG2-A',
@@ -314,7 +314,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
   ],
   'prekg-a': [
     {
-      id: 8,
+      id: '8',
       name: 'ليلى حسن',
       nameEn: 'Layla Hassan',
       class: 'Pre-KG-A',
@@ -325,7 +325,7 @@ const mockStudentsData: { [key: string]: Student[] } = {
       profileImage: '/prekg.avif'
     },
     {
-      id: 9,
+      id: '9',
       name: 'يوسف عمر',
       nameEn: 'Youssef Omar',
       class: 'Pre-KG-A',
@@ -340,24 +340,24 @@ const mockStudentsData: { [key: string]: Student[] } = {
 
 const mockMessages = [
   {
-    id: 1,
+    id: '1',
     from: 'والدة أحمد محمد',
     fromEn: 'Ahmed\'s Mother',
     subject: 'استفسار عن الواجبات المنزلية',
     subjectEn: 'Homework Inquiry',
     time: '2 hours ago',
     unread: true,
-    studentId: 1
+    studentId: '1'
   },
   {
-    id: 2,
+    id: '2',
     from: 'والد فاطمة علي',
     fromEn: 'Fatima\'s Father',
     subject: 'موعد اجتماع أولياء الأمور',
     subjectEn: 'Parent Meeting Schedule',
     time: '1 day ago',
     unread: false,
-    studentId: 2
+    studentId: '2'
   }
 ];
 
