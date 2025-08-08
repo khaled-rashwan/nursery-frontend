@@ -545,10 +545,10 @@ function ClassForm({
     capacity: initialData?.capacity || 25,
     notes: initialData?.notes || ''
   });
-  const [errors, setErrors] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string | { teacherId?: string, subjects?: string }[]>>({});
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, any> = { teachers: [] };
+    const newErrors: Record<string, string | { teacherId?: string, subjects?: string }[]> = { teachers: [] };
 
     if (!formData.name.trim()) {
       newErrors.name = locale === 'ar-SA' ? 'اسم الفصل مطلوب' : 'Class name is required';

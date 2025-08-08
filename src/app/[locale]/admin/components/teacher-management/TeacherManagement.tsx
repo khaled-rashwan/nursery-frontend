@@ -20,7 +20,6 @@ export function TeacherManagement({ locale }: TeacherManagementProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
 
