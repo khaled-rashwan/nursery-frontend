@@ -106,6 +106,28 @@ export const classAPI = {
   }
 };
 
+export const teacherAPI = {
+    list: async (user: User) => {
+        return makeAPICall('manageTeachers', user, {
+            queryParams: { operation: 'list' }
+        });
+    },
+    create: async (user: User, teacherData: Partial<UserFormData>) => {
+        return makeAPICall('manageTeachers', user, {
+            method: 'POST',
+            queryParams: { operation: 'create' },
+            body: { teacherData }
+        });
+    },
+    update: async (user: User, teacherId: string, teacherData: Partial<UserFormData>) => {
+        return makeAPICall('manageTeachers', user, {
+            method: 'POST',
+            queryParams: { operation: 'update' },
+            body: { teacherId, teacherData }
+        });
+    }
+};
+
 // User management API functions
 export const userAPI = {
   // Get all users with optional role filter

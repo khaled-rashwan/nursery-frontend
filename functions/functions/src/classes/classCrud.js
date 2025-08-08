@@ -22,8 +22,17 @@ const validateClassData = (classData) => {
     errors.push('Academic year is required and must be in format YYYY-YYYY');
   }
   
-  if (!classData.teacherUID || typeof classData.teacherUID !== 'string') {
-    errors.push('Teacher UID is required');
+  if (!classData.teachers || !Array.isArray(classData.teachers) || classData.teachers.length === 0) {
+    errors.push('At least one teacher must be assigned to the class');
+  } else {
+    classData.teachers.forEach((teacher, index) => {
+      if (!teacher.teacherId || typeof teacher.teacherId !== 'string') {
+        errors.push(`Teacher ID is required for teacher at index ${index}`);
+      }
+      if (!teacher.subjects || !Array.isArray(teacher.subjects) || teacher.subjects.length === 0) {
+        errors.push(`At least one subject is required for teacher at index ${index}`);
+      }
+    });
   }
   
   if (classData.capacity !== undefined && (typeof classData.capacity !== 'number' || classData.capacity < 1 || classData.capacity > 50)) {
@@ -191,8 +200,8 @@ const listClasses = async (req, res, authResult) => {
     snapshot.forEach(doc => {
       const data = doc.data();
       classDocs.push({ id: doc.id, data });
-      if (data.teacherUID?.trim()) {
-        teacherUIDs.add(data.teacherUID);
+      if (data.teachers && Array.isArray(data.teachers)) {
+        data.teachers.forEach(t => teacherUIDs.add(t.teacherId));
       }
     });
     
@@ -211,20 +220,20 @@ const listClasses = async (req, res, authResult) => {
     
     // Build response with teacher info
     const classes = classDocs.map(({ id, data }) => {
-      const teacherInfo = teacherInfoMap.get(data.teacherUID) || {
-        uid: data.teacherUID || '',
+      const teacherInfo = data.teachers ? data.teachers.map(t => teacherInfoMap.get(t.teacherId) || {
+        uid: t.teacherId,
         email: 'Unknown',
         displayName: 'Unknown Teacher',
         phoneNumber: null,
         role: 'teacher'
-      };
+      }) : [];
       
       return {
         id,
         name: data.name,
         level: data.level,
         academicYear: data.academicYear,
-        teacherUID: data.teacherUID,
+        teachers: data.teachers,
         teacherInfo: teacherInfo,
         capacity: data.capacity || 25,
         notes: data.notes || '',
@@ -271,14 +280,15 @@ const getClass = async (req, res, authResult) => {
     const data = classDoc.data();
     
     // Get teacher information
-    const teacherInfo = await getTeacherInfo(data.teacherUID);
+    const teacherInfoPromises = data.teachers.map(t => getTeacherInfo(t.teacherId));
+    const teacherInfo = await Promise.all(teacherInfoPromises);
     
     const classData = {
       id: classDoc.id,
       name: data.name,
       level: data.level,
       academicYear: data.academicYear,
-      teacherUID: data.teacherUID,
+      teachers: data.teachers,
       teacherInfo: teacherInfo,
       capacity: data.capacity || 25,
       notes: data.notes || '',
@@ -317,13 +327,15 @@ const createClass = async (req, res, authResult) => {
       });
     }
     
-    // Verify teacher exists and has correct role
-    const teacherVerification = await verifyTeacherRole(classData.teacherUID);
-    if (!teacherVerification.isValid) {
-      return res.status(400).json({ 
-        error: 'Invalid teacher',
-        details: teacherVerification.error 
-      });
+    // Verify each teacher exists and has correct role
+    for (const teacher of classData.teachers) {
+      const teacherVerification = await verifyTeacherRole(teacher.teacherId);
+      if (!teacherVerification.isValid) {
+        return res.status(400).json({
+          error: 'Invalid teacher',
+          details: teacherVerification.error
+        });
+      }
     }
     
     // Check for duplicate class name in the same academic year
@@ -344,7 +356,7 @@ const createClass = async (req, res, authResult) => {
       name: classData.name.trim(),
       level: classData.level,
       academicYear: classData.academicYear,
-      teacherUID: classData.teacherUID,
+      teachers: classData.teachers,
       capacity: classData.capacity || 25,
       notes: classData.notes?.trim() || '',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -353,18 +365,33 @@ const createClass = async (req, res, authResult) => {
     };
     
     await classRef.set(classDoc);
+
+    // Update teachers collection
+    const batch = db.batch();
+    classData.teachers.forEach(teacher => {
+      const teacherRef = db.collection('teachers').doc(teacher.teacherId);
+      batch.update(teacherRef, {
+        classes: admin.firestore.FieldValue.arrayUnion({
+          classId: classRef.id,
+          className: classData.name,
+          subjects: teacher.subjects
+        })
+      });
+    });
+    await batch.commit();
     
     // Get created class data with teacher information
     const createdClass = await classRef.get();
     const data = createdClass.data();
-    const teacherInfo = await getTeacherInfo(data.teacherUID);
+    const teacherInfoPromises = data.teachers.map(t => getTeacherInfo(t.teacherId));
+    const teacherInfo = await Promise.all(teacherInfoPromises);
     
     const responseClass = {
       id: createdClass.id,
       name: data.name,
       level: data.level,
       academicYear: data.academicYear,
-      teacherUID: data.teacherUID,
+      teachers: data.teachers,
       teacherInfo: teacherInfo,
       capacity: data.capacity,
       notes: data.notes,
@@ -415,9 +442,9 @@ const updateClass = async (req, res, authResult) => {
     
     const existingData = existingClass.data();
     
-    // Verify teacher exists and has correct role if teacher is being updated
-    if (classData.teacherUID !== existingData.teacherUID) {
-      const teacherVerification = await verifyTeacherRole(classData.teacherUID);
+    // Verify each teacher exists and has correct role
+    for (const teacher of classData.teachers) {
+      const teacherVerification = await verifyTeacherRole(teacher.teacherId);
       if (!teacherVerification.isValid) {
         return res.status(400).json({ 
           error: 'Invalid teacher',
@@ -447,7 +474,7 @@ const updateClass = async (req, res, authResult) => {
       name: classData.name.trim(),
       level: classData.level,
       academicYear: classData.academicYear,
-      teacherUID: classData.teacherUID,
+      teachers: classData.teachers,
       capacity: classData.capacity || 25,
       notes: classData.notes?.trim() || '',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -455,18 +482,69 @@ const updateClass = async (req, res, authResult) => {
     };
     
     await classRef.update(updateData);
+
+    // Update teachers collection
+    const oldTeachers = existingData.teachers.map(t => t.teacherId);
+    const newTeachers = classData.teachers.map(t => t.teacherId);
+    const addedTeachers = classData.teachers.filter(t => !oldTeachers.includes(t.teacherId));
+    const removedTeachers = existingData.teachers.filter(t => !newTeachers.includes(t.teacherId));
+    const updatedTeachers = classData.teachers.filter(t => oldTeachers.includes(t.teacherId));
+
+    const batch = db.batch();
+
+    // Add new teachers
+    addedTeachers.forEach(teacher => {
+      const teacherRef = db.collection('teachers').doc(teacher.teacherId);
+      batch.update(teacherRef, {
+        classes: admin.firestore.FieldValue.arrayUnion({
+          classId: classRef.id,
+          className: classData.name,
+          subjects: teacher.subjects
+        })
+      });
+    });
+
+    // Remove old teachers
+    await Promise.all(removedTeachers.map(async teacher => {
+      const teacherRef = db.collection('teachers').doc(teacher.teacherId);
+      const teacherDoc = await teacherRef.get();
+      if (teacherDoc.exists) {
+        const teacherData = teacherDoc.data();
+        const updatedClasses = teacherData.classes.filter(c => c.classId !== classId);
+        batch.update(teacherRef, { classes: updatedClasses });
+      }
+    }));
+
+    // Update existing teachers
+    await Promise.all(updatedTeachers.map(async teacher => {
+        const teacherRef = db.collection('teachers').doc(teacher.teacherId);
+        const teacherDoc = await teacherRef.get();
+        if (teacherDoc.exists) {
+            const teacherData = teacherDoc.data();
+            const updatedClasses = teacherData.classes.map(c => {
+                if (c.classId === classId) {
+                    return { ...c, subjects: teacher.subjects, className: classData.name };
+                }
+                return c;
+            });
+            batch.update(teacherRef, { classes: updatedClasses });
+        }
+    }));
+
+    await batch.commit();
     
     // Get updated class data with teacher information
     const updatedClass = await classRef.get();
     const data = updatedClass.data();
-    const teacherInfo = await getTeacherInfo(data.teacherUID);
+    const teacherInfoPromises = data.teachers.map(t => getTeacherInfo(t.teacherId));
+    const teacherInfo = await Promise.all(teacherInfoPromises);
     
     const responseClass = {
       id: updatedClass.id,
       name: data.name,
       level: data.level,
       academicYear: data.academicYear,
-      teacherUID: data.teacherUID,
+      teachers: data.teachers,
       teacherInfo: teacherInfo,
       capacity: data.capacity,
       notes: data.notes,
@@ -531,7 +609,8 @@ const deleteClass = async (req, res, authResult) => {
     const hasHistoricalData = !allEnrollmentsSnapshot.empty;
     
     // Get teacher information for response
-    const teacherInfo = await getTeacherInfo(data.teacherUID);
+    const teacherInfoPromises = data.teachers.map(t => getTeacherInfo(t.teacherId));
+    const teacherInfo = await Promise.all(teacherInfoPromises);
     
     // Store comprehensive class info for response
     const deletedClassInfo = {
@@ -539,7 +618,7 @@ const deleteClass = async (req, res, authResult) => {
       name: data.name,
       level: data.level,
       academicYear: data.academicYear,
-      teacherUID: data.teacherUID,
+      teachers: data.teachers,
       teacherInfo: teacherInfo,
       capacity: data.capacity,
       notes: data.notes,
@@ -547,6 +626,19 @@ const deleteClass = async (req, res, authResult) => {
       hadHistoricalEnrollments: hasHistoricalData,
       totalHistoricalEnrollments: allEnrollmentsSnapshot.size
     };
+
+    // Remove class from teachers' documents
+    const batch = db.batch();
+    await Promise.all(data.teachers.map(async teacher => {
+        const teacherRef = db.collection('teachers').doc(teacher.teacherId);
+        const teacherDoc = await teacherRef.get();
+        if (teacherDoc.exists) {
+            const teacherData = teacherDoc.data();
+            const updatedClasses = teacherData.classes.filter(c => c.classId !== classId);
+            batch.update(teacherRef, { classes: updatedClasses });
+        }
+    }));
+    await batch.commit();
     
     // If class has historical data, mark as deleted instead of hard delete
     if (hasHistoricalData) {

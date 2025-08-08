@@ -4,19 +4,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { classAPI, userAPI, handleAPIError } from '../../services/api';
 
+interface TeacherAssignment {
+  teacherId: string;
+  subjects: string[];
+}
+
 interface Class {
   id: string;
   name: string;
   level: 'Pre-KG' | 'KG1' | 'KG2';
   academicYear: string;
-  teacherUID: string;
-  teacherInfo: {
-    uid: string;
-    email: string;
-    displayName: string;
-    phoneNumber?: string;
-    role: string;
-  };
+  teachers: TeacherAssignment[];
+  teacherInfo: Teacher[];
   capacity: number;
   notes: string;
   createdAt: string;
@@ -136,11 +135,12 @@ export function ClassManagement({ locale }: ClassManagementProps) {
       } else {
         // Convert to ClassFormData for creation
         const classFormData = {
-          className: classData.name!,
+          name: classData.name!,
           level: classData.level!,
           academicYear: classData.academicYear!,
-          teacherUID: classData.teacherUID!,
-          capacity: classData.capacity!
+          teachers: classData.teachers!,
+          capacity: classData.capacity!,
+          notes: classData.notes,
         };
         data = await classAPI.create(user, classFormData);
       }
@@ -375,10 +375,17 @@ export function ClassManagement({ locale }: ClassManagementProps) {
                   <td style={{ padding: '1rem' }}>{classItem.level}</td>
                   <td style={{ padding: '1rem' }}>{classItem.academicYear}</td>
                   <td style={{ padding: '1rem' }}>
-                    <div>{classItem.teacherInfo.displayName}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
-                      {classItem.teacherInfo.email}
-                    </div>
+                    {classItem.teacherInfo.map(teacher => (
+                      <div key={teacher.uid}>
+                        <div>{teacher.displayName}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                          {teacher.email}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                          Subjects: {classItem.teachers.find(t => t.teacherId === teacher.uid)?.subjects.join(', ')}
+                        </div>
+                      </div>
+                    ))}
                   </td>
                   <td style={{ padding: '1rem' }}>{classItem.capacity}</td>
                   <td style={{ padding: '1rem' }}>
@@ -534,14 +541,14 @@ function ClassForm({
     name: initialData?.name || '',
     level: initialData?.level || 'KG1',
     academicYear: initialData?.academicYear || academicYears[1] || '', // Default to current year
-    teacherUID: initialData?.teacherUID || '',
+    teachers: initialData?.teachers || [{ teacherId: '', subjects: '' }],
     capacity: initialData?.capacity || 25,
     notes: initialData?.notes || ''
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, any>>({});
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, any> = { teachers: [] };
 
     if (!formData.name.trim()) {
       newErrors.name = locale === 'ar-SA' ? 'اسم الفصل مطلوب' : 'Class name is required';
@@ -555,8 +562,17 @@ function ClassForm({
       newErrors.academicYear = locale === 'ar-SA' ? 'العام الدراسي مطلوب' : 'Academic year is required';
     }
 
-    if (!formData.teacherUID) {
-      newErrors.teacherUID = locale === 'ar-SA' ? 'المعلم مطلوب' : 'Teacher is required';
+    if (formData.teachers.length === 0) {
+      newErrors.teachers = locale === 'ar-SA' ? 'المعلم مطلوب' : 'Teacher is required';
+    } else {
+      formData.teachers.forEach((teacher, index) => {
+        if (!teacher.teacherId) {
+          newErrors.teachers[index] = { ...newErrors.teachers[index], teacherId: locale === 'ar-SA' ? 'المعلم مطلوب' : 'Teacher is required' };
+        }
+        if (!teacher.subjects) {
+          newErrors.teachers[index] = { ...newErrors.teachers[index], subjects: locale === 'ar-SA' ? 'المادة مطلوبة' : 'Subjects are required' };
+        }
+      });
     }
 
     if (formData.capacity < 1 || formData.capacity > 50) {
@@ -564,7 +580,7 @@ function ClassForm({
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors).length === 1 && newErrors.teachers.length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -574,7 +590,12 @@ function ClassForm({
       return;
     }
 
-    onSubmit(formData);
+    const formattedTeachers = formData.teachers.map(t => ({
+        ...t,
+        subjects: t.subjects.split(',').map(s => s.trim()).filter(s => s)
+    }));
+
+    onSubmit({ ...formData, teachers: formattedTeachers });
   };
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -590,6 +611,22 @@ function ClassForm({
         [field]: ''
       }));
     }
+  };
+
+  const handleTeacherChange = (index: number, field: string, value: string) => {
+    const newTeachers = [...formData.teachers];
+    newTeachers[index] = { ...newTeachers[index], [field]: value };
+    setFormData({ ...formData, teachers: newTeachers });
+  };
+
+  const addTeacher = () => {
+    setFormData({ ...formData, teachers: [...formData.teachers, { teacherId: '', subjects: '' }] });
+  };
+
+  const removeTeacher = (index: number) => {
+    const newTeachers = [...formData.teachers];
+    newTeachers.splice(index, 1);
+    setFormData({ ...formData, teachers: newTeachers });
   };
 
   return (
@@ -722,43 +759,6 @@ function ClassForm({
               )}
             </div>
 
-            {/* Teacher */}
-            <div>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '0.5rem', 
-                fontWeight: '500',
-                color: '#2c3e50'
-              }}>
-                {locale === 'ar-SA' ? 'المعلم *' : 'Teacher *'}
-              </label>
-              <select
-                value={formData.teacherUID}
-                onChange={(e) => handleInputChange('teacherUID', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: `1px solid ${errors.teacherUID ? '#e74c3c' : '#ddd'}`,
-                  borderRadius: '4px',
-                  fontSize: '1rem'
-                }}
-              >
-                <option value="">
-                  {locale === 'ar-SA' ? 'اختر معلم' : 'Select Teacher'}
-                </option>
-                {teachers.map(teacher => (
-                  <option key={teacher.uid} value={teacher.uid}>
-                    {teacher.displayName} ({teacher.email})
-                  </option>
-                ))}
-              </select>
-              {errors.teacherUID && (
-                <div style={{ color: '#e74c3c', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                  {errors.teacherUID}
-                </div>
-              )}
-            </div>
-
             {/* Capacity */}
             <div>
               <label style={{ 
@@ -791,8 +791,92 @@ function ClassForm({
             </div>
           </div>
 
+          {/* Teachers */}
+          <div>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontWeight: '500',
+              color: '#2c3e50'
+            }}>
+              {locale === 'ar-SA' ? 'المعلمون *' : 'Teachers *'}
+            </label>
+            {formData.teachers.map((teacher, index) => (
+              <div key={index} style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr auto',
+                gap: '1rem',
+                marginBottom: '1rem',
+                alignItems: 'center'
+              }}>
+                <select
+                  value={teacher.teacherId}
+                  onChange={(e) => handleTeacherChange(index, 'teacherId', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: `1px solid ${errors.teachers?.[index]?.teacherId ? '#e74c3c' : '#ddd'}`,
+                    borderRadius: '4px',
+                    fontSize: '1rem'
+                  }}
+                >
+                  <option value="">
+                    {locale === 'ar-SA' ? 'اختر معلم' : 'Select Teacher'}
+                  </option>
+                  {teachers.map(t => (
+                    <option key={t.uid} value={t.uid}>
+                      {t.displayName} ({t.email})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={teacher.subjects}
+                  onChange={(e) => handleTeacherChange(index, 'subjects', e.target.value)}
+                  placeholder={locale === 'ar-SA' ? 'المواد (مفصولة بفواصل)' : 'Subjects (comma-separated)'}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: `1px solid ${errors.teachers?.[index]?.subjects ? '#e74c3c' : '#ddd'}`,
+                    borderRadius: '4px',
+                    fontSize: '1rem'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeTeacher(index)}
+                  style={{
+                    padding: '0.5rem',
+                    background: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  X
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addTeacher}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#27ae60',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              {locale === 'ar-SA' ? 'إضافة معلم' : 'Add Teacher'}
+            </button>
+          </div>
+
+
           {/* Notes */}
-          <div style={{ marginBottom: '2rem' }}>
+          <div style={{ marginBottom: '2rem', marginTop: '2rem' }}>
             <label style={{ 
               display: 'block', 
               marginBottom: '0.5rem', 

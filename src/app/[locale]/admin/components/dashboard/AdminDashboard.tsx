@@ -9,6 +9,7 @@ import { UserManagement } from '../user-management/UserManagement';
 import { StudentManagement } from '../student-management/StudentManagement';
 import { EnrollmentManagement } from '../enrollment-management/EnrollmentManagement';
 import { ClassManagement } from '../class-management/ClassManagement';
+import { TeacherManagement } from '../teacher-management/TeacherManagement';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -181,6 +182,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓' },
             { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚' },
             { id: 'classes', label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', icon: '🏫' },
+            { id: 'teachers', label: locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management', icon: '👩‍🏫' },
             { id: 'reports', label: locale === 'ar-SA' ? 'التقارير' : 'Reports', icon: '📈' },
             { id: 'settings', label: locale === 'ar-SA' ? 'الإعدادات' : 'Settings', icon: '⚙️' }
           ].map(tab => (
@@ -345,7 +347,11 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <ClassManagement locale={locale} />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && (
+      {activeTab === 'teachers' && (
+        <TeacherManagement locale={locale} />
+      )}
+
+      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && (
         <div style={{
           background: 'white',
           padding: '3rem',

@@ -38,6 +38,10 @@ exports.getEnrollmentsByYear = enrollmentCrud.getEnrollmentsByYear;
 exports.manageClasses = classCrud.manageClasses;
 exports.getEnrollmentStats = enrollmentCrud.getEnrollmentStats;
 
+// Export Teacher Management Functions
+const teacherCrud = require('./src/teachers/teacherCrud');
+exports.manageTeachers = teacherCrud.manageTeachers;
+
 // Export Attendance Management Functions (Old system - for backward compatibility)
 exports.saveAttendance = attendanceCrud.saveAttendance;
 exports.getAttendance = attendanceCrud.getAttendance;
