@@ -95,15 +95,16 @@ const convertFirestoreClassToClassInfo = (firestoreClass: FirestoreClass, enroll
 
   // Convert enrollments to Student format for compatibility with existing components
   const students: Student[] = enrollments
-    .filter(enrollment => enrollment.status === 'enrolled') // Only active enrollments
-    .map((enrollment, index) => ({
-      id: index + 1, // Generate sequential ID for display
-      name: enrollment.studentInfo?.fullName || 'Unknown Student',
-      nameEn: enrollment.studentInfo?.fullName || 'Unknown Student', // Use same for now
+    .filter(enrollment => enrollment.status === 'enrolled' && enrollment.studentInfo?.uid) // Only active enrollments with student UID
+    .map((enrollment) => ({
+      id: enrollment.studentInfo!.uid, // Use unique student UID
+      enrollmentId: enrollment.id, // Store the enrollment ID
+      name: enrollment.studentInfo!.fullName || 'Unknown Student',
+      nameEn: enrollment.studentInfo!.fullName || 'Unknown Student', // Use same for now
       class: enrollment.class,
       attendance: 95, // Mock data - would come from attendance system
       lastReport: new Date(enrollment.updatedAt).toISOString().split('T')[0], // Use enrollment update date
-      parentContact: enrollment.studentInfo?.parentInfo?.email || 'No contact',
+      parentContact: enrollment.studentInfo!.parentInfo?.email || 'No contact',
       unreadMessages: 0, // Mock data - would come from messaging system
       profileImage: getProfileImageByLevel(firestoreClass.level)
     }));
@@ -209,7 +210,8 @@ interface EnrollmentStudent {
 }
 
 interface Student {
-  id: number;
+  id: string; // Changed to hold student UID
+  enrollmentId: string; // Added to hold the enrollment document ID
   name: string;
   nameEn: string;
   class: string;
@@ -1484,8 +1486,8 @@ function AttendanceManagement({ locale, selectedClass, classes, user }: { locale
   }, [selectedClass, selectedDate, user, classes, loadAttendance]); // Added classes dependency
 
   // Handle attendance change for individual students
-  const handleAttendanceChange = (studentId: number, status: 'present' | 'absent' | 'late') => {
-    updateStudentAttendance(studentId.toString(), status);
+  const handleAttendanceChange = (studentId: string, status: 'present' | 'absent' | 'late') => {
+    updateStudentAttendance(studentId, status);
   };
 
   // Handle save attendance
@@ -1503,10 +1505,10 @@ function AttendanceManagement({ locale, selectedClass, classes, user }: { locale
 
     // Convert current attendance state to AttendanceRecord array
     const attendanceRecords: AttendanceRecord[] = currentStudents.map(student => ({
-      studentId: student.id.toString(),
-      enrollmentId: `${classInfo.academicYear}_${student.id}`, // Use proper enrollment ID format
+      studentId: student.id, // This is now the student UID
+      enrollmentId: student.enrollmentId, // This is now the correct enrollment ID
       studentName: locale === 'ar-SA' ? student.name : student.nameEn,
-      status: (currentAttendance[student.id.toString()] as 'present' | 'absent' | 'late') || 'absent',
+      status: (currentAttendance[student.id] as 'present' | 'absent' | 'late') || 'absent',
       notes: ''
     }));
 
@@ -1718,8 +1720,8 @@ function AttendanceManagement({ locale, selectedClass, classes, user }: { locale
                     key={option.status}
                     onClick={() => handleAttendanceChange(student.id, option.status as 'present' | 'absent' | 'late')}
                     style={{
-                      background: currentAttendance[student.id.toString()] === option.status ? option.color : 'white',
-                      color: currentAttendance[student.id.toString()] === option.status ? 'white' : option.color,
+                      background: currentAttendance[student.id] === option.status ? option.color : 'white',
+                      color: currentAttendance[student.id] === option.status ? 'white' : option.color,
                       border: `2px solid ${option.color}`,
                       padding: '0.8rem 1.2rem',
                       borderRadius: '10px',
