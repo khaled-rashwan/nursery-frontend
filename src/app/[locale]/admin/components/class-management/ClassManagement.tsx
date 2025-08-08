@@ -3,11 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { classAPI, userAPI, handleAPIError } from '../../services/api';
-
-interface TeacherAssignment {
-  teacherId: string;
-  subjects: string[];
-}
+import { TeacherAssignment } from '../../types/admin.types';
 
 interface Class {
   id: string;
@@ -527,28 +523,39 @@ interface ClassFormProps {
   loading: boolean;
 }
 
-function ClassForm({ 
-  locale, 
-  teachers, 
-  academicYears, 
-  levels, 
-  initialData, 
-  onSubmit, 
-  onCancel, 
-  loading 
+function ClassForm({
+  locale,
+  teachers,
+  academicYears,
+  levels,
+  initialData,
+  onSubmit,
+  onCancel,
+  loading
 }: ClassFormProps) {
+  interface FormErrors {
+    name?: string;
+    level?: string;
+    academicYear?: string;
+    teachers?: string | { teacherId?: string; subjects?: string }[];
+    capacity?: string;
+    notes?: string;
+  }
+
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     level: initialData?.level || 'KG1',
     academicYear: initialData?.academicYear || academicYears[1] || '', // Default to current year
-    teachers: initialData?.teachers || [{ teacherId: '', subjects: '' }],
+    teachers: initialData
+      ? initialData.teachers.map(t => ({ ...t, subjects: t.subjects.join(', ') }))
+      : [{ teacherId: '', subjects: '' }],
     capacity: initialData?.capacity || 25,
     notes: initialData?.notes || ''
   });
-  const [errors, setErrors] = useState<Record<string, string | { teacherId?: string, subjects?: string }[]>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string | { teacherId?: string, subjects?: string }[]> = { teachers: [] };
+    const newErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
       newErrors.name = locale === 'ar-SA' ? 'اسم الفصل مطلوب' : 'Class name is required';
@@ -565,14 +572,23 @@ function ClassForm({
     if (formData.teachers.length === 0) {
       newErrors.teachers = locale === 'ar-SA' ? 'المعلم مطلوب' : 'Teacher is required';
     } else {
-      formData.teachers.forEach((teacher, index) => {
+      const teacherErrors: { teacherId?: string, subjects?: string }[] = [];
+      let hasErrors = false;
+      formData.teachers.forEach((teacher) => {
+        const error: { teacherId?: string, subjects?: string } = {};
         if (!teacher.teacherId) {
-          newErrors.teachers[index] = { ...newErrors.teachers[index], teacherId: locale === 'ar-SA' ? 'المعلم مطلوب' : 'Teacher is required' };
+          error.teacherId = locale === 'ar-SA' ? 'المعلم مطلوب' : 'Teacher is required';
+          hasErrors = true;
         }
         if (!teacher.subjects) {
-          newErrors.teachers[index] = { ...newErrors.teachers[index], subjects: locale === 'ar-SA' ? 'المادة مطلوبة' : 'Subjects are required' };
+          error.subjects = locale === 'ar-SA' ? 'المادة مطلوبة' : 'Subjects are required';
+          hasErrors = true;
         }
+        teacherErrors.push(error);
       });
+      if (hasErrors) {
+        newErrors.teachers = teacherErrors;
+      }
     }
 
     if (formData.capacity < 1 || formData.capacity > 50) {
@@ -580,7 +596,7 @@ function ClassForm({
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 1 && newErrors.teachers.length === 0;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -598,7 +614,7 @@ function ClassForm({
     onSubmit({ ...formData, teachers: formattedTeachers });
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: keyof FormErrors, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -801,6 +817,11 @@ function ClassForm({
             }}>
               {locale === 'ar-SA' ? 'المعلمون *' : 'Teachers *'}
             </label>
+            {typeof errors.teachers === 'string' && (
+              <div style={{ color: '#e74c3c', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                {errors.teachers}
+              </div>
+            )}
             {formData.teachers.map((teacher, index) => (
               <div key={index} style={{
                 display: 'grid',
@@ -815,7 +836,7 @@ function ClassForm({
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: `1px solid ${errors.teachers?.[index]?.teacherId ? '#e74c3c' : '#ddd'}`,
+                    border: `1px solid ${Array.isArray(errors.teachers) && errors.teachers[index]?.teacherId ? '#e74c3c' : '#ddd'}`,
                     borderRadius: '4px',
                     fontSize: '1rem'
                   }}
@@ -837,7 +858,7 @@ function ClassForm({
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: `1px solid ${errors.teachers?.[index]?.subjects ? '#e74c3c' : '#ddd'}`,
+                    border: `1px solid ${Array.isArray(errors.teachers) && errors.teachers[index]?.subjects ? '#e74c3c' : '#ddd'}`,
                     borderRadius: '4px',
                     fontSize: '1rem'
                   }}

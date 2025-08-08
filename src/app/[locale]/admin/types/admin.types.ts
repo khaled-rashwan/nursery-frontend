@@ -77,13 +77,17 @@ export interface StudentFormData {
   parentUID: string;
 }
 
+export interface TeacherAssignment {
+  teacherId: string;
+  subjects: string[];
+}
+
 export interface Class {
   id: string;
-  className: string;
+  name: string;
   level: string;
   academicYear: string;
-  teacherUID: string;
-  teacherName?: string;
+  teachers: TeacherAssignment[];
   capacity: number;
   currentEnrollment: number;
   schedule?: {
@@ -98,14 +102,16 @@ export interface Class {
   deleted?: boolean;
   deletedAt?: string;
   deletedBy?: string;
+  notes?: string;
 }
 
 export interface ClassFormData {
-  className: string;
+  name: string;
   level: string;
   academicYear: string;
-  teacherUID: string;
+  teachers: TeacherAssignment[];
   capacity: number;
+  notes?: string;
   schedule?: {
     startTime: string;
     endTime: string;

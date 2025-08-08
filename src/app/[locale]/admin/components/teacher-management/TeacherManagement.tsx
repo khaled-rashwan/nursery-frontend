@@ -20,10 +20,18 @@ export function TeacherManagement({ locale }: TeacherManagementProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
 
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const fetchTeachers = useCallback(async () => {
     if (!user) return;
@@ -45,12 +53,16 @@ export function TeacherManagement({ locale }: TeacherManagementProps) {
   const handleSubmit = async (teacherData: Partial<Teacher>) => {
     if (!user) return;
     setLoading(true);
+    setError(null);
+    setSuccess(null);
     try {
+      let response;
       if (editingTeacher) {
-        await teacherAPI.update(user, editingTeacher.id, teacherData);
+        response = await teacherAPI.update(user, editingTeacher.id, teacherData);
       } else {
-        await teacherAPI.create(user, teacherData);
+        response = await teacherAPI.create(user, teacherData);
       }
+      setSuccess(response.message || (editingTeacher ? 'Teacher updated successfully' : 'Teacher created successfully'));
       fetchTeachers();
       setShowForm(false);
       setEditingTeacher(null);
