@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
+import { useRouter } from 'next/navigation';
 import { UserRole, canAccessAdmin } from '../../../utils/rolePermissions';
 import { AdminLoginForm } from './components/AdminLoginForm';
 import { AccessDenied } from './components/AccessDenied';
@@ -12,14 +13,14 @@ import { injectSpinnerAnimation } from './styles/animations';
 injectSpinnerAnimation();
 
 // Main Admin Portal Component
-export default function AdminPortalPage({ params }: { params: Promise<{ locale: string }> }) {
+export default function AdminPortalPage({ params }: { params: Promise<{ locale:string }> }) {
   // All hooks must be called unconditionally, at the top
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(false);
   const [hasAdminAccess, setHasAdminAccess] = useState<boolean | null>(null);
   const { user, loading: authLoading, logout, getUserCustomClaims } = useAuth();
-  const router = require('next/navigation').useRouter();
+  const router = useRouter();
   const [redirecting, setRedirecting] = useState(false);
 
   // All hooks and effects must be called before any return

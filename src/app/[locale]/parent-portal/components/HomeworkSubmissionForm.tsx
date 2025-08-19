@@ -20,7 +20,7 @@ const HomeworkSubmissionForm: React.FC<Props> = ({
   onDeleted,
 }) => {
   // Status is always 'submitted' for parent
-  const status: 'submitted' = 'submitted';
+  const status = 'submitted' as const;
   const [comment, setComment] = useState(initialSubmission?.comment || "");
   const [attachments, setAttachments] = useState<string[]>(initialSubmission?.attachments || []);
   const [loading, setLoading] = useState(false);
@@ -40,8 +40,12 @@ const HomeworkSubmissionForm: React.FC<Props> = ({
         comment,
       });
       onSubmitted(submission);
-    } catch (err: any) {
-      setError(err.message || "Submission failed");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Submission failed");
+      } else {
+        setError("An unknown error occurred during submission");
+      }
     } finally {
       setLoading(false);
     }
@@ -55,8 +59,12 @@ const HomeworkSubmissionForm: React.FC<Props> = ({
       const { deleteHomeworkSubmission } = await import("../services/api");
       await deleteHomeworkSubmission(token, homework.id, studentId);
       onDeleted();
-    } catch (err: any) {
-      setError(err.message || "Delete failed");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Delete failed");
+      } else {
+        setError("An unknown error occurred during delete");
+      }
     } finally {
       setLoading(false);
     }

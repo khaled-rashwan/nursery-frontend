@@ -10,6 +10,8 @@ const locales = [
 export default function LanguageSwitcher({ currentLocale, isRTL }: { currentLocale: string; isRTL: boolean }) {
   const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
+
+  if (!pathname) return null;
   
   // Only show the opposite language button
   const otherLocale = currentLocale === "ar-SA" ? locales[0] : locales[1];

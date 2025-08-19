@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useAcademicYear } from '../../../../contexts/AcademicYearContext';
 import type { EnrollmentStudent } from '../types';
+import { User } from 'firebase/auth';
 
 // Minimal types for threads/messages
 type Thread = {
@@ -31,7 +32,7 @@ type Message = {
 
 const API_BASE_URL = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net`;
 
-async function authedFetch(user: any, url: string, init?: RequestInit) {
+async function authedFetch(user: User, url: string, init?: RequestInit) {
   const token = await user.getIdToken();
   const headers = new Headers(init?.headers);
   headers.set('Authorization', `Bearer ${token}`);
@@ -175,7 +176,7 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
 
     setSending(true);
     try {
-      const parentId = enrollment.studentInfo?.parentInfo?.uid || (enrollment as any).parentUID || enrollment.studentInfo?.parentUID || '';
+      const parentId = enrollment.studentInfo?.parentInfo?.uid || enrollment.studentInfo?.parentUID || '';
       const studentId = enrollment.studentUID;
       const body = {
         parentId,

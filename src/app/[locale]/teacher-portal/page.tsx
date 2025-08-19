@@ -297,13 +297,15 @@ function AuthenticationForm({ locale }: { locale: string }) {
   );
 }
 
+import { useRouter } from 'next/navigation';
+
 // Main Teacher Portal Component
 export default function TeacherPortalPage({ params }: { params: Promise<{ locale: string }> }) {
   // State and auth
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
   const { user, loading, getUserCustomClaims, logout } = useAuth();
-  const router = require('next/navigation').useRouter();
+  const router = useRouter();
 
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {

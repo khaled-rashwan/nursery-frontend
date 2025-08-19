@@ -3,8 +3,26 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../../../hooks/useAuth";
 import { useAcademicYear } from "../../../../contexts/AcademicYearContext";
+import { User } from "firebase/auth";
 
 // Minimal types for threads/messages
+interface Child {
+  id: string;
+  name: string;
+  nameEn: string;
+  class?: string;
+  classEn?: string;
+  classId?: string;
+  photo?: string;
+  fees?: {
+    total: number;
+    paid: number;
+    remaining: number;
+  };
+  birthDate?: string;
+  age?: string;
+  parentUID?: string;
+}
 interface Thread {
   id: string;
   threadId?: string;
@@ -30,7 +48,7 @@ interface Message {
 
 const API_BASE_URL = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net`;
 
-async function authedFetch(user: any, url: string, init?: RequestInit) {
+async function authedFetch(user: User, url: string, init?: RequestInit) {
   const token = await user.getIdToken();
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${token}`);
@@ -38,7 +56,7 @@ async function authedFetch(user: any, url: string, init?: RequestInit) {
   return fetch(url, { ...init, headers });
 }
 
-export function ParentMessagesCenter({ locale, currentChild }: { locale: string; currentChild: any }) {
+export function ParentMessagesCenter({ locale, currentChild }: { locale: string; currentChild: Child }) {
   // Reset selectedThread when switching students
   useEffect(() => {
     setSelectedThread(null);

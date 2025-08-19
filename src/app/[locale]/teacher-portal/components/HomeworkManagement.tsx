@@ -247,8 +247,12 @@ export default function HomeworkManagement({
         });
         setSubmissionEdits(edits);
       }
-    } catch (e: any) {
-      setSubmissionsError(e.message || 'Failed to load submissions');
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setSubmissionsError(e.message || 'Failed to load submissions');
+      } else {
+        setSubmissionsError('An unknown error occurred while loading submissions');
+      }
     } finally {
       setSubmissionsLoading(false);
     }
@@ -265,8 +269,12 @@ export default function HomeworkManagement({
       // Optionally, reload submissions
       const subs = await fetchHomeworkSubmissions(user, reviewHomework.id);
       setSubmissions(subs);
-    } catch (e: any) {
-      setSubmissionsError(e.message || 'Failed to update submission');
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setSubmissionsError(e.message || 'Failed to update submission');
+      } else {
+        setSubmissionsError('An unknown error occurred while updating submission');
+      }
     } finally {
       setSubmissionSaving(prev => ({ ...prev, [studentId]: false }));
     }
@@ -470,13 +478,18 @@ export default function HomeworkManagement({
     }));
   };
 
-  const formatDate = (dateValue: any) => {
+  type DateInput =
+    | string
+    | { toDate: () => Date }
+    | { seconds: number; nanoseconds: number };
+
+  const formatDate = (dateValue: DateInput) => {
     let date: Date | null = null;
     if (!dateValue) return '';
-    if (typeof dateValue === 'object' && typeof dateValue.toDate === 'function') {
+    if (typeof dateValue === 'object' && 'toDate' in dateValue && typeof dateValue.toDate === 'function') {
       date = dateValue.toDate();
-    } else if (typeof dateValue === 'object' && dateValue.seconds) {
-      date = new Date(dateValue.seconds * 1000);
+    } else if (typeof dateValue === 'object' && 'seconds' in dateValue) {
+      date = new Date((dateValue as { seconds: number }).seconds * 1000);
     } else if (typeof dateValue === 'string') {
       date = new Date(dateValue);
     } else {

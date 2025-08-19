@@ -5,6 +5,7 @@ import { useAuth } from '../../../../../hooks/useAuth';
 import { EnrollmentRegistration } from './EnrollmentRegistration';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { enrollmentAPI, handleAPIError } from '../../services/api';
+import { EnrollmentFormData } from '../../types/admin.types';
 
 interface StudentInfo {
   uid: string;
@@ -47,18 +48,8 @@ interface Enrollment {
   updatedBy?: string;
 }
 
-interface EnrollmentFormData {
-  studentUID: string;
-  academicYear: string;
-  class: string;
-  teacherUID: string;
-  status: 'enrolled' | 'withdrawn' | 'graduated' | 'pending';
-  notes: string;
-  previousClass?: string;
-}
-
 interface EnrollmentManagementProps {
-  locale: string;
+  locale:string;
 }
 
 export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
@@ -771,7 +762,6 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
             studentUID: editingEnrollment.studentUID,
             academicYear: editingEnrollment.academicYear,
             class: editingEnrollment.class,
-            teacherUID: editingEnrollment.teacherUID,
             status: editingEnrollment.status,
             notes: editingEnrollment.notes,
             previousClass: editingEnrollment.previousClass

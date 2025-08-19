@@ -27,6 +27,10 @@ export interface ReportCard {
   createdAt?: string;
 }
 
+interface RawReportCard extends Omit<ReportCard, 'grades'> {
+  grades: Record<string, string> | GradeEntry[];
+}
+
 interface ReportCardModalProps {
   studentId: string;
   studentName: string;
@@ -60,7 +64,7 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({ studentId, stu
         .then(res => res.json())
         .then(data => {
           if (data.reportCards) {
-            setReportCards(data.reportCards.map((rc: any) => ({
+            setReportCards(data.reportCards.map((rc: RawReportCard) => ({
               ...rc,
               grades: Array.isArray(rc.grades)
                 ? rc.grades
@@ -145,7 +149,7 @@ export const ReportCardModal: React.FC<ReportCardModalProps> = ({ studentId, stu
             })
               .then(res => res.json())
               .then(data => {
-                if (data.reportCards) setReportCards(data.reportCards.map((rc: any) => ({
+                if (data.reportCards) setReportCards(data.reportCards.map((rc: RawReportCard) => ({
                   ...rc,
                   grades: Array.isArray(rc.grades)
                     ? rc.grades

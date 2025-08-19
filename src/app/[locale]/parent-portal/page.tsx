@@ -553,6 +553,8 @@ function LoginForm({ locale }: { locale: string }) {
   );
 }
 
+const ParentMessagesCenter = React.lazy(() => import('./components/ParentMessagesCenter'));
+
 // Session Monitor Component
 function SessionMonitor({ 
   user, 
@@ -1755,10 +1757,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                 {/* Parent Messages Center */}
                 {currentChild && (
                   <React.Suspense fallback={<div style={{textAlign:'center',padding:'2rem'}}>{locale==='ar-SA'?'جاري تحميل الرسائل...':'Loading messages...'}</div>}>
-                    {(() => {
-                      const ParentMessagesCenter = require('./components/ParentMessagesCenter').default;
-                      return <ParentMessagesCenter locale={locale} currentChild={currentChild} />;
-                    })()}
+                    <ParentMessagesCenter locale={locale} currentChild={currentChild} />
                   </React.Suspense>
                 )}
               </div>
@@ -1770,6 +1769,8 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
   );
 }
 
+import { useRouter } from 'next/navigation';
+
 // Main Parent Portal Component
 
 export default function ParentPortalPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -1777,7 +1778,7 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
   const { user, loading: authLoading, logout, getUserCustomClaims } = useAuth();
-  const router = require('next/navigation').useRouter();
+  const router = useRouter();
   // Role state
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);

@@ -25,7 +25,8 @@ export default function PortalNavButton({ locale }: PortalNavButtonProps) {
     if (!user) return;
     getUserCustomClaims().then((claims) => {
       if (!claims) return;
-  let role = claims.role || claims.customRole || (claims['https://hasura.io/jwt/claims'] && (claims as any)['https://hasura.io/jwt/claims']['x-hasura-default-role']);
+  const hasuraClaims = claims['https://hasura.io/jwt/claims'] as { 'x-hasura-default-role': string } | undefined;
+  const role: string | undefined = (claims.role as string) || (claims.customRole as string) || (hasuraClaims && hasuraClaims['x-hasura-default-role']);
       if (role && roleToPortal[role]) {
         setPortal(roleToPortal[role]);
         switch (role) {
