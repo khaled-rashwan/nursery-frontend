@@ -24,6 +24,7 @@ const canAssignRole = (assignerRole, targetRole) => {
 };
 
 // Permission check for student/enrollment management
+
 const canManageStudents = (role) => {
   return ['admin', 'superadmin'].includes(role);
 };
@@ -32,11 +33,17 @@ const canManageEnrollments = (role) => {
   return ['admin', 'superadmin'].includes(role);
 };
 
+// Permission check for viewing enrollments (teachers, admins, superadmins, parents)
+const canViewEnrollments = (role) => {
+  return ['teacher', 'admin', 'superadmin', 'parent'].includes(role);
+};
+
 module.exports = {
   canEditUser,
   canDeleteUser,
   canCreateRole,
   canAssignRole,
   canManageStudents,
-  canManageEnrollments
+  canManageEnrollments,
+  canViewEnrollments
 };

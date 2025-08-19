@@ -11,6 +11,9 @@ const enrollmentCrud = require('./src/enrollments/enrollmentCrud');
 const classCrud = require('./src/classes/classCrud');
 const attendanceCrud = require('./src/attendance/attendanceCrud');
 const attendanceCrudNew = require('./src/attendance/attendanceCrudNew');
+const userTriggers = require('./src/triggers/userTriggers');
+const manageMessages = require('./src/messages/manageMessages');
+const { manageReportCards } = require('./src/reportCards/reportCardCrud');
 
 // Export User Management Functions
 exports.listUsers = userManagement.listUsers;
@@ -25,6 +28,7 @@ exports.getStudent = studentCrud.getStudent;
 exports.updateStudent = studentCrud.updateStudent;
 exports.deleteStudent = studentCrud.deleteStudent;
 exports.getChildrenByParentUID = getChildrenByParentUID.getChildrenByParentUID;
+exports.getChildrenWithEnrollments = require('./src/students/getChildrenWithEnrollments').getChildrenWithEnrollments;
 
 // Export Enrollment Management Functions
 exports.createEnrollment = enrollmentCrud.createEnrollment;
@@ -33,14 +37,37 @@ exports.getEnrollment = enrollmentCrud.getEnrollment;
 exports.updateEnrollment = enrollmentCrud.updateEnrollment;
 exports.deleteEnrollment = enrollmentCrud.deleteEnrollment;
 exports.getEnrollmentsByYear = enrollmentCrud.getEnrollmentsByYear;
+exports.getEnrollmentsByClass = require('./src/enrollments/getEnrollmentsByClass').getEnrollmentsByClass;
 
 // Export Class Management Functions
 exports.manageClasses = classCrud.manageClasses;
 exports.getEnrollmentStats = enrollmentCrud.getEnrollmentStats;
 
+// Export Class Teacher Assignment Functions
+const classTeacherAssignments = require('./src/classes/classTeacherAssignments');
+exports.manageClassTeacherAssignments = classTeacherAssignments.manageClassTeacherAssignments;
+
 // Export Teacher Management Functions
 const teacherCrud = require('./src/teachers/teacherCrud');
-exports.manageTeachers = teacherCrud.manageTeachers;
+const teacherCrudNew = require('./src/teachers/teacherCrudNew');
+exports.manageTeachers = teacherCrud.manageTeachers; // Keep old for backward compatibility
+exports.manageTeachersNew = teacherCrudNew.manageTeachers; // New implementation
+
+// Export Homework Management Functions
+const homeworkCrud = require('./src/homework/homeworkCrud');
+exports.createHomework = homeworkCrud.createHomework;
+exports.getHomework = homeworkCrud.getHomework;
+exports.listHomeworkByClass = homeworkCrud.listHomeworkByClass;
+exports.updateHomework = homeworkCrud.updateHomework;
+exports.deleteHomework = homeworkCrud.deleteHomework;
+
+// Export Homework Submission CRUDL (Parent/Teacher)
+const homeworkSubmissionCrud = require('./src/homework/homeworkSubmissionCrud');
+exports.submitHomework = homeworkSubmissionCrud.submitHomework;
+exports.listHomeworkSubmissions = homeworkSubmissionCrud.listHomeworkSubmissions;
+exports.getHomeworkSubmission = homeworkSubmissionCrud.getHomeworkSubmission;
+exports.updateHomeworkSubmission = homeworkSubmissionCrud.updateHomeworkSubmission;
+exports.deleteHomeworkSubmission = homeworkSubmissionCrud.deleteHomeworkSubmission;
 
 // Export Attendance Management Functions (Old system - for backward compatibility)
 exports.saveAttendance = attendanceCrud.saveAttendance;
@@ -53,3 +80,12 @@ exports.saveAttendanceCentralized = attendanceCrudNew.saveAttendanceCentralized;
 exports.getAttendanceCentralized = attendanceCrudNew.getAttendanceCentralized;
 exports.getStudentAttendanceHistory = attendanceCrudNew.getStudentAttendanceHistory;
 exports.deleteAttendanceCentralized = attendanceCrudNew.deleteAttendance;
+
+// Export User Triggers (for teacher record management)
+exports.onCustomClaimsChange = userTriggers.onCustomClaimsChange;
+
+// Export Messaging Functions
+exports.manageMessages = manageMessages.manageMessages;
+
+// Export Report Card Functions
+exports.manageReportCards = manageReportCards;

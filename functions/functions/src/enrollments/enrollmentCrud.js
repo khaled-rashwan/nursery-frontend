@@ -205,9 +205,82 @@ const createEnrollment = functions.https.onRequest(async (req, res) => {
       });
     }
 
-    // Note: Class validation is now simplified - the frontend dropdown ensures valid classes
-    // We could add dynamic validation here by checking against getValidClassNames(), but
-    // keeping it simple as requested since the frontend provides a dropdown of valid classes
+    // NEW ARCHITECTURE: Validate classId instead of teacherUID
+    // Get class information to validate classId and get className
+    let classDoc = null;
+    let className = null;
+    
+    if (enrollmentData.classId) {
+      // NEW: Using classId (preferred method)
+      try {
+        classDoc = await db.collection('classes').doc(enrollmentData.classId).get();
+        if (!classDoc.exists) {
+          return res.status(400).json({ 
+            error: 'Invalid class',
+            details: 'Class with specified ID does not exist' 
+          });
+        }
+        const classData = classDoc.data();
+        if (classData.deleted) {
+          return res.status(400).json({ 
+            error: 'Invalid class',
+            details: 'Cannot enroll in a deleted class' 
+          });
+        }
+        className = classData.name;
+        console.log(`✅ Class validation successful: ${className} (${enrollmentData.classId})`);
+      } catch (error) {
+        console.error('Error validating classId:', error);
+        return res.status(400).json({ 
+          error: 'Invalid class',
+          details: `Error validating class ID: ${error.message}` 
+        });
+      }
+    } else if (enrollmentData.class) {
+      // FALLBACK: Using class name (legacy support)
+      try {
+        const classQuery = await db.collection('classes')
+          .where('name', '==', enrollmentData.class)
+          .where('academicYear', '==', enrollmentData.academicYear)
+          .where('deleted', '!=', true)
+          .limit(1)
+          .get();
+        
+        if (classQuery.empty) {
+          // Try without academicYear filter in case class spans multiple years
+          const classQueryFallback = await db.collection('classes')
+            .where('name', '==', enrollmentData.class)
+            .where('deleted', '!=', true)
+            .limit(1)
+            .get();
+          
+          if (classQueryFallback.empty) {
+            return res.status(400).json({ 
+              error: 'Invalid class',
+              details: `Class "${enrollmentData.class}" not found` 
+            });
+          }
+          classDoc = classQueryFallback.docs[0];
+        } else {
+          classDoc = classQuery.docs[0];
+        }
+        
+        className = enrollmentData.class;
+        enrollmentData.classId = classDoc.id; // Add classId for new architecture
+        console.log(`✅ Class validation successful (legacy): ${className} → ${classDoc.id}`);
+      } catch (error) {
+        console.error('Error validating class name:', error);
+        return res.status(400).json({ 
+          error: 'Invalid class',
+          details: `Error validating class name: ${error.message}` 
+        });
+      }
+    } else {
+      return res.status(400).json({ 
+        error: 'Invalid enrollment data',
+        details: 'Either classId or class name is required' 
+      });
+    }
 
     // Verify student exists and is not deleted
     const studentVerification = await verifyStudentExists(enrollmentData.studentUID);
@@ -218,14 +291,9 @@ const createEnrollment = functions.https.onRequest(async (req, res) => {
       });
     }
 
-    // Verify teacher exists and has correct role
-    const teacherVerification = await verifyTeacherRole(enrollmentData.teacherUID);
-    if (!teacherVerification.isValid) {
-      return res.status(400).json({ 
-        error: 'Invalid teacher',
-        details: teacherVerification.error 
-      });
-    }
+    // REMOVED: Teacher verification - teachers are assigned via teachers.classes[] field
+    // Teacher assignments are managed through the Teacher Management component
+    // No need to verify teacherUID in enrollment creation
 
     // Create enrollment ID using the specified format: {academicYear}_{studentUID}
     const enrollmentId = `${enrollmentData.academicYear}_${enrollmentData.studentUID}`;
@@ -244,12 +312,12 @@ const createEnrollment = functions.https.onRequest(async (req, res) => {
       }
     }
 
-    // Create enrollment document
+    // Create enrollment document with NEW ARCHITECTURE
     const enrollmentDoc = {
       studentUID: enrollmentData.studentUID,
       academicYear: enrollmentData.academicYear,
-      class: enrollmentData.class,
-      teacherUID: enrollmentData.teacherUID,
+      classId: enrollmentData.classId,        // NEW: Reference to classes collection document ID
+      class: className,                       // KEEP: Human-readable class name for compatibility
       status: enrollmentData.status || 'enrolled',
       enrollmentDate: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -258,6 +326,7 @@ const createEnrollment = functions.https.onRequest(async (req, res) => {
       // Additional metadata
       notes: enrollmentData.notes || '',
       previousClass: enrollmentData.previousClass || null
+      // REMOVED: teacherUID - teacher assignments managed via teachers.classes[] field
     };
 
     await db.collection('enrollments').doc(enrollmentId).set(enrollmentDoc);
@@ -266,21 +335,21 @@ const createEnrollment = functions.https.onRequest(async (req, res) => {
     const createdEnrollment = await db.collection('enrollments').doc(enrollmentId).get();
     const data = createdEnrollment.data();
     
-    // Get comprehensive student and teacher information
+    // Get comprehensive student information
     const studentInfo = await getStudentInfo(data.studentUID);
-    const teacherInfo = await getTeacherInfo(data.teacherUID);
+    // REMOVED: Teacher info - teachers managed via teachers.classes[] architecture
 
     const responseEnrollment = {
       id: createdEnrollment.id,
       studentUID: data.studentUID,
       academicYear: data.academicYear,
-      class: data.class,
-      teacherUID: data.teacherUID,
+      classId: data.classId,              // NEW: Include classId in response
+      class: data.class,                  // KEEP: Human-readable class name
       status: data.status,
       notes: data.notes,
       previousClass: data.previousClass,
       studentInfo: studentInfo,
-      teacherInfo: teacherInfo,
+      // REMOVED: teacherInfo - not relevant in new architecture
       enrollmentDate: data.enrollmentDate?.toDate().toISOString(),
       createdAt: data.createdAt?.toDate().toISOString(),
       updatedAt: data.updatedAt?.toDate().toISOString(),
@@ -321,13 +390,14 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
     return res.status(authResult.error.status).json({ error: authResult.error.message });
   }
 
-  // Allow both admins and teachers to access enrollments
+  // Allow admins, teachers, and parents (scoped to their own children) to access enrollments
   const userRole = authResult.decodedToken.role || 'user';
   const isAdmin = ['admin', 'superadmin'].includes(userRole);
   const isTeacher = userRole === 'teacher';
+  const isParent = userRole === 'parent';
 
-  if (!isAdmin && !isTeacher) {
-    return res.status(403).json({ error: 'Forbidden: Only administrators and teachers can access enrollments' });
+  if (!isAdmin && !isTeacher && !isParent) {
+    return res.status(403).json({ error: 'Forbidden: Only administrators, teachers, or parents (their own children) can access enrollments' });
   }
 
   // If teacher, restrict to only their assigned classes by adding teacherUID filter
@@ -338,9 +408,9 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 10, 100); // Max 100 per page
     const academicYear = req.query.academicYear?.trim();
     const className = req.query.class?.trim();
-    let teacherUID = req.query.teacherUID?.trim();
-    const studentUID = req.query.studentUID?.trim();
-    const parentUID = req.query.parentUID?.trim();
+  let teacherUID = req.query.teacherUID?.trim();
+  const studentUID = req.query.studentUID?.trim();
+  let parentUID = req.query.parentUID?.trim();
     const status = req.query.status?.trim();
     const search = req.query.search?.trim();
     const sortBy = req.query.sortBy || 'createdAt'; // class, academicYear, createdAt, updatedAt, enrollmentDate
@@ -351,6 +421,17 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
     // If user is a teacher, force filter to only their classes
     if (isTeacherFilteringOwnClasses) {
       teacherUID = authResult.decodedToken.uid; // Override with teacher's UID
+    }
+
+    // If user is a parent, force filter to only their children
+    if (isParent) {
+      // Ensure parents cannot query other parents' enrollments
+      // This forces the filter to the authenticated parent's UID regardless of query params
+      if (req.query.parentUID && req.query.parentUID !== authResult.decodedToken.uid) {
+        console.warn('Parent attempted to query another parent\'s enrollments. Overriding to own UID.');
+      }
+      // eslint-disable-next-line no-param-reassign
+      parentUID = authResult.decodedToken.uid;
     }
 
     console.log('List enrollments request:', {
@@ -365,15 +446,16 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
       sortBy,
       sortOrder,
       startAfterTimestamp,
-      includeDeleted,
-      isTeacherFilteringOwnClasses
+  includeDeleted,
+  isTeacherFilteringOwnClasses,
+  isParent
     });
 
     let query = db.collection('enrollments');
 
+
     // Apply only sorting to avoid complex Firestore index requirements
     console.log('Applying sort:', sortBy, sortOrder);
-    
     // Use single orderBy to avoid complex index requirements
     if (sortBy === 'class') {
       query = query.orderBy('class', sortOrder);
@@ -387,7 +469,6 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
       // Default: createdAt
       query = query.orderBy('createdAt', sortOrder);
     }
-
     // Handle cursor-based pagination
     if (startAfterTimestamp && !isNaN(parseInt(startAfterTimestamp))) {
       console.log('Applying pagination with startAfterTimestamp:', startAfterTimestamp);
@@ -399,7 +480,6 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
         // Continue without pagination rather than failing
       }
     }
-
     // Apply a larger limit since we'll filter client-side
     const fetchLimit = Math.min(limit * 3, 300); // Fetch more to account for filtering
     query = query.limit(fetchLimit);
@@ -522,6 +602,7 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
         id,
         studentUID: data.studentUID,
         academicYear: data.academicYear,
+        classId: data.classId, // NEW: expose classId for reliable joins
         class: data.class,
         teacherUID: data.teacherUID,
         status: data.status,
@@ -557,12 +638,36 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
       console.log('Class filter applied. Before:', beforeCount, 'After:', enrollments.length);
     }
 
-    // Filter by teacher if specified
+    // Filter by teacher if specified - NEW ARCHITECTURE: Filter by classId assignments
     if (teacherUID) {
-      console.log('Applying teacherUID filter:', teacherUID);
+      console.log('Applying teacherUID filter (via classId assignments):', teacherUID);
       const beforeCount = enrollments.length;
-      enrollments = enrollments.filter(enrollment => enrollment.teacherUID === teacherUID);
-      console.log('TeacherUID filter applied. Before:', beforeCount, 'After:', enrollments.length);
+      try {
+        const teacherDoc = await db.collection('teachers').doc(teacherUID).get();
+        let teacherAssignedClassIds = [];
+        if (teacherDoc.exists()) {
+          const teacherData = teacherDoc.data();
+          const teacherClassAssignments = teacherData.classes || [];
+          teacherAssignedClassIds = teacherClassAssignments.map(assignment => assignment.classId);
+          console.log('Teacher assigned classIds:', teacherAssignedClassIds);
+        }
+        // Filter enrollments to only include classIds assigned to the teacher
+        if (teacherAssignedClassIds.length > 0) {
+          enrollments = enrollments.filter(enrollment => 
+            teacherAssignedClassIds.includes(enrollment.classId)
+          );
+          console.log('Filtered enrollments by assigned classIds');
+        } else {
+          // FALLBACK: If no assignments found, try legacy teacherUID field
+          console.log('No class assignments found, trying legacy teacherUID filter');
+          enrollments = enrollments.filter(enrollment => enrollment.teacherUID === teacherUID);
+        }
+      } catch (error) {
+        console.error('Error fetching teacher assignments:', error);
+        // FALLBACK: Use legacy teacherUID filter
+        enrollments = enrollments.filter(enrollment => enrollment.teacherUID === teacherUID);
+      }
+      console.log('TeacherUID filter applied (via classId assignments). Before:', beforeCount, 'After:', enrollments.length);
     }
 
     // Filter by student if specified
@@ -610,11 +715,13 @@ const listEnrollments = functions.https.onRequest(async (req, res) => {
       console.log('Search filter applied. Before:', beforeSearchCount, 'After:', enrollments.length);
     }
 
-    // Apply the final limit after all filtering
-    const totalFilteredCount = enrollments.length;
-    enrollments = enrollments.slice(0, limit);
 
-    console.log('Applied final limit. Total filtered:', totalFilteredCount, 'Returned:', enrollments.length);
+  // Apply the final limit after all filtering
+  let totalFilteredCount = enrollments.length;
+  enrollments = enrollments.slice(0, limit);
+  totalFilteredCount = enrollments.length;
+
+  console.log('Applied final limit. Total filtered:', totalFilteredCount, 'Returned:', enrollments.length);
 
     // Prepare pagination info
     let nextPageInfo = null;
@@ -749,6 +856,7 @@ const getEnrollment = functions.https.onRequest(async (req, res) => {
       id: enrollmentDoc.id,
       studentUID: data.studentUID,
       academicYear: data.academicYear,
+      classId: data.classId, // NEW: include classId in single fetch
       class: data.class,
       teacherUID: data.teacherUID,
       status: data.status,

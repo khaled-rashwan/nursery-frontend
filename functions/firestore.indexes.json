@@ -4,58 +4,78 @@
       "collectionGroup": "classes",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "academicYear",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "name",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "academicYear", "order": "ASCENDING" },
+        { "fieldPath": "level", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "classes",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "academicYear",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "level",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "name",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "academicYear", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "classes",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "level",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "name",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "level", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "homework",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "classId", "order": "ASCENDING" },
+        { "fieldPath": "dueDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "homework",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "classId", "order": "ASCENDING" },
+        { "fieldPath": "teacherUID", "order": "ASCENDING" },
+        { "fieldPath": "dueDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "threads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "teacherId", "order": "ASCENDING" },
+        { "fieldPath": "academicYear", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "threads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "parentId", "order": "ASCENDING" },
+        { "fieldPath": "academicYear", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "threads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "academicYear", "order": "ASCENDING" },
+        { "fieldPath": "teacherId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "threads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "academicYear", "order": "ASCENDING" },
+        { "fieldPath": "parentId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
     }
   ],

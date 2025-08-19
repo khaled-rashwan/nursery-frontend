@@ -37,12 +37,44 @@ exports.getChildrenByParentUID = functions.https.onRequest(async (req, res) => {
       res.status(400).json({ error: 'Missing parentUID' });
       return;
     }
+    
     const studentsRef = admin.firestore().collection('students');
     const snapshot = await studentsRef.where('parentUID', '==', parentUID).get();
     const children = [];
-    snapshot.forEach(doc => {
-      children.push({ id: doc.id, ...doc.data() });
-    });
+    
+    // For each child, also get their enrollment information
+    for (const doc of snapshot.docs) {
+      const studentData = doc.data();
+      const studentId = doc.id;
+      
+      // Get the most recent enrollment for this student
+      let enrollmentInfo = null;
+      try {
+        const enrollmentSnapshot = await admin.firestore().collection('enrollments')
+          .where('studentUID', '==', studentId)
+          .orderBy('createdAt', 'desc')
+          .limit(1)
+          .get();
+          
+        if (!enrollmentSnapshot.empty) {
+          const enrollmentData = enrollmentSnapshot.docs[0].data();
+          enrollmentInfo = {
+            classId: enrollmentData.classId || enrollmentData.class,
+            className: enrollmentData.class || enrollmentData.className,
+            academicYear: enrollmentData.academicYear
+          };
+        }
+      } catch (error) {
+        console.warn(`Failed to get enrollment for student ${studentId}:`, error.message);
+      }
+      
+      children.push({ 
+        id: studentId, 
+        ...studentData,
+        enrollment: enrollmentInfo
+      });
+    }
+    
     res.status(200).json({ children, usedAuth: !!parentUIDFromAuth });
   } catch (error) {
     console.error('Error fetching children:', error);

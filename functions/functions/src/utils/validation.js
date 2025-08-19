@@ -57,14 +57,13 @@ const validateEnrollmentData = (enrollmentData) => {
     }
   }
   
-  if (!enrollmentData.class || enrollmentData.class.trim().length === 0) {
-    errors.push('Class is required');
+  // NEW ARCHITECTURE: Require either classId OR class name (not both)
+  if (!enrollmentData.classId && (!enrollmentData.class || enrollmentData.class.trim().length === 0)) {
+    errors.push('Either classId or class name is required');
   }
-  // Removed hardcoded class validation - classes will be validated against database in the main function
   
-  if (!enrollmentData.teacherUID || enrollmentData.teacherUID.trim().length === 0) {
-    errors.push('Teacher UID is required');
-  }
+  // REMOVED: teacherUID validation - teachers managed via teachers.classes[] architecture
+  // Teacher assignments are handled separately in Teacher Management
   
   const validStatuses = ['enrolled', 'withdrawn', 'graduated', 'pending'];
   if (enrollmentData.status && !validStatuses.includes(enrollmentData.status)) {
@@ -133,10 +132,73 @@ const validateAttendanceData = (attendanceData) => {
   return errors;
 };
 
+const validateHomeworkData = (homeworkData) => {
+  const errors = [];
+  
+  if (!homeworkData.classId || homeworkData.classId.trim().length === 0) {
+    errors.push('Class ID is required');
+  }
+  
+  if (!homeworkData.subjectId || homeworkData.subjectId.trim().length === 0) {
+    errors.push('Subject ID is required');
+  }
+  
+  if (!homeworkData.teacherUID || homeworkData.teacherUID.trim().length === 0) {
+    errors.push('Teacher UID is required');
+  }
+  
+  if (!homeworkData.title || homeworkData.title.trim().length < 3) {
+    errors.push('Title is required and must be at least 3 characters');
+  }
+  
+  if (homeworkData.title && homeworkData.title.trim().length > 200) {
+    errors.push('Title must be less than 200 characters');
+  }
+  
+  if (!homeworkData.description || homeworkData.description.trim().length < 5) {
+    errors.push('Description is required and must be at least 5 characters');
+  }
+  
+  if (homeworkData.description && homeworkData.description.trim().length > 1000) {
+    errors.push('Description must be less than 1000 characters');
+  }
+  
+  if (!homeworkData.dueDate) {
+    errors.push('Due date is required');
+  } else {
+    const dueDate = new Date(homeworkData.dueDate);
+    const now = new Date();
+    if (dueDate <= now) {
+      errors.push('Due date must be in the future');
+    }
+  }
+  
+  if (homeworkData.attachments && !Array.isArray(homeworkData.attachments)) {
+    errors.push('Attachments must be an array');
+  }
+  
+  if (homeworkData.attachments && homeworkData.attachments.length > 10) {
+    errors.push('Maximum 10 attachments allowed');
+  }
+  
+  // Validate attachment URLs if provided
+  if (homeworkData.attachments && homeworkData.attachments.length > 0) {
+    const urlRegex = /^https?:\/\/.+/;
+    homeworkData.attachments.forEach((url, index) => {
+      if (typeof url !== 'string' || !urlRegex.test(url)) {
+        errors.push(`Attachment ${index + 1} must be a valid URL`);
+      }
+    });
+  }
+  
+  return errors;
+};
+
 module.exports = {
   validateEmail,
   validatePhoneNumber,
   validateStudentData,
   validateEnrollmentData,
-  validateAttendanceData
+  validateAttendanceData,
+  validateHomeworkData
 };

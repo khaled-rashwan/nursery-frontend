@@ -41,7 +41,7 @@
 body {
   /* background: linear-gradient(135deg, var(--light-yellow) 0%, var(--light-orange) 100%); */
   color: var(--foreground);
-  font-family: 'Comic Sans MS', cursive, Arial, sans-serif;
+  /* font-family: 'Comic Sans MS', cursive, Arial, sans-serif; */
   overflow-x: hidden;
   line-height: 1.6;
 }
@@ -74,9 +74,9 @@ body {
   transition: transform 0.3s var(--bounce);
 }
 
-.logo:hover {
+/* .logo:hover {
   transform: scale(1.1) rotate(-5deg);
-}
+} */
 
 .nav-menu {
   display: flex;

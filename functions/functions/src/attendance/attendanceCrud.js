@@ -9,44 +9,44 @@ const db = admin.firestore();
 // Helper function to verify class access and get class information
 const verifyClassAccess = async (academicYear, classId, decodedToken) => {
   try {
-    // Get class information
-    const classQuery = await db.collection('classes')
-      .where('academicYear', '==', academicYear)
-      .where('name', '==', classId)
-      .limit(1)
-      .get();
-    
-    if (classQuery.empty) {
+    // Get class information by classId
+    const classDoc = await db.collection('classes').doc(classId).get();
+    if (!classDoc.exists) {
       return { isValid: false, error: 'Class does not exist' };
     }
-    
-    const classDoc = classQuery.docs[0];
     const classData = classDoc.data();
-    
+
     // Role-based access control
     const userRole = decodedToken.role || (decodedToken.customClaims && decodedToken.customClaims.role);
-    
+
     // Superadmin and admin can access all classes
-    if (['superadmin', 'admin'].includes(userRole)) {
+    if (["superadmin", "admin"].includes(userRole)) {
       return { isValid: true, classData: { ...classData, id: classDoc.id } };
     }
-    
-    // Teachers can only access their own classes
-    if (userRole === 'teacher') {
-      if (classData.teacherUID === decodedToken.uid) {
+
+    // Teachers can only access their assigned classes
+    if (userRole === "teacher") {
+      // Check if teacher's classes array contains this classId
+      const teacherDoc = await db.collection("teachers").doc(decodedToken.uid).get();
+      if (!teacherDoc.exists) {
+        return { isValid: false, error: "Teacher profile not found" };
+      }
+      const teacherData = teacherDoc.data();
+      const assignedClass = (teacherData.classes || []).find(c => c.classId === classId);
+      if (assignedClass) {
         return { isValid: true, classData: { ...classData, id: classDoc.id } };
       } else {
-        return { isValid: false, error: 'Teachers can only manage attendance for their own classes' };
+        return { isValid: false, error: "Teachers can only manage attendance for their assigned classes" };
       }
     }
-    
+
     // Parents have read-only access if their child is in the class
-    if (userRole === 'parent') {
+    if (userRole === "parent") {
       // We'll check parent access when retrieving attendance records
       return { isValid: true, classData: { ...classData, id: classDoc.id }, readOnly: true };
     }
-    
-    return { isValid: false, error: 'Insufficient permissions' };
+
+    return { isValid: false, error: "Insufficient permissions" };
   } catch (error) {
     console.error('Error verifying enrollment access:', error);
     return { isValid: false, error: 'Failed to verify enrollment access' };
@@ -97,17 +97,14 @@ exports.saveAttendance = functions.https.onRequest(async (req, res) => {
 
     // Validate required fields
     const { enrollmentId, date, attendanceRecords } = req.body;
-    
     if (!enrollmentId) {
-      return res.status(400).json({ error: 'Enrollment ID is required' });
+      return res.status(400).json({ error: "Enrollment ID is required" });
     }
-    
     if (!date) {
-      return res.status(400).json({ error: 'Date is required' });
+      return res.status(400).json({ error: "Date is required" });
     }
-    
     if (!attendanceRecords || !Array.isArray(attendanceRecords) || attendanceRecords.length === 0) {
-      return res.status(400).json({ error: 'Attendance records are required' });
+      return res.status(400).json({ error: "Attendance records are required" });
     }
 
     // Validate date
@@ -116,49 +113,55 @@ exports.saveAttendance = functions.https.onRequest(async (req, res) => {
       return res.status(400).json({ error: dateValidation.error });
     }
 
-    // Verify enrollment access
-    const accessResult = await verifyEnrollmentAccess(enrollmentId, decodedToken);
+    // Get enrollment document
+    const enrollmentDoc = await db.collection("enrollments").doc(enrollmentId).get();
+    if (!enrollmentDoc.exists) {
+      return res.status(404).json({ error: "Enrollment not found" });
+    }
+    const enrollmentData = enrollmentDoc.data();
+    const classId = enrollmentData.classId;
+    const academicYear = enrollmentData.academicYear;
+
+    // Verify class access
+    const accessResult = await verifyClassAccess(academicYear, classId, decodedToken);
     if (!accessResult.isValid) {
       return res.status(403).json({ error: accessResult.error });
     }
-
     if (accessResult.readOnly) {
-      return res.status(403).json({ error: 'Read-only access: Cannot modify attendance records' });
+      return res.status(403).json({ error: "Read-only access: Cannot modify attendance records" });
     }
 
     // Validate attendance records
-    const validStatuses = ['present', 'absent', 'late'];
+    const validStatuses = ["present", "absent", "late"];
     for (const record of attendanceRecords) {
       if (!record.studentId || !record.status) {
-        return res.status(400).json({ error: 'Each attendance record must have studentId and status' });
+        return res.status(400).json({ error: "Each attendance record must have studentId and status" });
       }
-      
       if (!validStatuses.includes(record.status)) {
-        return res.status(400).json({ error: `Invalid status: ${record.status}. Must be one of: ${validStatuses.join(', ')}` });
+        return res.status(400).json({ error: `Invalid status: ${record.status}. Must be one of: ${validStatuses.join(", ")}` });
       }
     }
 
     // Use batch write for atomicity
     const batch = db.batch();
-    const attendanceRef = db.collection('enrollments').doc(enrollmentId).collection('attendance').doc(date);
-    
+    const attendanceRef = db.collection("enrollments").doc(enrollmentId).collection("attendance").doc(date);
     const attendanceData = {
       date: date,
       enrollmentId: enrollmentId,
-      academicYear: accessResult.enrollmentData.academicYear,
-      className: accessResult.enrollmentData.className,
+      academicYear: academicYear,
+      classId: classId,
       teacherUID: decodedToken.uid,
       records: attendanceRecords.map(record => ({
         studentId: record.studentId,
-        studentName: record.studentName || '',
+        studentName: record.studentName || "",
         status: record.status,
-        notes: record.notes || '',
+        notes: record.notes || "",
         recordedAt: admin.firestore.FieldValue.serverTimestamp()
       })),
       totalStudents: attendanceRecords.length,
-      presentCount: attendanceRecords.filter(r => r.status === 'present').length,
-      absentCount: attendanceRecords.filter(r => r.status === 'absent').length,
-      lateCount: attendanceRecords.filter(r => r.status === 'late').length,
+      presentCount: attendanceRecords.filter(r => r.status === "present").length,
+      absentCount: attendanceRecords.filter(r => r.status === "absent").length,
+      lateCount: attendanceRecords.filter(r => r.status === "late").length,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: decodedToken.uid
@@ -167,9 +170,8 @@ exports.saveAttendance = functions.https.onRequest(async (req, res) => {
     // Check if attendance already exists for this date
     const existingDoc = await attendanceRef.get();
     if (existingDoc.exists) {
-      // Update existing record
-      attendanceData.createdAt = existingDoc.data().createdAt; // Preserve original creation date
-      attendanceData.createdBy = existingDoc.data().createdBy; // Preserve original creator
+      attendanceData.createdAt = existingDoc.data().createdAt;
+      attendanceData.createdBy = existingDoc.data().createdBy;
     }
 
     batch.set(attendanceRef, attendanceData, { merge: true });
@@ -179,7 +181,7 @@ exports.saveAttendance = functions.https.onRequest(async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Attendance saved successfully',
+      message: "Attendance saved successfully",
       data: {
         enrollmentId,
         date,

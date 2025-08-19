@@ -47,11 +47,12 @@ interface Class {
 interface EnrollmentFormData {
   studentUID: string;
   academicYear: string;
-  class: string;
-  teacherUID: string;
+  classId: string;              // NEW: Reference to classes collection document ID
+  class?: string;               // OPTIONAL: Human-readable class name (auto-filled)
   status: 'enrolled' | 'withdrawn' | 'graduated' | 'pending';
   notes: string;
   previousClass?: string;
+  // REMOVED: teacherUID - teacher assignments managed via teachers.classes[]
 }
 
 interface EnrollmentRegistrationProps {
@@ -74,15 +75,14 @@ export function EnrollmentRegistration({
   const [formData, setFormData] = useState<EnrollmentFormData>({
     studentUID: initialData?.studentUID || '',
     academicYear: initialData?.academicYear || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
+    classId: initialData?.classId || '',
     class: initialData?.class || '',
-    teacherUID: initialData?.teacherUID || '',
     status: initialData?.status || 'enrolled',
     notes: initialData?.notes || '',
     previousClass: initialData?.previousClass || ''
   });
 
   const [students, setStudents] = useState<Student[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -92,11 +92,9 @@ export function EnrollmentRegistration({
 
   const validStatuses = ['enrolled', 'withdrawn', 'graduated', 'pending'];
 
-  // Get class names for current academic year
-  const getClassNamesForYear = (academicYear: string) => {
-    return classes
-      .filter(cls => cls.academicYear === academicYear)
-      .map(cls => cls.name);
+  // Get classes for current academic year
+  const getClassesForYear = (academicYear: string) => {
+    return classes.filter(cls => cls.academicYear === academicYear);
   };
 
   // Get all class names for previous class options
@@ -118,7 +116,7 @@ export function EnrollmentRegistration({
 
   const academicYears = generateAcademicYears();
 
-  // Fetch students, teachers, and classes
+  // Fetch students and classes (removed teachers)
   const fetchData = useCallback(async () => {
     if (!user) return;
 
@@ -135,10 +133,7 @@ export function EnrollmentRegistration({
         setSelectedStudent(student || null);
       }
 
-      // Fetch teachers (users with teacher role)
-      const usersData = await userAPI.list(user, 'teacher');
-      const teacherUsers = usersData.users?.filter((user: { role: string }) => user.role === 'teacher') || [];
-      setTeachers(teacherUsers);
+      // REMOVED: Teacher fetching - teachers are managed via teachers.classes[] architecture
 
       // Fetch classes
       const classesData = await classAPI.list(user);
@@ -177,13 +172,11 @@ export function EnrollmentRegistration({
       newErrors.academicYear = locale === 'ar-SA' ? 'العام الدراسي مطلوب' : 'Academic year is required';
     }
 
-    if (!formData.class) {
-      newErrors.class = locale === 'ar-SA' ? 'يجب اختيار فصل' : 'Class is required';
+    if (!formData.classId) {
+      newErrors.classId = locale === 'ar-SA' ? 'يجب اختيار فصل' : 'Class is required';
     }
 
-    if (!formData.teacherUID) {
-      newErrors.teacherUID = locale === 'ar-SA' ? 'يجب اختيار معلم' : 'Teacher is required';
-    }
+    // REMOVED: Teacher validation - teachers managed via teachers.classes[] architecture
 
     if (!formData.status) {
       newErrors.status = locale === 'ar-SA' ? 'يجب اختيار حالة' : 'Status is required';
@@ -363,7 +356,7 @@ export function EnrollmentRegistration({
             )}
           </div>
 
-          {/* Class */}
+          {/* Class Selection */}
           <div>
             <label style={{ 
               display: 'block', 
@@ -374,12 +367,19 @@ export function EnrollmentRegistration({
               {locale === 'ar-SA' ? 'الفصل *' : 'Class *'}
             </label>
             <select
-              value={formData.class}
-              onChange={(e) => handleInputChange('class', e.target.value)}
+              value={formData.classId}
+              onChange={(e) => {
+                const selectedClass = getClassesForYear(formData.academicYear).find(cls => cls.id === e.target.value);
+                handleInputChange('classId', e.target.value);
+                if (selectedClass) {
+                  handleInputChange('class', selectedClass.name);
+                }
+              }}
+              disabled={loadingData}
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: `1px solid ${errors.class ? '#e74c3c' : '#ddd'}`,
+                border: `1px solid ${errors.classId ? '#e74c3c' : '#ddd'}`,
                 borderRadius: '4px',
                 fontSize: '1rem'
               }}
@@ -387,53 +387,44 @@ export function EnrollmentRegistration({
               <option value="">
                 {locale === 'ar-SA' ? 'اختر فصل' : 'Select Class'}
               </option>
-              {getClassNamesForYear(formData.academicYear).map((className: string) => (
-                <option key={className} value={className}>{className}</option>
+              {getClassesForYear(formData.academicYear).map((classItem: Class) => (
+                <option key={classItem.id} value={classItem.id}>
+                  {classItem.name} - {classItem.level} ({classItem.capacity} {locale === 'ar-SA' ? 'طالب' : 'students'})
+                </option>
               ))}
             </select>
-            {errors.class && (
+            {errors.classId && (
               <div style={{ color: '#e74c3c', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                {errors.class}
+                {errors.classId}
               </div>
             )}
           </div>
 
-          {/* Teacher */}
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem', 
-              fontWeight: '500',
-              color: '#2c3e50'
+          {/* Teacher Assignment Info */}
+          <div style={{
+            gridColumn: '1 / -1',
+            padding: '1rem',
+            background: '#e8f4f8',
+            border: '1px solid #bee5eb',
+            borderRadius: '6px',
+            marginTop: '1rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.5rem'
             }}>
-              {locale === 'ar-SA' ? 'المعلم *' : 'Teacher *'}
-            </label>
-            <select
-              value={formData.teacherUID}
-              onChange={(e) => handleInputChange('teacherUID', e.target.value)}
-              disabled={loadingData}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: `1px solid ${errors.teacherUID ? '#e74c3c' : '#ddd'}`,
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-            >
-              <option value="">
-                {locale === 'ar-SA' ? 'اختر معلم' : 'Select Teacher'}
-              </option>
-              {teachers.map(teacher => (
-                <option key={teacher.uid} value={teacher.uid}>
-                  {teacher.displayName} ({teacher.email})
-                </option>
-              ))}
-            </select>
-            {errors.teacherUID && (
-              <div style={{ color: '#e74c3c', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                {errors.teacherUID}
-              </div>
-            )}
+              <span style={{ fontSize: '1.2rem' }}>👨‍🏫</span>
+              <strong style={{ color: '#0c5460' }}>
+                {locale === 'ar-SA' ? 'تعيين المعلمين' : 'Teacher Assignment'}
+              </strong>
+            </div>
+            <p style={{ margin: 0, color: '#0c5460', fontSize: '0.9rem' }}>
+              {locale === 'ar-SA' 
+                ? 'يتم إدارة تعيين المعلمين للفصول من خلال صفحة "إدارة المعلمين" ← "تعيين الفصول". لا حاجة لاختيار معلم عند التسجيل.'
+                : 'Teacher assignments are managed through "Teacher Management" → "Assign Classes". No need to select a teacher during enrollment.'}
+            </p>
           </div>
 
           {/* Status */}

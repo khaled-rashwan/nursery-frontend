@@ -1,7 +1,9 @@
 'use client';
 
+
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 interface FirebaseLogoutButtonProps {
   locale: string;
@@ -9,6 +11,7 @@ interface FirebaseLogoutButtonProps {
 
 export default function FirebaseLogoutButton({ locale }: FirebaseLogoutButtonProps) {
   const { user, logout, loading } = useAuth();
+  const router = useRouter();
 
   // Don't render anything if no user is logged in
   if (!user) {
@@ -17,6 +20,7 @@ export default function FirebaseLogoutButton({ locale }: FirebaseLogoutButtonPro
 
   const handleLogout = async () => {
     await logout();
+    router.push(`/${locale}/login`);
   };
 
   return (

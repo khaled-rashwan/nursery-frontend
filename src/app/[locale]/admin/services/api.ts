@@ -106,26 +106,117 @@ export const classAPI = {
   }
 };
 
+// Class Teacher Assignments API functions
+export const classTeacherAssignmentAPI = {
+  // List assignments with optional filters
+  list: async (user: User, filters?: {
+    classId?: string;
+    teacherId?: string;
+    academicYear?: string;
+    isActive?: boolean;
+  }) => {
+    const queryParams: Record<string, string> = { operation: 'list' };
+    if (filters?.classId) queryParams.classId = filters.classId;
+    if (filters?.teacherId) queryParams.teacherId = filters.teacherId;
+    if (filters?.academicYear) queryParams.academicYear = filters.academicYear;
+    if (filters?.isActive !== undefined) queryParams.isActive = filters.isActive.toString();
+    
+    return makeAPICall('manageClassTeacherAssignments', user, { queryParams });
+  },
+
+  // Get a specific assignment
+  get: async (user: User, assignmentId: string) => {
+    return makeAPICall('manageClassTeacherAssignments', user, {
+      queryParams: { operation: 'get', id: assignmentId }
+    });
+  },
+
+  // Create a new assignment
+  create: async (user: User, assignmentData: {
+    classId: string;
+    teacherId: string;
+    subjects: string[];
+    isActive?: boolean;
+  }) => {
+    return makeAPICall('manageClassTeacherAssignments', user, {
+      method: 'POST',
+      queryParams: { operation: 'create' },
+      body: assignmentData
+    });
+  },
+
+  // Update an existing assignment
+  update: async (user: User, assignmentId: string, updateData: {
+    classId?: string;
+    teacherId?: string;
+    subjects?: string[];
+    isActive?: boolean;
+  }) => {
+    return makeAPICall('manageClassTeacherAssignments', user, {
+      method: 'POST',
+      queryParams: { operation: 'update', id: assignmentId },
+      body: updateData
+    });
+  },
+
+  // Delete an assignment
+  delete: async (user: User, assignmentId: string) => {
+    return makeAPICall('manageClassTeacherAssignments', user, {
+      method: 'POST',
+      queryParams: { operation: 'delete', id: assignmentId }
+    });
+  },
+
+  // Bulk create assignments
+  bulkCreate: async (user: User, assignments: Array<{
+    classId: string;
+    teacherId: string;
+    subjects: string[];
+    isActive?: boolean;
+  }>) => {
+    return makeAPICall('manageClassTeacherAssignments', user, {
+      method: 'POST',
+      queryParams: { operation: 'bulk-create' },
+      body: { assignments }
+    });
+  },
+
+  // Bulk delete assignments
+  bulkDelete: async (user: User, assignmentIds: string[]) => {
+    return makeAPICall('manageClassTeacherAssignments', user, {
+      method: 'POST',
+      queryParams: { operation: 'bulk-delete' },
+      body: { assignmentIds }
+    });
+  }
+};
+
 export const teacherAPI = {
+    // List all teachers (combines Auth data with teacher-specific data)
     list: async (user: User) => {
-        return makeAPICall('manageTeachers', user, {
+        return makeAPICall('manageTeachersNew', user, {
             queryParams: { operation: 'list' }
         });
     },
-    create: async (user: User, teacherData: Partial<UserFormData>) => {
-        return makeAPICall('manageTeachers', user, {
-            method: 'POST',
-            queryParams: { operation: 'create' },
-            body: { teacherData }
+    
+    // Get a specific teacher
+    get: async (user: User, teacherId: string) => {
+        return makeAPICall('manageTeachersNew', user, {
+            queryParams: { operation: 'get', teacherId }
         });
     },
-    update: async (user: User, teacherId: string, teacherData: Partial<UserFormData>) => {
-        return makeAPICall('manageTeachers', user, {
+    
+    // Update teacher-specific data (classes, subjects, etc.)
+    updateTeacherData: async (user: User, teacherId: string, teacherData: { classes?: unknown[] }) => {
+        return makeAPICall('manageTeachersNew', user, {
             method: 'POST',
             queryParams: { operation: 'update' },
             body: { teacherId, teacherData }
         });
-    }
+    },
+    
+    // Note: To create teachers, use the User Management API with role: 'teacher'
+    // This will automatically create the corresponding teacher record
 };
 
 // User management API functions
@@ -310,6 +401,90 @@ export const studentAPI = {
       method: 'POST',
       body: { studentId }
     });
+  }
+};
+
+// System statistics API functions
+export const systemAPI = {
+  // Get system-wide statistics
+  getStats: async (user: User) => {
+    try {
+      // Get all the data in parallel
+      const [studentsData, teachersData, parentsData, classesData] = await Promise.all([
+        studentAPI.list(user, { includeDeleted: false }),
+        userAPI.list(user, 'teacher'),
+        userAPI.list(user, 'parent'),
+        classAPI.list(user, {})
+      ]);
+
+      // Calculate totals
+      const totalStudents = studentsData.students?.length || 0;
+      const totalTeachers = teachersData.users?.filter((u: unknown) => (u as { customClaims?: { role?: string } })?.customClaims?.role === 'teacher')?.length || 0;
+      const totalParents = parentsData.users?.filter((u: unknown) => (u as { customClaims?: { role?: string } })?.customClaims?.role === 'parent')?.length || 0;
+      const totalClasses = classesData.classes?.length || 0;
+
+      return {
+        totalStudents,
+        totalTeachers,
+        totalParents,
+        totalClasses
+      };
+    } catch (error) {
+      console.error('Error fetching system statistics:', error);
+      // Return mock data as fallback
+      return {
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalParents: 0,
+        totalClasses: 0
+      };
+    }
+  }
+};
+
+// Activity logging API functions
+export const activityAPI = {
+  // Get recent activities with optional filters
+  list: async (user: User, options?: { 
+    limit?: number; 
+    type?: string; 
+    startDate?: string; 
+    endDate?: string; 
+  }) => {
+    try {
+      const queryParams: Record<string, string> = {};
+      if (options?.limit) queryParams.limit = options.limit.toString();
+      if (options?.type) queryParams.type = options.type;
+      if (options?.startDate) queryParams.startDate = options.startDate;
+      if (options?.endDate) queryParams.endDate = options.endDate;
+      
+      return makeAPICall('getRecentActivities', user, { queryParams });
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      // Return mock data as fallback for now
+      const { mockRecentActivity } = await import('../data/mockData');
+      return { activities: mockRecentActivity };
+    }
+  },
+
+  // Log a new activity (internal use)
+  log: async (user: User, activityData: {
+    type: string;
+    description: string;
+    targetId?: string;
+    targetName?: string;
+    metadata?: Record<string, unknown>;
+  }) => {
+    try {
+      return makeAPICall('logActivity', user, {
+        method: 'POST',
+        body: activityData
+      });
+    } catch (error) {
+      console.error('Error logging activity:', error);
+      // Silently fail for activity logging to not disrupt main operations
+      return null;
+    }
   }
 };
 

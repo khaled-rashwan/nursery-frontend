@@ -9,58 +9,66 @@ const db = admin.firestore();
 // Helper function to verify class access and get class information
 const verifyClassAccess = async (academicYear, classId, decodedToken) => {
   try {
-    // Get class information
-    const classQuery = await db.collection('classes')
-      .where('academicYear', '==', academicYear)
-      .where('name', '==', classId)
-      .limit(1)
-      .get();
-    
-    if (classQuery.empty) {
+    // Get class information by classId
+    const classDoc = await db.collection('classes').doc(classId).get();
+    if (!classDoc.exists) {
       return { isValid: false, error: 'Class does not exist' };
     }
-    
-    const classDoc = classQuery.docs[0];
     const classData = classDoc.data();
-    
+
     // Role-based access control
     const userRole = decodedToken.role || (decodedToken.customClaims && decodedToken.customClaims.role);
-    
+
     // Superadmin and admin can access all classes
-    if (['superadmin', 'admin'].includes(userRole)) {
+    if (["superadmin", "admin"].includes(userRole)) {
       return { isValid: true, classData: { ...classData, id: classDoc.id } };
     }
-    
-    // Teachers can only access their own classes
-    if (userRole === 'teacher') {
-      if (classData.teacherUID === decodedToken.uid) {
+
+    // Teachers can only access their assigned classes
+    if (userRole === "teacher") {
+      // Check if teacher's classes array contains this classId
+      const teacherDoc = await db.collection("teachers").doc(decodedToken.uid).get();
+      if (!teacherDoc.exists) {
+        return { isValid: false, error: "Teacher profile not found" };
+      }
+      const teacherData = teacherDoc.data();
+      const assignedClass = (teacherData.classes || []).find(c => c.classId === classId);
+      if (assignedClass) {
         return { isValid: true, classData: { ...classData, id: classDoc.id } };
       } else {
-        return { isValid: false, error: 'Teachers can only manage attendance for their own classes' };
+        return { isValid: false, error: "Teachers can only access attendance for their assigned classes" };
       }
     }
-    
-    // Parents have read-only access if their child is in the class
-    if (userRole === 'parent') {
-      // We'll check parent access when retrieving attendance records
-      return { isValid: true, classData: { ...classData, id: classDoc.id }, readOnly: true };
-    }
-    
-    return { isValid: false, error: 'Invalid user role' };
+
+    return { isValid: false, error: "Insufficient permissions" };
   } catch (error) {
     console.error('Error verifying class access:', error);
-    return { isValid: false, error: 'Error verifying class access' };
+    return { isValid: false, error: 'Failed to verify class access' };
   }
 };
 
 // Helper function to get enrolled students for a class
 const getClassEnrollments = async (academicYear, classId) => {
   try {
-    const enrollmentsQuery = await db.collection('enrollments')
+    // NEW ARCHITECTURE: Query by classId instead of meaningless teacherUID
+    // Classes are stored by name, so we need to check both classId and className
+    
+    // First try to get enrollments by classId (new architecture)
+    let enrollmentsQuery = await db.collection('enrollments')
       .where('academicYear', '==', academicYear)
-      .where('class', '==', classId)
+      .where('classId', '==', classId)
       .where('status', '==', 'enrolled')
       .get();
+    
+    // If no results with classId, try with class name (legacy support)
+    if (enrollmentsQuery.empty) {
+      console.log(`No enrollments found with classId: ${classId}, trying className...`);
+      enrollmentsQuery = await db.collection('enrollments')
+        .where('academicYear', '==', academicYear)
+        .where('class', '==', classId)  // classId might actually be className in some contexts
+        .where('status', '==', 'enrolled')
+        .get();
+    }
     
     const enrollments = [];
     enrollmentsQuery.forEach(doc => {
@@ -69,11 +77,14 @@ const getClassEnrollments = async (academicYear, classId) => {
         enrollments.push({
           id: doc.id,
           studentUID: data.studentUID,
-          studentInfo: data.studentInfo
+          studentInfo: data.studentInfo,
+          classId: data.classId,
+          className: data.class
         });
       }
     });
     
+    console.log(`Found ${enrollments.length} enrolled students for class ${classId} in ${academicYear}`);
     return enrollments;
   } catch (error) {
     console.error('Error getting class enrollments:', error);
@@ -302,17 +313,14 @@ exports.getAttendanceCentralized = functions.https.onRequest(async (req, res) =>
       
       // For parents, filter to only their child's records
       if (accessResult.readOnly && decodedToken.role === 'parent') {
-        // Get parent's children from enrollments
-        const parentChildrenQuery = await db.collection('enrollments')
-          .where('academicYear', '==', academicYear)
-          .where('class', '==', classId)
-          .where('studentInfo.parentUID', '==', decodedToken.uid)
+        // Get parent's children directly from students collection
+        const parentChildrenQuery = await db.collection('students')
+          .where('parentUID', '==', decodedToken.uid)
           .get();
         
         const childStudentIds = [];
         parentChildrenQuery.forEach(doc => {
-          const data = doc.data();
-          childStudentIds.push(data.studentUID);
+          childStudentIds.push(doc.id); // doc.id is the studentUID
         });
         
         // Filter records to only include parent's children
@@ -415,13 +423,15 @@ exports.getStudentAttendanceHistory = functions.https.onRequest(async (req, res)
 
     // Verify parent has access to this student
     if (decodedToken.role === 'parent') {
-      const studentEnrollmentQuery = await db.collection('enrollments')
-        .where('studentUID', '==', studentId)
-        .where('studentInfo.parentUID', '==', decodedToken.uid)
-        .limit(1)
-        .get();
+      // Direct check: Query student document to verify parent relationship
+      const studentDoc = await db.collection('students').doc(studentId).get();
       
-      if (studentEnrollmentQuery.empty) {
+      if (!studentDoc.exists) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      const studentData = studentDoc.data();
+      if (studentData.parentUID !== decodedToken.uid) {
         return res.status(403).json({ error: 'Access denied: Not authorized to view this student\'s attendance' });
       }
     }

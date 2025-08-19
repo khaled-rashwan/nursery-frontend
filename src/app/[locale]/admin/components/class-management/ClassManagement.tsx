@@ -1,8 +1,28 @@
 'use client';
 
+/**
+ * Class Management Component
+ * 
+ * CURRENT ARCHITECTURE: Teacher assignments managed in teachers collection
+ * 
+ * This component manages classes without direct teacher assignments because:
+ * 1. Teacher-class relationships are stored in the teachers collection under each teacher's 'classes' field
+ * 2. Teacher assignments are handled exclusively in the Teacher Management component
+ * 3. Each teacher document contains: { classes: [{ classId, className, subjects }] }
+ * 
+ * Current state: Classes are created without teacher assignments
+ * Teacher assignments: Managed through Teacher Management → Assign Classes functionality
+ * 
+ * Architecture Flow:
+ * 1. Create class here (Class Management)
+ * 2. Assign teachers in Teacher Management component
+ * 3. Teacher portal reads from teacher.classes[] field
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
-import { classAPI, userAPI, handleAPIError } from '../../services/api';
+import { classAPI, userAPI, classTeacherAssignmentAPI, handleAPIError } from '../../services/api';
+import { ActivityHelpers } from '../../services/activityLogger';
 import { TeacherAssignment } from '../../types/admin.types';
 
 interface Class {
@@ -10,8 +30,8 @@ interface Class {
   name: string;
   level: 'Pre-KG' | 'KG1' | 'KG2';
   academicYear: string;
-  teachers: TeacherAssignment[];
-  teacherInfo: Teacher[];
+  // Teacher assignments are managed in teachers collection under classes field
+  // Format: teachers.classes[{ classId, className, subjects[] }]
   capacity: number;
   notes: string;
   createdAt: string;
@@ -128,17 +148,46 @@ export function ClassManagement({ locale }: ClassManagementProps) {
       let data;
       if (isEditing && editingClass) {
         data = await classAPI.update(user, editingClass.id, classData);
+        
+        // Log class update activity
+        if (user.email && user.displayName && classData.name) {
+          const changes = [];
+          if (classData.name !== editingClass.name) changes.push('name');
+          if (classData.level !== editingClass.level) changes.push('level');
+          if (classData.capacity !== editingClass.capacity) changes.push('capacity');
+          if (classData.notes !== editingClass.notes) changes.push('notes');
+          
+          ActivityHelpers.classUpdated(
+            user.email,
+            user.displayName,
+            classData.name,
+            editingClass.id,
+            changes
+          );
+        }
       } else {
         // Convert to ClassFormData for creation
+        // TODO: Remove teachers field after implementing class_teacher_assignments
         const classFormData = {
           name: classData.name!,
           level: classData.level!,
           academicYear: classData.academicYear!,
-          teachers: classData.teachers!,
+          teachers: [], // Empty array until class_teacher_assignments is implemented
           capacity: classData.capacity!,
           notes: classData.notes,
         };
         data = await classAPI.create(user, classFormData);
+        
+        // Log class creation activity
+        if (user.email && user.displayName && classData.name && classData.level) {
+          ActivityHelpers.classCreated(
+            user.email,
+            user.displayName,
+            classData.name,
+            data.classId || 'new-class',
+            classData.level
+          );
+        }
       }
       
       setSuccess(data.message);
@@ -157,11 +206,25 @@ export function ClassManagement({ locale }: ClassManagementProps) {
   const handleDelete = async (classId: string) => {
     if (!user) return;
 
+    // Find the class being deleted for activity logging
+    const classToDelete = classes.find(c => c.id === classId);
+
     setLoading(true);
     setError(null);
 
     try {
       const data = await classAPI.delete(user, classId);
+      
+      // Log class deletion activity
+      if (user.email && user.displayName && classToDelete) {
+        ActivityHelpers.classDeleted(
+          user.email,
+          user.displayName,
+          classToDelete.name,
+          classId
+        );
+      }
+      
       setSuccess(data.message);
       setDeleteConfirm(null);
       fetchClasses();
@@ -371,17 +434,19 @@ export function ClassManagement({ locale }: ClassManagementProps) {
                   <td style={{ padding: '1rem' }}>{classItem.level}</td>
                   <td style={{ padding: '1rem' }}>{classItem.academicYear}</td>
                   <td style={{ padding: '1rem' }}>
-                    {classItem.teacherInfo.map(teacher => (
-                      <div key={teacher.uid}>
-                        <div>{teacher.displayName}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#666' }}>
-                          {teacher.email}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#666' }}>
-                          Subjects: {classItem.teachers.find(t => t.teacherId === teacher.uid)?.subjects.join(', ')}
-                        </div>
-                      </div>
-                    ))}
+                    {/* Teacher assignments are managed through teachers.classes[] field */}
+                    <div style={{ color: '#666', fontStyle: 'italic' }}>
+                      <em>{locale === 'ar-SA' ? 'يُدار تعيين المعلمين من خلال مجموعة المعلمين' : 'Teacher assignments managed through teachers collection'}</em>
+                    </div>
+                    {/* 
+                    CURRENT ARCHITECTURE: Teacher assignments are stored in teachers.classes[] array
+                    Format: { classId: string, className: string, subjects: string[] }
+                    
+                    To see assigned teachers:
+                    1. Query teachers collection 
+                    2. Filter teachers where classes array contains this classId
+                    3. Display teacher info with their assigned subjects
+                    */}
                   </td>
                   <td style={{ padding: '1rem' }}>{classItem.capacity}</td>
                   <td style={{ padding: '1rem' }}>
@@ -546,9 +611,13 @@ function ClassForm({
     name: initialData?.name || '',
     level: initialData?.level || 'KG1',
     academicYear: initialData?.academicYear || academicYears[1] || '', // Default to current year
-    teachers: initialData
-      ? initialData.teachers.map(t => ({ ...t, subjects: t.subjects.join(', ') }))
-      : [{ teacherId: '', subjects: '' }],
+    // TODO: Remove teachers field after implementing class_teacher_assignments
+    // teachers: initialData?.teachers && Array.isArray(initialData.teachers)
+    //   ? initialData.teachers.map(t => ({ 
+    //       ...t, 
+    //       subjects: Array.isArray(t.subjects) ? t.subjects.join(', ') : (t.subjects || '')
+    //     }))
+    //   : [{ teacherId: '', subjects: '' }],
     capacity: initialData?.capacity || 25,
     notes: initialData?.notes || ''
   });
@@ -569,7 +638,10 @@ function ClassForm({
       newErrors.academicYear = locale === 'ar-SA' ? 'العام الدراسي مطلوب' : 'Academic year is required';
     }
 
-    if (formData.teachers.length === 0) {
+    // TODO: Remove teacher validation after implementing class_teacher_assignments
+    // Teacher assignments will be managed separately
+    /*
+    if (!formData.teachers || formData.teachers.length === 0) {
       newErrors.teachers = locale === 'ar-SA' ? 'المعلم مطلوب' : 'Teacher is required';
     } else {
       const teacherErrors: { teacherId?: string, subjects?: string }[] = [];
@@ -590,6 +662,7 @@ function ClassForm({
         newErrors.teachers = teacherErrors;
       }
     }
+    */
 
     if (formData.capacity < 1 || formData.capacity > 50) {
       newErrors.capacity = locale === 'ar-SA' ? 'السعة يجب أن تكون بين 1 و 50' : 'Capacity must be between 1 and 50';
@@ -606,12 +679,16 @@ function ClassForm({
       return;
     }
 
-    const formattedTeachers = formData.teachers.map(t => ({
+    // TODO: Remove teacher handling after implementing class_teacher_assignments
+    // Teacher assignments will be managed separately
+    /*
+    const formattedTeachers = (formData.teachers || []).map(t => ({
         ...t,
-        subjects: t.subjects.split(',').map(s => s.trim()).filter(s => s)
+        subjects: (t.subjects || '').split(',').map(s => s.trim()).filter(s => s)
     }));
+    */
 
-    onSubmit({ ...formData, teachers: formattedTeachers });
+    onSubmit({ ...formData /* teachers: formattedTeachers */ });
   };
 
   const handleInputChange = (field: keyof FormErrors, value: string | number) => {
@@ -629,21 +706,27 @@ function ClassForm({
     }
   };
 
+  // TODO: Remove teacher handler functions after implementing class_teacher_assignments
+  /*
   const handleTeacherChange = (index: number, field: string, value: string) => {
+    if (!formData.teachers) return;
     const newTeachers = [...formData.teachers];
     newTeachers[index] = { ...newTeachers[index], [field]: value };
     setFormData({ ...formData, teachers: newTeachers });
   };
 
   const addTeacher = () => {
-    setFormData({ ...formData, teachers: [...formData.teachers, { teacherId: '', subjects: '' }] });
+    const currentTeachers = formData.teachers || [];
+    setFormData({ ...formData, teachers: [...currentTeachers, { teacherId: '', subjects: '' }] });
   };
 
   const removeTeacher = (index: number) => {
+    if (!formData.teachers) return;
     const newTeachers = [...formData.teachers];
     newTeachers.splice(index, 1);
     setFormData({ ...formData, teachers: newTeachers });
   };
+  */
 
   return (
     <div style={{
@@ -807,7 +890,10 @@ function ClassForm({
             </div>
           </div>
 
-          {/* Teachers */}
+          {/* 
+          TODO: Remove Teachers section after implementing class_teacher_assignments
+          Teacher assignments will be managed separately in Teacher Management component
+          
           <div>
             <label style={{
               display: 'block',
@@ -822,7 +908,7 @@ function ClassForm({
                 {errors.teachers}
               </div>
             )}
-            {formData.teachers.map((teacher, index) => (
+            {formData.teachers && formData.teachers.length > 0 ? formData.teachers.map((teacher, index) => (
               <div key={index} style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr auto',
@@ -844,11 +930,15 @@ function ClassForm({
                   <option value="">
                     {locale === 'ar-SA' ? 'اختر معلم' : 'Select Teacher'}
                   </option>
-                  {teachers.map(t => (
+                  {teachers && teachers.length > 0 ? teachers.map(t => (
                     <option key={t.uid} value={t.uid}>
                       {t.displayName} ({t.email})
                     </option>
-                  ))}
+                  )) : (
+                    <option value="" disabled>
+                      {locale === 'ar-SA' ? 'لا يوجد معلمون متاحون' : 'No teachers available'}
+                    </option>
+                  )}
                 </select>
                 <input
                   type="text"
@@ -878,7 +968,18 @@ function ClassForm({
                   X
                 </button>
               </div>
-            ))}
+            )) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '1rem',
+                color: '#7f8c8d',
+                background: '#f8f9fa',
+                borderRadius: '6px',
+                border: '1px dashed #bdc3c7'
+              }}>
+                {locale === 'ar-SA' ? 'لا يوجد معلمون معينون' : 'No teachers assigned'}
+              </div>
+            )}
             <button
               type="button"
               onClick={addTeacher}
@@ -893,6 +994,33 @@ function ClassForm({
             >
               {locale === 'ar-SA' ? 'إضافة معلم' : 'Add Teacher'}
             </button>
+          </div>
+          */}
+
+          {/* Teacher Assignment Info Box */}
+          <div style={{
+            padding: '1rem',
+            background: '#e8f4f8',
+            border: '1px solid #bee5eb',
+            borderRadius: '6px',
+            marginBottom: '2rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.5rem'
+            }}>
+              <span style={{ fontSize: '1.2rem' }}>👨‍🏫</span>
+              <strong style={{ color: '#0c5460' }}>
+                {locale === 'ar-SA' ? 'تعيين المعلمين' : 'Teacher Assignment'}
+              </strong>
+            </div>
+            <p style={{ margin: 0, color: '#0c5460', fontSize: '0.9rem' }}>
+              {locale === 'ar-SA' 
+                ? 'يتم إدارة تعيين المعلمين للفصول من خلال صفحة "إدارة المعلمين" ← "تعيين الفصول". سيتم حفظ التعيينات في مجموعة المعلمين تحت حقل classes.'
+                : 'Teacher assignments to classes are managed through "Teacher Management" → "Assign Classes". Assignments are stored in the teachers collection under the classes field.'}
+            </p>
           </div>
 
 

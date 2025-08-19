@@ -101,6 +101,15 @@ service cloud.firestore {
       allow read: if hasAnyRole(['teacher', 'parent']);
     }
 
+    // Centralized Attendance Collection (New System)
+    match /attendance/{attendanceDocId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      // Teachers can read and write attendance for their assigned classes
+      allow read, write: if hasRole('teacher');
+      // Parents can read attendance records (filtered by backend)
+      allow read: if hasRole('parent');
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

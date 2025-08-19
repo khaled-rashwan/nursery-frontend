@@ -8,7 +8,11 @@ import { UserRole, getRoleName } from '../../../utils/rolePermissions';
 import { 
   logSecurityEvent 
 } from '../../../utils/parentPortalSecurity';
-import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, ChildEnriched, StudentAttendanceHistoryResponse } from './services/api';
+import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, fetchHomeworkByClass, fetchStudentEnrollment, fetchHomeworkSubmission, ChildEnriched, StudentAttendanceHistoryResponse, HomeworkItem, HomeworkSubmission } from './services/api';
+import HomeworkSubmissionForm from './components/HomeworkSubmissionForm';
+// Academic Year context & selector
+import { AcademicYearProvider, useAcademicYear } from '../../../contexts/AcademicYearContext';
+import { CompactAcademicYearSelector } from '../../../components/common/AcademicYearSelector';
 
 // Child interface - updated to match Firestore data
 interface Child {
@@ -17,8 +21,8 @@ interface Child {
   nameEn: string;
   class?: string;
   classEn?: string;
+  classId?: string; // Added for homework fetching
   photo?: string;
-  attendanceRate?: string; // derived from attendance stats
   fees?: {
     total: number;
     paid: number;
@@ -782,15 +786,88 @@ function ChildSelector({ selectedChildId, onChildChange, locale, childList }: {
 }
 
 function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string }) {
+  const { user } = useAuth();
+  // Declare state in correct order for use in effects
+  const [selectedChildId, setSelectedChildId] = useState('');
+  const [currentHomework, setCurrentHomework] = useState<HomeworkItem[]>([]);
+  // Store the parent's auth token for submission API
+  const [parentToken, setParentToken] = useState<string>('');
+
+  // Fetch parent token on user change
+  useEffect(() => {
+    let cancelled = false;
+    async function getToken() {
+      if (user) {
+        const t = await user.getIdToken();
+        if (!cancelled) setParentToken(t);
+      } else {
+        setParentToken('');
+      }
+    }
+    getToken();
+    return () => { cancelled = true; };
+  }, [user]);
+  // Homework submissions state: { [homeworkId]: HomeworkSubmission|null }
+  const [homeworkSubmissions, setHomeworkSubmissions] = useState<Record<string, HomeworkSubmission|null>>({});
+  const [loadingSubmissions, setLoadingSubmissions] = useState<Record<string, boolean>>({});
+  // Fetch submission for each homework item when homework or selected child changes
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSubmissions() {
+      if (!user || !selectedChildId || !currentHomework.length) return;
+      const token = await user.getIdToken();
+      const newLoading: Record<string, boolean> = {};
+      const newSubs: Record<string, HomeworkSubmission|null> = {};
+      await Promise.all(currentHomework.map(async (hw) => {
+        newLoading[hw.id] = true;
+        try {
+          const sub = await fetchHomeworkSubmission(token, hw.id, selectedChildId);
+          newSubs[hw.id] = sub;
+        } catch {
+          newSubs[hw.id] = null;
+        } finally {
+          newLoading[hw.id] = false;
+        }
+      }));
+      if (!cancelled) {
+        setHomeworkSubmissions(newSubs);
+        setLoadingSubmissions(newLoading);
+      }
+    }
+    loadSubmissions();
+    return () => { cancelled = true; };
+  }, [user, selectedChildId, currentHomework]);
+  // Submission form handlers
+  const handleSubmission = (hwId: string, submission: HomeworkSubmission) => {
+    setHomeworkSubmissions(prev => ({ ...prev, [hwId]: submission }));
+  };
+  const handleDeleteSubmission = (hwId: string) => {
+    setHomeworkSubmissions(prev => ({ ...prev, [hwId]: null }));
+  };
+  const { selectedAcademicYear } = useAcademicYear();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0,7));
   const [children, setChildren] = useState<Child[]>([]);
-  const [selectedChildId, setSelectedChildId] = useState('');
   const [loadingChildren, setLoadingChildren] = useState(true);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, StudentAttendanceHistoryResponse>>({});
   const [loadingAttendance, setLoadingAttendance] = useState(false);
-  const { user } = useAuth();
+  // Always fetch homework for the selected child/class/year (no cache)
+  const [currentHomeworkKey, setCurrentHomeworkKey] = useState('');
+  const [loadingHomework, setLoadingHomework] = useState(false);
+  const [homeworkError, setHomeworkError] = useState<string | null>(null);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
+
+  // Reset dashboard state when academic year changes
+  useEffect(() => {
+    setSelectedChildId('');
+    setAttendanceMap({});
+    setCurrentHomework([]);
+    setCurrentHomeworkKey('');
+    setActiveTab('overview');
+    setSelectedMonth(new Date().toISOString().slice(0,7));
+    setHomeworkError(null);
+    setAttendanceError(null);
+  }, [selectedAcademicYear]);
 
   // Fetch children from backend (Step 1 integration)
   useEffect(() => {
@@ -802,19 +879,35 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
         const token = await user.getIdToken();
         const fetched: ChildEnriched[] = await fetchChildrenService(token, user.uid);
         if (cancelled) return;
-        // Map to Child shape (class info to be added later when enrollment endpoints used)
-        const mapped: Child[] = fetched.map(c => ({
+        // Map and enrich with academicYear-specific enrollment from backend
+        const baseMapped: Child[] = fetched.map(c => ({
           id: c.id,
           name: c.name,
           nameEn: c.nameEn,
           birthDate: c.birthDate,
           age: c.age ? `${c.age} ${locale === 'ar-SA' ? 'سنة' : 'yrs'}` : undefined,
           parentUID: c.parentUID,
-          photo: c.photo
+          photo: c.photo,
+          classId: undefined,
+          class: undefined,
+          classEn: undefined
         }));
-        setChildren(mapped);
-        if (mapped.length > 0) {
-          setSelectedChildId(prev => prev || mapped[0].id);
+
+        // For each child, fetch enrollment for the selected academic year
+        const token2 = await user.getIdToken();
+        const enriched = await Promise.all(baseMapped.map(async (child) => {
+          try {
+            const enr = await fetchStudentEnrollment(token2, child.id, selectedAcademicYear);
+            if (enr) {
+              return { ...child, classId: enr.classId, class: enr.className, classEn: enr.className };
+            }
+          } catch {}
+          return child;
+        }));
+
+        setChildren(enriched);
+        if (enriched.length > 0) {
+          setSelectedChildId(prev => prev || enriched[0].id);
         }
       } catch (e:unknown) {
         if (!cancelled) {
@@ -827,7 +920,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     }
     loadChildren();
     return () => { cancelled = true; };
-  }, [user, locale]);
+  }, [user, locale, selectedAcademicYear]);
 
   // Fetch attendance for selected child
   useEffect(() => {
@@ -842,8 +935,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
         if (cancelled) return;
         if (data) {
           setAttendanceMap(prev => ({ ...prev, [selectedChildId]: data }));
-          // Update child attendanceRate
-          setChildren(prev => prev.map(ch => ch.id === selectedChildId ? { ...ch, attendanceRate: data.stats.attendanceRate } : ch));
+          // Note: No longer updating attendanceRate on child since we display absent days
         }
       } catch (e:unknown) {
         if (!cancelled) {
@@ -862,12 +954,54 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     return () => { cancelled = true; };
   }, [user, selectedChildId, attendanceMap]);
 
+  // Fetch homework for selected child's class
+  useEffect(() => {
+    let cancelled = false;
+    async function loadHomework() {
+      setCurrentHomework([]);
+      setCurrentHomeworkKey('');
+      if (!user || !selectedChildId) return;
+      const currentChild = children.find(child => child.id === selectedChildId);
+      if (!currentChild || !currentChild.classId) return;
+      setLoadingHomework(true);
+      setHomeworkError(null);
+      try {
+        const token = await user.getIdToken();
+        const homework = await fetchHomeworkByClass(token, currentChild.classId);
+        if (cancelled) return;
+        setCurrentHomework(homework);
+        setCurrentHomeworkKey(`${selectedAcademicYear || 'all'}:${currentChild.classId}:${selectedChildId}`);
+      } catch (e: unknown) {
+        if (!cancelled) {
+          console.error('Failed to load homework', e);
+          if (e instanceof Error) {
+            setHomeworkError(e.message || 'Failed to load homework');
+          } else {
+            setHomeworkError('An unknown error occurred while fetching homework.');
+          }
+        }
+      } finally {
+        if (!cancelled) setLoadingHomework(false);
+      }
+    }
+    loadHomework();
+    return () => { cancelled = true; };
+  }, [user, selectedChildId, children, selectedAcademicYear]);
+
   // Get current child data
   const currentChild = children.find(child => child.id === selectedChildId) || children[0];
   const attendanceHistory = currentChild ? attendanceMap[currentChild.id] : undefined;
-  // Filter attendance records by selected month (YYYY-MM)
-  const currentAttendance = attendanceHistory ? attendanceHistory.records.filter(r => r.date.startsWith(selectedMonth)) : [];
-  const attendanceRateDisplay = currentChild?.attendanceRate || (attendanceHistory?.stats.attendanceRate ? attendanceHistory.stats.attendanceRate : '--');
+  // Filter by selected academic year and month (YYYY-MM)
+  const currentAttendance = attendanceHistory
+    ? attendanceHistory.records.filter(r => r.academicYear === selectedAcademicYear && r.date.startsWith(selectedMonth))
+    : [];
+  const absentDaysDisplay = attendanceHistory?.stats.absentDays?.toString() || '--';
+  // Use always-fetched homework for the selected child/class/year
+  const pendingHomework = currentHomework.filter(hw => {
+    const dueDate = new Date(hw.dueDate);
+    const today = new Date();
+    return dueDate >= today;
+  });
 
   const tabs = [
     { id: 'overview', icon: '📊', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview' },
@@ -925,22 +1059,11 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             {locale === 'ar-SA' ? 'بوابة أولياء الأمور' : 'Parent Portal'}
           </h1>
         </div>
-        <button
-          onClick={onLogout}
-          style={{
-            padding: '0.75rem 1.5rem',
-            background: 'var(--primary-yellow)',
-            color: 'var(--primary-purple)',
-            border: 'none',
-            borderRadius: 'var(--border-radius)',
-            fontSize: '1rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          🚪 {locale === 'ar-SA' ? 'تسجيل الخروج' : 'Logout'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.15)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>
+            <CompactAcademicYearSelector locale={locale} />
+          </div>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -1007,6 +1130,8 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
               selectedChildId={selectedChildId}
               onChildChange={(id) => {
                 setSelectedChildId(id);
+                // Reset all homework so it always reloads for the new child
+                // No longer needed: setHomeworkMap({});
               }}
               locale={locale}
               childList={children}
@@ -1063,7 +1188,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                         color: 'var(--primary-blue)',
                         marginBottom: '0.5rem'
                       }}>
-                        📚 {locale === 'ar-SA' ? currentChild.class : currentChild.classEn}
+                        📚 {currentChild.class || (locale === 'ar-SA' ? 'غير مُسجل في صف' : 'Not enrolled in a class')}
                       </p>
                       <p style={{
                         fontSize: '1.1rem',
@@ -1087,17 +1212,17 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                     }}>
                       <div style={{
                         fontSize: '3rem',
-                        color: 'var(--primary-green)',
+                        color: absentDaysDisplay === '--' || absentDaysDisplay === '0' ? 'var(--primary-green)' : 'var(--primary-red)',
                         fontWeight: 'bold'
                       }}>
-                        {attendanceRateDisplay}{attendanceRateDisplay !== '--' ? '%' : ''}
+                        {absentDaysDisplay}
                       </div>
                       <div style={{
                         fontSize: '1.1rem',
-                        color: 'var(--primary-green)',
+                        color: absentDaysDisplay === '--' || absentDaysDisplay === '0' ? 'var(--primary-green)' : 'var(--primary-red)',
                         fontWeight: 'bold'
                       }}>
-                        {locale === 'ar-SA' ? 'نسبة الحضور' : 'Attendance Rate'}
+                        {locale === 'ar-SA' ? 'أيام الغياب' : 'Absent Days'}
                       </div>
                       {loadingAttendance && <div style={{ fontSize: '0.8rem', color: '#555', marginTop: '0.5rem' }}>{locale==='ar-SA'?'جاري التحميل...':'Loading...'}</div>}
                       {attendanceError && <div style={{ fontSize: '0.8rem', color: 'var(--primary-red)', marginTop: '0.5rem' }}>{attendanceError}</div>}
@@ -1133,7 +1258,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                       color: 'var(--primary-pink)',
                       fontWeight: 'bold'
                     }}>
-                      {currentChild.id}
+                      {pendingHomework.length}
                     </div>
                   </div>
 
@@ -1183,7 +1308,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                       color: 'var(--primary-blue)',
                       fontWeight: 'bold'
                     }}>
-                      {currentChild.id}
+                      {currentHomework.length}
                     </div>
                   </div>
                 </div>
@@ -1261,7 +1386,10 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
             )}
 
             {activeTab === 'homework' && (
-              <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+              <div key={selectedChildId + ':' + (currentChild?.classId || '')} style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                <div style={{ marginBottom: '1rem', fontWeight: 'bold', color: 'var(--primary-blue)', fontSize: '1.2rem' }}>
+                  {locale === 'ar-SA' ? 'الطفل المختار:' : 'Selected Child:'} {currentChild?.name || currentChild?.nameEn || ''}
+                </div>
                 <h2 style={{
                   fontSize: '2.5rem',
                   color: 'var(--primary-purple)',
@@ -1271,70 +1399,239 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   📚 {locale === 'ar-SA' ? 'الواجبات والملاحظات' : 'Homework & Notes'}
                 </h2>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {/* {currentHomework.map((hw: HomeworkItem, index: number) => (
-                    <div key={index} style={{
-                      background: 'white',
-                      padding: '2rem',
-                      borderRadius: 'var(--border-radius)',
-                      boxShadow: 'var(--shadow)',
-                      border: `4px solid ${hw.status === 'completed' ? 'var(--primary-green)' : 'var(--primary-orange)'}`
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        flexWrap: 'wrap',
-                        gap: '1rem'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <h3 style={{
-                            fontSize: '1.5rem',
-                            color: 'var(--primary-purple)',
+                {/* Loading and Error States */}
+                {loadingHomework && (
+                  <div style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+                    <p style={{ fontSize: '1.2rem', color: 'var(--primary-purple)' }}>
+                      {locale === 'ar-SA' ? 'جاري تحميل الواجبات...' : 'Loading homework...'}
+                    </p>
+                  </div>
+                )}
+
+                {homeworkError && (
+                  <div style={{
+                    background: 'var(--light-red)',
+                    padding: '1.5rem',
+                    borderRadius: 'var(--border-radius)',
+                    marginBottom: '2rem',
+                    border: '3px solid var(--primary-red)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
+                    <p style={{ fontSize: '1.1rem', color: 'var(--primary-red)', margin: 0 }}>
+                      {homeworkError}
+                    </p>
+                  </div>
+                )}
+
+                {!loadingHomework && !homeworkError && !currentChild?.classId && (
+                  <div style={{
+                    background: 'var(--light-yellow)',
+                    padding: '2rem',
+                    borderRadius: 'var(--border-radius)',
+                    border: '3px solid var(--primary-yellow)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
+                    <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-orange)', marginBottom: '1rem' }}>
+                      {locale === 'ar-SA' ? 'لا توجد معلومات عن الصف' : 'No Class Information'}
+                    </h3>
+                    <p style={{ fontSize: '1.1rem', color: '#666' }}>
+                      {locale === 'ar-SA' 
+                        ? 'لا يمكن عرض الواجبات بدون معلومات الصف. يرجى التواصل مع الإدارة.'
+                        : 'Cannot display homework without class information. Please contact administration.'
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {!loadingHomework && !homeworkError && currentChild?.classId && currentHomework.length === 0 && (
+                  <div style={{
+                    background: 'var(--light-green)',
+                    padding: '2rem',
+                    borderRadius: 'var(--border-radius)',
+                    border: '3px solid var(--primary-green)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
+                    <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-green)', marginBottom: '1rem' }}>
+                      {locale === 'ar-SA' ? 'لا توجد واجبات حالياً' : 'No Homework Currently'}
+                    </h3>
+                    <p style={{ fontSize: '1.1rem', color: '#666' }}>
+                      {locale === 'ar-SA' 
+                        ? 'لا توجد واجبات مُعيَّنة لصف طفلك في الوقت الحالي.'
+                        : 'There are no homework assignments for your child\'s class at the moment.'
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {/* Homework List */}
+                {!loadingHomework && !homeworkError && currentHomework.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {currentHomework.map((hw: HomeworkItem) => {
+                      const dueDate = new Date(hw.dueDate);
+                      const today = new Date();
+                      const isPending = dueDate >= today;
+                      const isOverdue = dueDate < today;
+                      const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      const submission = homeworkSubmissions[hw.id] || null;
+                      const loadingSub = loadingSubmissions[hw.id];
+                      return (
+                        <div key={hw.id} style={{
+                          background: 'white',
+                          padding: '2rem',
+                          borderRadius: 'var(--border-radius)',
+                          boxShadow: 'var(--shadow)',
+                          border: `4px solid ${isOverdue ? 'var(--primary-red)' : isPending ? 'var(--primary-orange)' : 'var(--primary-green)'}`
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap',
+                            gap: '1rem',
                             marginBottom: '1rem'
                           }}>
-                            📖 {hw.subject}
-                          </h3>
-                          <p style={{
-                            fontSize: '1.2rem',
-                            color: '#666',
-                            marginBottom: '1rem',
-                            lineHeight: '1.6'
-                          }}>
-                            {hw.task}
-                          </p>
-                          <p style={{
-                            fontSize: '1.1rem',
-                            color: 'var(--primary-blue)',
-                            fontWeight: 'bold'
-                          }}>
-                            📅 {locale === 'ar-SA' ? 'تاريخ التسليم:' : 'Due Date:'} {hw.dueDate}
-                          </p>
-                        </div>
-                        <div style={{
-                          padding: '1rem',
-                          background: hw.status === 'completed' ? 'var(--light-green)' : 'var(--light-orange)',
-                          borderRadius: 'var(--border-radius)',
-                          textAlign: 'center'
-                        }}>
-                          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-                            {hw.status === 'completed' ? '✅' : '⏰'}
+                            <div style={{ flex: 1 }}>
+                              <h3 style={{
+                                fontSize: '1.5rem',
+                                color: 'var(--primary-purple)',
+                                marginBottom: '0.5rem'
+                              }}>
+                                📖 {hw.title}
+                              </h3>
+                              <p style={{
+                                fontSize: '1rem',
+                                color: '#666',
+                                marginBottom: '0.5rem'
+                              }}>
+                                👨‍🏫 {locale === 'ar-SA' ? 'المعلم:' : 'Teacher:'} {hw.teacherInfo.displayName}
+                              </p>
+                              <p style={{
+                                fontSize: '1rem',
+                                color: 'var(--primary-blue)',
+                                fontWeight: 'bold'
+                              }}>
+                                📅 {locale === 'ar-SA' ? 'تاريخ التسليم:' : 'Due Date:'} {new Date(hw.dueDate).toLocaleDateString(locale === 'ar-SA' ? 'ar-SA' : 'en-US')}
+                                {isPending && daysUntilDue > 0 && (
+                                  <span style={{ color: 'var(--primary-orange)', marginLeft: '0.5rem' }}>
+                                    ({daysUntilDue} {locale === 'ar-SA' ? 'أيام متبقية' : 'days remaining'})
+                                  </span>
+                                )}
+                                {isPending && daysUntilDue === 0 && (
+                                  <span style={{ color: 'var(--primary-red)', marginLeft: '0.5rem' }}>
+                                    ({locale === 'ar-SA' ? 'مستحق اليوم' : 'Due today'})
+                                  </span>
+                                )}
+                                {isOverdue && (
+                                  <span style={{ color: 'var(--primary-red)', marginLeft: '0.5rem' }}>
+                                    ({locale === 'ar-SA' ? 'متأخر' : 'Overdue'})
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div style={{
+                              padding: '1rem',
+                              background: isOverdue ? 'var(--light-red)' : isPending ? 'var(--light-orange)' : 'var(--light-green)',
+                              borderRadius: 'var(--border-radius)',
+                              textAlign: 'center',
+                              minWidth: '120px'
+                            }}>
+                              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                                {isOverdue ? '🚨' : isPending ? '⏰' : '✅'}
+                              </div>
+                              <div style={{
+                                fontSize: '1rem',
+                                fontWeight: 'bold',
+                                color: isOverdue ? 'var(--primary-red)' : isPending ? 'var(--primary-orange)' : 'var(--primary-green)'
+                              }}>
+                                {locale === 'ar-SA' 
+                                  ? (isOverdue ? 'متأخر' : isPending ? 'معلق' : 'منتهي')
+                                  : (isOverdue ? 'Overdue' : isPending ? 'Pending' : 'Past Due')
+                                }
+                              </div>
+                            </div>
                           </div>
+
+                          {/* Description */}
                           <div style={{
-                            fontSize: '1rem',
-                            fontWeight: 'bold',
-                            color: hw.status === 'completed' ? 'var(--primary-green)' : 'var(--primary-orange)'
+                            background: 'var(--light-blue)',
+                            padding: '1.5rem',
+                            borderRadius: 'var(--border-radius)',
+                            marginBottom: '1rem'
                           }}>
-                            {locale === 'ar-SA' 
-                              ? (hw.status === 'completed' ? 'مكتمل' : 'معلق')
-                              : (hw.status === 'completed' ? 'Completed' : 'Pending')
-                            }
+                            <h4 style={{
+                              fontSize: '1.2rem',
+                              color: 'var(--primary-blue)',
+                              marginBottom: '0.5rem'
+                            }}>
+                              📝 {locale === 'ar-SA' ? 'التفاصيل:' : 'Description:'}
+                            </h4>
+                            <p style={{
+                              fontSize: '1.1rem',
+                              color: '#333',
+                              margin: 0,
+                              lineHeight: '1.6',
+                              whiteSpace: 'pre-wrap'
+                            }}>
+                              {hw.description}
+                            </p>
+                          </div>
+
+                          {/* Attachments */}
+                          {hw.attachments && hw.attachments.length > 0 && (
+                            <div style={{
+                              background: 'var(--light-green)',
+                              padding: '1rem',
+                              borderRadius: 'var(--border-radius)'
+                            }}>
+                              <h4 style={{
+                                fontSize: '1.1rem',
+                                color: 'var(--primary-green)',
+                                marginBottom: '0.5rem'
+                              }}>
+                                📎 {locale === 'ar-SA' ? 'المرفقات:' : 'Attachments:'}
+                              </h4>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {hw.attachments.map((attachment, index) => (
+                                  <span key={index} style={{
+                                    background: 'var(--primary-green)',
+                                    color: 'white',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '20px',
+                                    fontSize: '0.9rem'
+                                  }}>
+                                    {attachment}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Homework Submission Form */}
+                          <div style={{ marginTop: 24 }}>
+                            {loadingSub ? (
+                              <div style={{ textAlign: 'center', color: 'var(--primary-blue)' }}>
+                                {locale === 'ar-SA' ? 'جاري تحميل تسليم الواجب...' : 'Loading submission...'}
+                              </div>
+                            ) : (
+                              <HomeworkSubmissionForm
+                                homework={hw}
+                                studentId={selectedChildId}
+                                token={parentToken}
+                                initialSubmission={submission}
+                                onSubmitted={sub => handleSubmission(hw.id, sub)}
+                                onDeleted={() => handleDeleteSubmission(hw.id)}
+                              />
+                            )}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))} */}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1453,20 +1750,17 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
               </div>
             )}
 
-            {activeTab === 'notifications' && (
-              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <h2 style={{
-                  fontSize: '2.5rem',
-                  color: 'var(--primary-purple)',
-                  textAlign: 'center',
-                  marginBottom: '2rem'
-                }}>
-                  🔔 {locale === 'ar-SA' ? 'لوحة الإشعارات' : 'Notifications Panel'}
-                </h2>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {currentChild.id}
-                </div>
+            {activeTab === 'messages' && (
+              <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                {/* Parent Messages Center */}
+                {currentChild && (
+                  <React.Suspense fallback={<div style={{textAlign:'center',padding:'2rem'}}>{locale==='ar-SA'?'جاري تحميل الرسائل...':'Loading messages...'}</div>}>
+                    {(() => {
+                      const ParentMessagesCenter = require('./components/ParentMessagesCenter').default;
+                      return <ParentMessagesCenter locale={locale} currentChild={currentChild} />;
+                    })()}
+                  </React.Suspense>
+                )}
               </div>
             )}
           </>
@@ -1477,14 +1771,20 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
 }
 
 // Main Parent Portal Component
+
 export default function ParentPortalPage({ params }: { params: Promise<{ locale: string }> }) {
+  // All hooks must be called unconditionally, at the top
   const [locale, setLocale] = useState<string>('en-US');
   const [mounted, setMounted] = useState(false);
+  const { user, loading: authLoading, logout, getUserCustomClaims } = useAuth();
+  const router = require('next/navigation').useRouter();
+  // Role state
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const [roleError, setRoleError] = useState<string | null>(null);
-  const { user, loading: authLoading, logout, getUserCustomClaims } = useAuth();
+  const [redirecting, setRedirecting] = useState(false);
 
+  // Set locale and mount
   useEffect(() => {
     params.then(({ locale: paramLocale }) => {
       setLocale(paramLocale);
@@ -1498,24 +1798,13 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
       if (user) {
         setRoleLoading(true);
         setRoleError(null);
-        
         try {
           const claims = await getUserCustomClaims();
           const role = claims?.role as UserRole;
-          
-          console.log('[DEBUG] Role check result:', { 
-            userId: user.uid, 
-            email: user.email,
-            role, 
-            claims 
-          });
-          
-          // Simple role check - just verify the user has 'parent' role
           if (!role) {
             setRoleError('No role assigned to this account');
             setUserRole(null);
           } else if (role !== 'parent') {
-            // Log security event for role mismatch
             logSecurityEvent('role_mismatch', {
               userId: user.uid,
               userRole: role,
@@ -1523,17 +1812,13 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
               timestamp: new Date(),
               userAgent: navigator.userAgent
             });
-            
             setRoleError(`Access denied. Your role is: ${role}`);
-            setUserRole(role); // Set the actual role so it shows in access denied screen
+            setUserRole(role);
           } else {
-            // User has parent role - allow access
             setUserRole(role);
           }
         } catch (error) {
           console.error('Error checking user role:', error);
-          
-          // Log security event for failed role check
           logSecurityEvent('unauthorized_access', {
             userId: user.uid,
             userRole: null,
@@ -1541,7 +1826,6 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
             timestamp: new Date(),
             userAgent: navigator.userAgent
           });
-          
           setRoleError('Failed to verify account permissions');
           setUserRole(null);
         } finally {
@@ -1553,9 +1837,66 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
         setRoleError(null);
       }
     };
-
     checkUserRole();
   }, [user, getUserCustomClaims]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (mounted && !authLoading && !user && !redirecting) {
+      setRedirecting(true);
+      router.replace(`/${locale}/login`);
+    }
+  }, [mounted, authLoading, user, locale, router, redirecting]);
+
+  // Handler for logout
+  const handleLogout = async () => {
+    await logout();
+    setUserRole(null);
+    setRoleError(null);
+  };
+
+  // Handler for retrying role check
+  const handleRetryRoleCheck = async () => {
+    if (user) {
+      setRoleLoading(true);
+      setRoleError(null);
+      try {
+        const claims = await getUserCustomClaims();
+        const role = claims?.role as UserRole;
+        if (!role) {
+          setRoleError('No role assigned to this account');
+          setUserRole(null);
+        } else if (role !== 'parent') {
+          logSecurityEvent('role_mismatch', {
+            userId: user.uid,
+            userRole: role,
+            expectedRole: 'parent',
+            timestamp: new Date(),
+            userAgent: navigator.userAgent
+          });
+          setRoleError(`Access denied. Your role is: ${role}`);
+          setUserRole(role);
+        } else {
+          setUserRole(role);
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        logSecurityEvent('unauthorized_access', {
+          userId: user.uid,
+          userRole: null,
+          expectedRole: 'parent',
+          timestamp: new Date(),
+          userAgent: navigator.userAgent
+        });
+        setRoleError('Failed to verify account permissions');
+        setUserRole(null);
+      } finally {
+        setRoleLoading(false);
+      }
+    }
+  };
+
+  // All hooks above, now handle conditional rendering below
 
   // Show loading spinner while checking authentication and role
   if (!mounted || authLoading || (user && roleLoading)) {
@@ -1580,71 +1921,27 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
     );
   }
 
-  const handleLogout = async () => {
-    await logout();
-    setUserRole(null); // Reset role state on logout
-    setRoleError(null);
-  };
-
-  const handleRetryRoleCheck = async () => {
-    if (user) {
-      setRoleLoading(true);
-      setRoleError(null);
-      
-      try {
-        const claims = await getUserCustomClaims();
-        const role = claims?.role as UserRole;
-        
-        console.log('[DEBUG] Retry role check result:', { 
-          userId: user.uid, 
-          email: user.email,
-          role, 
-          claims 
-        });
-        
-        // Simple role check - just verify the user has 'parent' role
-        if (!role) {
-          setRoleError('No role assigned to this account');
-          setUserRole(null);
-        } else if (role !== 'parent') {
-          // Log security event for role mismatch
-          logSecurityEvent('role_mismatch', {
-            userId: user.uid,
-            userRole: role,
-            expectedRole: 'parent',
-            timestamp: new Date(),
-            userAgent: navigator.userAgent
-          });
-          
-          setRoleError(`Access denied. Your role is: ${role}`);
-          setUserRole(role); // Set the actual role so it shows in access denied screen
-        } else {
-          // User has parent role - allow access
-          setUserRole(role);
-        }
-      } catch (error) {
-        console.error('Error checking user role:', error);
-        
-        // Log security event for failed role check
-        logSecurityEvent('unauthorized_access', {
-          userId: user.uid,
-          userRole: null,
-          expectedRole: 'parent',
-          timestamp: new Date(),
-          userAgent: navigator.userAgent
-        });
-        
-        setRoleError('Failed to verify account permissions');
-        setUserRole(null);
-      } finally {
-        setRoleLoading(false);
-      }
-    }
-  };
-
-  // If user is not authenticated, show login form
-  if (!user) {
-    return <LoginForm locale={locale} />;
+  // Always render a spinner for unauthenticated users, never return before all hooks
+  if (!mounted || authLoading || (!user && !redirecting)) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, var(--light-pink), var(--light-blue))'
+      }}>
+        <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+        <p style={{
+          fontSize: '1.2rem',
+          color: 'var(--primary-purple)',
+          fontWeight: 'bold'
+        }}>
+          {locale === 'ar-SA' ? 'جاري التحقق من تسجيل الدخول...' : 'Checking authentication...'}
+        </p>
+      </div>
+    );
   }
 
   // If there was an error checking role, show error with retry option
@@ -1741,9 +2038,14 @@ export default function ParentPortalPage({ params }: { params: Promise<{ locale:
 
   // If user is authenticated and has parent role, show dashboard
   return (
-    <>
+    <AcademicYearProvider>
       <SessionMonitor user={user} onLogout={handleLogout} locale={locale} />
-      <Dashboard onLogout={handleLogout} locale={locale} />
-    </>
+      <ParentDashboardWrapper onLogout={handleLogout} locale={locale} />
+    </AcademicYearProvider>
   );
+}
+
+function ParentDashboardWrapper({ onLogout, locale }: { onLogout: () => void; locale: string }) {
+  const { selectedAcademicYear } = useAcademicYear();
+  return <Dashboard key={selectedAcademicYear} onLogout={onLogout} locale={locale} />;
 }

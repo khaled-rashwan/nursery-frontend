@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { getRoleColor, getRoleIcon, getRoleName } from '../../../../../utils/rolePermissions';
-import { UserClaims } from '../../types/admin.types';
-import { mockSystemStats, mockRecentActivity } from '../../data/mockData';
+import { UserClaims, SystemStats, RecentActivity } from '../../types/admin.types';
+import { activityLogger, ActivityHelpers } from '../../services/activityLogger';
+import { systemAPI, handleAPIError } from '../../services/api';
 import { UserManagement } from '../user-management/UserManagement';
 import { StudentManagement } from '../student-management/StudentManagement';
 import { EnrollmentManagement } from '../enrollment-management/EnrollmentManagement';
 import { ClassManagement } from '../class-management/ClassManagement';
 import { TeacherManagement } from '../teacher-management/TeacherManagement';
+import { AcademicYearProvider, AcademicYearSelector } from '../../../../../components/academic-year';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -20,17 +22,51 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const { user, getUserCustomClaims } = useAuth();
   const [userClaims, setUserClaims] = useState<UserClaims | null>(null);
+  const [systemStats, setSystemStats] = useState<SystemStats>({
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalParents: 0,
+    totalClasses: 0
+  });
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserClaims = async () => {
       if (user && getUserCustomClaims) {
         const claims = await getUserCustomClaims();
         setUserClaims(claims);
+        if (user.email && user.displayName) {
+          ActivityHelpers.login(user.email, user.displayName);
+        }
       }
     };
     fetchUserClaims();
     
   }, [user, getUserCustomClaims]);
+
+  // Fetch system statistics
+  const fetchSystemStats = useCallback(async () => {
+    if (!user) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const stats = await systemAPI.getStats(user);
+      setSystemStats(stats);
+    } catch (error) {
+      console.error('Error fetching system statistics:', error);
+      setError(handleAPIError(error, locale));
+      // Keep the default values (all zeros) on error
+    } finally {
+      setLoading(false);
+    }
+  }, [user, locale]);
+
+  // ...existing code...
 
   const StatCard = ({ icon, title, value, color }: { icon: string; title: string; value: string | number; color: string }) => (
     <div style={{
@@ -70,23 +106,29 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
   );
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
-      padding: '2rem'
-    }}>
-      {/* Header */}
+    <AcademicYearProvider>
       <div style={{
-        background: 'white',
-        padding: '2rem',
-        borderRadius: '15px',
-        boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-        marginBottom: '2rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        border: '3px solid #3498db'
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
+        padding: '2rem'
       }}>
+      {/* Header */}
+      <div
+        style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '15px',
+          boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+          marginBottom: '2rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          border: '3px solid #3498db',
+          flexWrap: 'wrap',
+          rowGap: '1.5rem',
+          columnGap: '1.5rem',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{
             width: '60px',
@@ -146,24 +188,37 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
           </div>
         </div>
         
-        <button
-          onClick={onLogout}
-          style={{
-            padding: '0.8rem 1.5rem',
-            background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        >
-          🚪 {locale === 'ar-SA' ? 'تسجيل الخروج' : 'Sign Out'}
-        </button>
+        {/* Academic Year Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', margin: '0 1rem' }}>
+          <AcademicYearSelector variant="compact" />
+        </div>
+        
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button
+            onClick={fetchSystemStats}
+            disabled={loading}
+            style={{
+              padding: '0.6rem 1.2rem',
+              background: loading ? '#95a5a6' : 'linear-gradient(135deg, #27ae60, #229954)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              fontWeight: 'bold',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+            onMouseEnter={(e) => !loading && (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseLeave={(e) => !loading && (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            🔄 {loading
+              ? (locale === 'ar-SA' ? 'تحديث...' : 'Refreshing...') 
+              : (locale === 'ar-SA' ? 'تحديث البيانات' : 'Refresh Data')}
+          </button>
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -215,6 +270,20 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div>
+          {/* Error Message */}
+          {error && (
+            <div style={{
+              background: '#fee',
+              color: '#c33',
+              padding: '1rem',
+              borderRadius: '4px',
+              marginBottom: '1rem',
+              border: '1px solid #fcc'
+            }}>
+              {error}
+            </div>
+          )}
+
           {/* System Stats */}
           <div style={{
             display: 'grid',
@@ -225,108 +294,30 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             <StatCard 
               icon="👨‍🎓" 
               title={locale === 'ar-SA' ? 'إجمالي الطلاب' : 'Total Students'} 
-              value={mockSystemStats.totalStudents} 
+              value={loading ? '...' : systemStats.totalStudents} 
               color="#3498db" 
             />
             <StatCard 
               icon="👩‍🏫" 
               title={locale === 'ar-SA' ? 'إجمالي المعلمين' : 'Total Teachers'} 
-              value={mockSystemStats.totalTeachers} 
+              value={loading ? '...' : systemStats.totalTeachers} 
               color="#2ecc71" 
             />
             <StatCard 
               icon="👨‍👩‍👧‍👦" 
               title={locale === 'ar-SA' ? 'إجمالي أولياء الأمور' : 'Total Parents'} 
-              value={mockSystemStats.totalParents} 
+              value={loading ? '...' : systemStats.totalParents} 
               color="#9b59b6" 
             />
             <StatCard 
               icon="🏫" 
               title={locale === 'ar-SA' ? 'إجمالي الفصول' : 'Total Classes'} 
-              value={mockSystemStats.totalClasses} 
+              value={loading ? '...' : systemStats.totalClasses} 
               color="#f39c12" 
-            />
-            <StatCard 
-              icon="💳" 
-              title={locale === 'ar-SA' ? 'الرسوم المعلقة' : 'Pending Fees'} 
-              value={`${mockSystemStats.pendingFees.toLocaleString()} ${locale === 'ar-SA' ? 'ريال' : 'SAR'}`} 
-              color="#e74c3c" 
-            />
-            <StatCard 
-              icon="💰" 
-              title={locale === 'ar-SA' ? 'الإيرادات الشهرية' : 'Monthly Revenue'} 
-              value={`${mockSystemStats.monthlyRevenue.toLocaleString()} ${locale === 'ar-SA' ? 'ريال' : 'SAR'}`} 
-              color="#27ae60" 
             />
           </div>
 
-          {/* Recent Activity */}
-          <div style={{
-            background: 'white',
-            padding: '2rem',
-            borderRadius: '15px',
-            boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-            border: '3px solid #95a5a6'
-          }}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              color: '#2c3e50',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              📋 {locale === 'ar-SA' ? 'النشاط الأخير' : 'Recent Activity'}
-            </h2>
-            
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {mockRecentActivity.map(activity => (
-                <div key={activity.id} style={{
-                  padding: '1rem',
-                  borderBottom: '1px solid #ecf0f1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem'
-                }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    background: activity.type === 'user_created' ? '#3498db' : 
-                               activity.type === 'fee_payment' ? '#27ae60' :
-                               activity.type === 'class_updated' ? '#f39c12' :
-                               activity.type === 'report_generated' ? '#9b59b6' : '#95a5a6',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '1.2rem'
-                  }}>
-                    {activity.type === 'user_created' ? '👤' :
-                     activity.type === 'fee_payment' ? '💰' :
-                     activity.type === 'class_updated' ? '📚' :
-                     activity.type === 'report_generated' ? '📊' : '🔧'}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{
-                      fontSize: '1.1rem',
-                      color: '#2c3e50',
-                      margin: '0 0 0.5rem 0'
-                    }}>
-                      {activity.description}
-                    </p>
-                    <p style={{
-                      fontSize: '0.9rem',
-                      color: '#7f8c8d',
-                      margin: 0
-                    }}>
-                      👤 {activity.user} • 🕒 {activity.timestamp}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Recent Activity section removed as per request */}
         </div>
       )}
 
@@ -385,5 +376,6 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         </div>
       )}
     </div>
+    </AcademicYearProvider>
   );
 }

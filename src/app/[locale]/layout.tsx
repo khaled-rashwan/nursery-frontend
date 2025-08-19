@@ -6,8 +6,10 @@ import {routing} from '@/i18n/routing';
 import { Geist, Geist_Mono } from "next/font/google";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import FirebaseLogoutButton from "../../components/FirebaseLogoutButton";
+import LoginNavButton from "../../components/LoginNavButton";
 import Link from 'next/link';
 import Image from 'next/image';
+import PortalNavButton from '../../components/PortalNavButton';
 import '../globals.css';
 
 const geistSans = Geist({
@@ -136,20 +138,13 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
                 {locale === 'ar-SA' ? 'اتصل بنا' : 'Contact Us'}
               </Link>
             </li>
+            {/* Login nav item, only visible if not logged in */}
             <li className="nav-item">
-              <Link href={`/${locale}/parent-portal`} className="nav-link bounce-on-hover">
-                {locale === 'ar-SA' ? 'بوابة أولياء الأمور' : 'Parent Portal'}
-              </Link>
+              <LoginNavButton locale={locale} />
             </li>
+            {/* Portal nav item, only visible if logged in */}
             <li className="nav-item">
-              <Link href={`/${locale}/teacher-portal`} className="nav-link bounce-on-hover">
-                {locale === 'ar-SA' ? 'بوابة المعلمين' : 'Teacher Portal'}
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link href={`/${locale}/admin`} className="nav-link bounce-on-hover">
-                {locale === 'ar-SA' ? 'بوابة الإدارة' : 'Admin Portal'}
-              </Link>
+              <PortalNavButton locale={locale} />
             </li>
           </ul>
         </nav>

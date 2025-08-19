@@ -5,16 +5,23 @@ export interface SystemStats {
   totalTeachers: number;
   totalParents: number;
   totalClasses: number;
-  pendingFees: number;
-  monthlyRevenue: number;
 }
 
 export interface RecentActivity {
-  id: number;
-  type: string;
+  id: string;
+  type: 'user_created' | 'user_updated' | 'user_deleted' | 
+        'student_created' | 'student_updated' | 'student_deleted' |
+        'class_created' | 'class_updated' | 'class_deleted' |
+        'enrollment_created' | 'enrollment_updated' | 'enrollment_deleted' |
+        'teacher_assigned' | 'teacher_unassigned' |
+        'attendance_recorded' | 'system_backup' | 'login' | 'logout';
   description: string;
   timestamp: string;
   user: string;
+  userDisplayName?: string;
+  targetId?: string; // ID of the affected resource (student, class, etc.)
+  targetName?: string; // Name of the affected resource
+  metadata?: Record<string, unknown>; // Additional context data
 }
 
 export interface User {
@@ -82,6 +89,41 @@ export interface TeacherAssignment {
   subjects: string[];
 }
 
+// New class teacher assignment interface for the junction table
+export interface ClassTeacherAssignment {
+  id: string;
+  classId: string;
+  teacherId: string;
+  subjects: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy?: string;
+  // Additional info populated by API
+  teacherInfo?: {
+    uid: string;
+    email: string;
+    displayName: string;
+    phoneNumber?: string;
+    role: string;
+  };
+  classInfo?: {
+    id: string;
+    name: string;
+    level: string;
+    academicYear: string;
+  };
+}
+
+// Form data for creating/updating assignments
+export interface ClassTeacherAssignmentFormData {
+  classId: string;
+  teacherId: string;
+  subjects: string[];
+  isActive?: boolean;
+}
+
 export interface Class {
   id: string;
   name: string;
@@ -143,11 +185,12 @@ export interface Enrollment {
 export interface EnrollmentFormData {
   studentUID: string;
   academicYear: string;
-  class: string;
-  teacherUID: string;
+  classId: string;              // NEW: Reference to classes collection document ID
+  class?: string;               // OPTIONAL: Human-readable class name (auto-filled)
   status?: 'enrolled' | 'withdrawn' | 'graduated' | 'pending';
   notes?: string;
   previousClass?: string;
+  // REMOVED: teacherUID - teacher assignments managed via teachers.classes[]
 }
 
 // Attendance Management Types

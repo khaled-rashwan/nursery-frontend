@@ -4,6 +4,56 @@ const { setCorsHeaders, handleCorsOptions } = require('../utils/cors');
 const { authenticate, requireAdmin } = require('../utils/auth');
 const { canEditUser, canDeleteUser, canCreateRole, canAssignRole } = require('../utils/permissions');
 
+const db = admin.firestore();
+
+/**
+ * Helper function to handle teacher collection changes when user role changes
+ */
+const handleTeacherRoleChange = async (uid, oldRole, newRole) => {
+  try {
+    // If user became a teacher
+    if (newRole === 'teacher' && oldRole !== 'teacher') {
+      console.log(`Creating teacher record for newly assigned teacher: ${uid}`);
+      
+      // Check if teacher record already exists
+      const teacherDoc = await db.collection('teachers').doc(uid).get();
+      
+      if (!teacherDoc.exists) {
+        await db.collection('teachers').doc(uid).set({
+          classes: [],
+          assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdBy: 'user_management'
+        });
+        console.log(`Teacher record created for user: ${uid}`);
+      }
+    }
+    
+    // If user is no longer a teacher
+    if (oldRole === 'teacher' && newRole !== 'teacher') {
+      console.log(`Archiving teacher record for user no longer a teacher: ${uid}`);
+      
+      const teacherDoc = await db.collection('teachers').doc(uid).get();
+      
+      if (teacherDoc.exists) {
+        // Archive the record instead of deleting to preserve history
+        await db.collection('teachers_archived').doc(uid).set({
+          ...teacherDoc.data(),
+          archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+          archivedReason: 'role_removed'
+        });
+        
+        // Remove from active teachers collection
+        await db.collection('teachers').doc(uid).delete();
+        console.log(`Teacher record archived for user: ${uid}`);
+      }
+    }
+  } catch (error) {
+    console.error(`Error handling teacher role change for user ${uid}:`, error);
+    // Don't throw to avoid failing the main operation
+  }
+};
+
 // HTTPS function to list users
 const listUsers = functions.https.onRequest(async (req, res) => {
   setCorsHeaders(res);
@@ -114,6 +164,9 @@ const editUser = functions.https.onRequest(async (req, res) => {
       }
 
       await admin.auth().setCustomUserClaims(uid, { role: userData.role });
+      
+      // Handle teacher collection creation/removal when role changes
+      await handleTeacherRoleChange(uid, targetRole, userData.role);
     }
 
     // Return updated user data
@@ -192,6 +245,17 @@ const createUser = functions.https.onRequest(async (req, res) => {
 
     // Set custom claims for role
     await admin.auth().setCustomUserClaims(userRecord.uid, { role: userData.role });
+    
+    // If creating a teacher, also create teacher collection record
+    if (userData.role === 'teacher') {
+      await db.collection('teachers').doc(userRecord.uid).set({
+        classes: [],
+        assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: 'user_creation'
+      });
+      console.log(`Teacher record created for new user: ${userRecord.uid}`);
+    }
 
     // Return created user data
     const responseUser = {
