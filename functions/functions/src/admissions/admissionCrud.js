@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const { setCorsHeaders, handleCorsOptions } = require('../utils/cors');
+const { setCorsHeaders } = require('../utils/cors');
 const { authenticate, isAuthorized } = require('../utils/auth');
 
 const db = admin.firestore();
@@ -20,7 +20,10 @@ const validateSubmission = (data) => {
 
 const submitAdmission = functions.https.onRequest(async (req, res) => {
     setCorsHeaders(res);
-    if (handleCorsOptions(req, res)) return;
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
 
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
@@ -76,7 +79,10 @@ const deleteAdmission = async (id) => {
 
 const manageAdmissions = functions.https.onRequest(async (req, res) => {
     setCorsHeaders(res);
-    if (handleCorsOptions(req, res)) return;
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
 
     const authResult = await authenticate(req);
     if (!authResult.authenticated) {
@@ -87,27 +93,28 @@ const manageAdmissions = functions.https.onRequest(async (req, res) => {
         return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const { operation, id, status } = req.body;
-
     try {
-        switch (req.method) {
-            case 'GET':
-                const admissions = await listAdmissions();
-                return res.status(200).json({ admissions });
-            case 'POST':
-                 switch (operation) {
-                    case 'updateStatus':
-                        const updated = await updateAdmissionStatus(id, status);
-                        return res.status(200).json(updated);
-                    case 'delete':
-                        const deleted = await deleteAdmission(id);
-                        return res.status(200).json(deleted);
-                    default:
-                        return res.status(400).json({ error: 'Invalid operation' });
-                }
-            default:
-                return res.status(405).json({ error: 'Method Not Allowed' });
+        if (req.method === 'GET') {
+            const admissions = await listAdmissions();
+            return res.status(200).json({ admissions });
         }
+
+        if (req.method === 'POST') {
+            const { operation, id, status } = req.body;
+            switch (operation) {
+                case 'updateStatus':
+                    const updated = await updateAdmissionStatus(id, status);
+                    return res.status(200).json(updated);
+                case 'delete':
+                    const deleted = await deleteAdmission(id);
+                    return res.status(200).json(deleted);
+                default:
+                    return res.status(400).json({ error: 'Invalid operation' });
+            }
+        }
+
+        return res.status(405).json({ error: 'Method Not Allowed' });
+
     } catch (error) {
         console.error('Error managing admissions:', error);
         return res.status(500).json({ error: 'Internal server error' });

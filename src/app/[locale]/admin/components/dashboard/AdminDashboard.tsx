@@ -11,6 +11,7 @@ import { StudentManagement } from '../student-management/StudentManagement';
 import { EnrollmentManagement } from '../enrollment-management/EnrollmentManagement';
 import { ClassManagement } from '../class-management/ClassManagement';
 import { TeacherManagement } from '../teacher-management/TeacherManagement';
+import AdmissionsManagement from '../admissions-management/AdmissionsManagement';
 import { AcademicYearProvider, AcademicYearSelector } from '../../../../../components/academic-year';
 
 interface AdminDashboardProps {
@@ -233,6 +234,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           {[
             { id: 'overview', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview', icon: '📊' },
+            { id: 'admissions', label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', icon: '📝' },
             { id: 'users', label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', icon: '👥' },
             { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓' },
             { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚' },
@@ -342,7 +344,11 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <TeacherManagement locale={locale} />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && (
+      {activeTab === 'admissions' && (
+        <AdmissionsManagement locale={locale} />
+      )}
+
+      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && (
         <div style={{
           background: 'white',
           padding: '3rem',
