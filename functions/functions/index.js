@@ -93,3 +93,8 @@ exports.manageAnnouncements = manageAnnouncements;
 
 // Export Report Card Functions
 exports.manageReportCards = manageReportCards;
+
+// Export Admissions Functions
+const { submitAdmission, manageAdmissions } = require('./src/admissions/admissionCrud');
+exports.submitAdmission = submitAdmission;
+exports.manageAdmissions = manageAdmissions;

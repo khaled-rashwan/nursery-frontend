@@ -110,6 +110,12 @@ service cloud.firestore {
       allow read: if hasRole('parent');
     }
 
+    // Admissions collection
+    match /admissions/{admissionId} {
+      allow create: if true; // Allow public submission
+      allow read, update, delete: if hasAnyRole(['admin', 'superadmin']);
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

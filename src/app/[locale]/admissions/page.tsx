@@ -9,8 +9,63 @@ export default function AdmissionsPage() {
   const t = useTranslations('AdmissionsPage');
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState('enrollment');
+  const [formData, setFormData] = useState({
+    parentName: '',
+    email: '',
+    phone: '',
+    bestTime: '',
+    whatsapp: 'yes',
+    preferredLang: 'arabic',
+    relationship: '',
+    message: ''
+  });
+  const [submissionStatus, setSubmissionStatus] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const isRTL = locale === 'ar-SA';
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setSubmissionStatus(null);
+
+    try {
+      const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitAdmission', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmissionStatus({ success: true, message: 'Thank you! Your submission has been received.' });
+        setFormData({
+          parentName: '',
+          email: '',
+          phone: '',
+          bestTime: '',
+          whatsapp: 'yes',
+          preferredLang: 'arabic',
+          relationship: '',
+          message: ''
+        });
+      } else {
+        setSubmissionStatus({ success: false, message: `Error: ${result.error}` });
+      }
+    } catch (error) {
+      setSubmissionStatus({ success: false, message: 'An unexpected error occurred. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const docList = [
     t('docList.0'),
@@ -94,16 +149,16 @@ export default function AdmissionsPage() {
           gap: '2rem',
           alignItems: 'center'
         }}>
-          <div style={{ textAlign: 'center' }}>
-            <Image src="/admissions/house.png" alt="Admissions Open" width={100} height={100} />
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Image src="/admissions/house.png" alt="Admissions Open" width={120} height={120} />
             <p style={{ marginTop: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>{t('openNow')}</p>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <Image src="/admissions/calender.png" alt="Application Deadline" width={100} height={100} />
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Image src="/admissions/calender.png" alt="Application Deadline" width={120} height={120} />
             <p style={{ marginTop: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>{t('deadline')}</p>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <Image src="/admissions/chairs.png" alt="Limited Seats" width={100} height={100} />
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Image src="/admissions/chairs.png" alt="Limited Seats" width={120} height={120} />
             <p style={{ marginTop: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>{t('seatsLimited')}</p>
           </div>
         </div>
@@ -114,14 +169,16 @@ export default function AdmissionsPage() {
         margin: '3rem auto',
         maxWidth: '1200px',
         display: 'grid',
-        gridTemplateColumns: isRTL ? '1fr 2fr' : '2fr 1fr',
-        gap: '2rem'
+        gridTemplateColumns: '2fr 1fr',
+        gap: '2rem',
+        alignItems: 'start'
       }}>
         <div style={{
           background: 'white',
           padding: '2rem',
           borderRadius: 'var(--border-radius)',
           boxShadow: 'var(--shadow)',
+          order: isRTL ? 1 : 0
         }}>
           <div style={{ display: 'flex', borderBottom: '2px solid #eee', marginBottom: '1.5rem' }}>
             <button onClick={() => setActiveTab('enrollment')} style={{...tabButtonStyle, ...(activeTab === 'enrollment' ? activeTabStyle : {})}}>{t('enrollmentProcess')}</button>
@@ -132,9 +189,9 @@ export default function AdmissionsPage() {
             {tabContent[activeTab as keyof typeof tabContent]}
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '1rem' }}>
-          <Image src="/admissions/girl.jpg" alt="Happy student" width={400} height={300} style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: '100%' }} />
-          <Image src="/admissions/boy.jpg" alt="Happy student" width={400} height={300} style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: '100%' }} />
+        <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gap: '1rem' }}>
+          <Image src="/admissions/girl.jpg" alt="Happy student" width={300} height={225} style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} />
+          <Image src="/admissions/boy.jpg" alt="Happy student" width={300} height={225} style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} />
         </div>
       </section>
 
@@ -157,29 +214,29 @@ export default function AdmissionsPage() {
         <h4 style={{ textAlign: 'center', fontSize: '1.5rem', color: 'var(--primary-purple)', marginBottom: '2rem' }}>
           {t('formSubtitle')}
         </h4>
-        <form style={{ display: 'grid', gap: '1.5rem' }}>
-          <label>{t('parentName')}</label>
-          <input type="text" style={inputStyle} />
-          <label>{t('email')}</label>
-          <input type="email" style={inputStyle} />
-          <label>{t('phone')}</label>
-          <input type="tel" style={inputStyle} />
-          <label>{t('bestTime')}</label>
-          <input type="text" style={inputStyle} />
-          <label>{t('whatsapp')}</label>
-          <select style={inputStyle}>
+        <form style={{ display: 'grid', gap: '1.5rem' }} onSubmit={handleSubmit}>
+          <label htmlFor="parentName">{t('parentName')}</label>
+          <input type="text" id="parentName" name="parentName" value={formData.parentName} onChange={handleChange} style={inputStyle} required />
+          <label htmlFor="email">{t('email')}</label>
+          <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} style={inputStyle} required />
+          <label htmlFor="phone">{t('phone')}</label>
+          <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} style={inputStyle} required />
+          <label htmlFor="bestTime">{t('bestTime')}</label>
+          <input type="text" id="bestTime" name="bestTime" value={formData.bestTime} onChange={handleChange} style={inputStyle} />
+          <label htmlFor="whatsapp">{t('whatsapp')}</label>
+          <select id="whatsapp" name="whatsapp" value={formData.whatsapp} onChange={handleChange} style={inputStyle}>
             <option value="yes">Yes</option>
             <option value="no">No</option>
           </select>
-          <label>{t('preferredLang')}</label>
-          <select style={inputStyle}>
+          <label htmlFor="preferredLang">{t('preferredLang')}</label>
+          <select id="preferredLang" name="preferredLang" value={formData.preferredLang} onChange={handleChange} style={inputStyle}>
             <option value="arabic">Arabic</option>
             <option value="english">English</option>
           </select>
-          <label>{t('relationship')}</label>
-          <input type="text" style={inputStyle} />
-          <label>{t('message')}</label>
-          <textarea rows={5} style={inputStyle}></textarea>
+          <label htmlFor="relationship">{t('relationship')}</label>
+          <input type="text" id="relationship" name="relationship" value={formData.relationship} onChange={handleChange} style={inputStyle} required />
+          <label htmlFor="message">{t('message')}</label>
+          <textarea id="message" name="message" rows={5} value={formData.message} onChange={handleChange} style={inputStyle}></textarea>
           {/* Recaptcha placeholder */}
           <div style={{
             height: '78px',
@@ -193,21 +250,33 @@ export default function AdmissionsPage() {
           }}>
             reCAPTCHA placeholder
           </div>
-          <button type="submit" style={{
+          {submissionStatus && (
+            <div style={{
+              padding: '1rem',
+              borderRadius: 'var(--border-radius)',
+              background: submissionStatus.success ? 'var(--light-green)' : 'var(--light-pink)',
+              color: submissionStatus.success ? 'var(--primary-green)' : 'var(--primary-pink)',
+              border: `2px solid ${submissionStatus.success ? 'var(--primary-green)' : 'var(--primary-pink)'}`,
+              textAlign: 'center'
+            }}>
+              {submissionStatus.message}
+            </div>
+          )}
+          <button type="submit" disabled={isLoading} style={{
             padding: '1rem',
-            background: 'var(--primary-pink)',
+            background: isLoading ? '#ccc' : 'var(--primary-pink)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--border-radius)',
             fontSize: '1.2rem',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             fontWeight: 'bold',
             transition: 'background 0.3s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-purple)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary-pink)'}
+          onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-purple)'}}
+          onMouseLeave={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-pink)'}}
           >
-            {t('submit')}
+            {isLoading ? 'Submitting...' : t('submit')}
           </button>
         </form>
       </section>
