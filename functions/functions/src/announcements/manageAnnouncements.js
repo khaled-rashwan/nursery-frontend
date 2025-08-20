@@ -77,10 +77,25 @@ const listAnnouncements = async (req, res, decoded, role) => {
                 return res.json([]);
             }
 
-            query = db.collection('announcements')
-                .where('academicYear', '==', academicYear)
-                .where('classId', 'in', enrolledClassIds)
-                .orderBy('createdAt', 'desc');
+            const announcementsPromises = enrolledClassIds.map(classId => {
+                return db.collection('announcements')
+                    .where('academicYear', '==', academicYear)
+                    .where('classId', '==', classId)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+            });
+
+            const announcementsSnapshots = await Promise.all(announcementsPromises);
+            let announcements = [];
+            announcementsSnapshots.forEach(snapshot => {
+                snapshot.docs.forEach(doc => {
+                    announcements.push(doc.data());
+                });
+            });
+
+            announcements.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+
+            return res.json(announcements);
         } else {
             return res.status(403).json({ error: 'Forbidden. User role not permitted.' });
         }
