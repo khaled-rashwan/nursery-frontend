@@ -1,7 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { setCorsHeaders } = require('../utils/cors');
-const { authenticate, isAuthorized } = require('../utils/auth');
+const { authenticate, requireRole } = require('../utils/auth');
 
 const db = admin.firestore();
 
@@ -84,13 +84,14 @@ const manageAdmissions = functions.https.onRequest(async (req, res) => {
         return;
     }
 
-    const authResult = await authenticate(req);
-    if (!authResult.authenticated) {
-        return res.status(401).json({ error: 'Unauthorized' });
+    const authResult = await authenticate(req, res);
+    if (authResult.error) {
+        return res.status(authResult.error.status).json({ error: authResult.error.message });
     }
 
-    if (!isAuthorized(authResult.decodedToken, ['admin', 'superadmin'])) {
-        return res.status(403).json({ error: 'Forbidden' });
+    const roleResult = requireRole(authResult.decodedToken, ['admin', 'superadmin']);
+    if (roleResult.error) {
+        return res.status(roleResult.error.status).json({ error: roleResult.error.message });
     }
 
     try {
