@@ -19,17 +19,17 @@ export default function AdmissionsPage() {
     relationship: '',
     message: ''
   });
-  const [submissionStatus, setSubmissionStatus] = useState(null);
+  const [submissionStatus, setSubmissionStatus] = useState<{ success: boolean; message: string; } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const isRTL = locale === 'ar-SA';
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setSubmissionStatus(null);
