@@ -87,5 +87,9 @@ exports.onCustomClaimsChange = userTriggers.onCustomClaimsChange;
 // Export Messaging Functions
 exports.manageMessages = manageMessages.manageMessages;
 
+// Export Announcement Functions
+const { manageAnnouncements } = require('./src/announcements/manageAnnouncements');
+exports.manageAnnouncements = manageAnnouncements;
+
 // Export Report Card Functions
 exports.manageReportCards = manageReportCards;
