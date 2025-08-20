@@ -22,7 +22,7 @@ export default function AdminAdmissionsPage({ params }: { params: Promise<{ loca
   useEffect(() => {
     if (user) {
       getUserCustomClaims().then(claims => {
-        if (claims) {
+        if (claims && typeof claims.role === 'string') {
           setUserRole(claims.role);
         }
       });
