@@ -52,15 +52,18 @@ const listAnnouncements = async (req, res, decoded, role) => {
     }
 
     try {
-        let query;
+        let announcements = [];
         if (role === 'teacher') {
             if (!classId) {
                 return res.status(400).json({ error: 'Missing required field for teacher: classId' });
             }
-            query = db.collection('announcements')
+            const query = db.collection('announcements')
                 .where('academicYear', '==', academicYear)
-                .where('classId', '==', classId)
-                .orderBy('createdAt', 'desc');
+                .where('classId', '==', classId);
+
+            const snapshot = await query.get();
+            announcements = snapshot.docs.map(doc => doc.data());
+
         } else if (role === 'parent') {
             const enrollmentsSnapshot = await db.collection('enrollments')
                 .where('parentUID', '==', decoded.uid)
@@ -77,32 +80,25 @@ const listAnnouncements = async (req, res, decoded, role) => {
                 return res.json([]);
             }
 
-            const announcementsPromises = enrolledClassIds.map(classId => {
+            const announcementsPromises = enrolledClassIds.map(cid => {
                 return db.collection('announcements')
                     .where('academicYear', '==', academicYear)
-                    .where('classId', '==', classId)
-                    .orderBy('createdAt', 'desc')
+                    .where('classId', '==', cid)
                     .get();
             });
 
             const announcementsSnapshots = await Promise.all(announcementsPromises);
-            let announcements = [];
             announcementsSnapshots.forEach(snapshot => {
                 snapshot.docs.forEach(doc => {
                     announcements.push(doc.data());
                 });
             });
-
-            announcements.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-
-            return res.json(announcements);
         } else {
             return res.status(403).json({ error: 'Forbidden. User role not permitted.' });
         }
 
-        const snapshot = await query.get();
-        const announcements = snapshot.docs.map(doc => doc.data());
         return res.json(announcements);
+
     } catch (error) {
         console.error('Error listing announcements:', error);
         return res.status(500).json({ error: 'Internal server error' });
