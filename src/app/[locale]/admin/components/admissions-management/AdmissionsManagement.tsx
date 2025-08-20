@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
-import DeleteConfirmModal from '../DeleteConfirmModal';
+import { DeleteConfirmModal } from '../DeleteConfirmModal';
 
 interface Admission {
   id: string;
@@ -160,10 +160,10 @@ export default function AdmissionsManagement({ locale }: AdmissionsManagementPro
 
       {showDeleteConfirm && (
         <DeleteConfirmModal
-          isOpen={!!showDeleteConfirm}
-          onClose={() => setShowDeleteConfirm(null)}
+          userName={admissions.find(a => a.id === showDeleteConfirm)?.parentName || ''}
+          locale={locale}
           onConfirm={() => handleDelete(showDeleteConfirm)}
-          message="Are you sure you want to delete this submission?"
+          onCancel={() => setShowDeleteConfirm(null)}
         />
       )}
 

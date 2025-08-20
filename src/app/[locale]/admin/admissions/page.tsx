@@ -8,7 +8,8 @@ import AdmissionsManagement from '../components/admissions-management/Admissions
 export default function AdminAdmissionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [mounted, setMounted] = useState(false);
   const [locale, setLocale] = useState<string>('en-US');
-  const { user, loading, userRole } = useAuth();
+  const { user, loading, getUserCustomClaims } = useAuth();
+  const [userRole, setUserRole] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,12 +20,22 @@ export default function AdminAdmissionsPage({ params }: { params: Promise<{ loca
   }, [params]);
 
   useEffect(() => {
+    if (user) {
+      getUserCustomClaims().then(claims => {
+        if (claims) {
+          setUserRole(claims.role);
+        }
+      });
+    }
+  }, [user, getUserCustomClaims]);
+
+  useEffect(() => {
     if (!loading && !user) {
       router.push(`/${locale}/admin/login`);
     }
   }, [user, loading, router, locale]);
 
-  if (!mounted || loading) {
+  if (!mounted || loading || !userRole && user) {
     return (
       <div style={{
         display: 'flex',
