@@ -75,34 +75,32 @@ const listAnnouncements = async (req, res, decoded, role) => {
             announcementsData = snapshot.docs.map(doc => doc.data());
 
         } else if (role === 'parent') {
+            const { classId } = req.query;
+            if (!classId) {
+                return res.status(400).json({ error: 'Missing required field for parent role: classId' });
+            }
+
+            // Verify that the parent is enrolled in the specified class for the given academic year.
             const enrollmentsSnapshot = await db.collection('enrollments')
                 .where('parentUID', '==', decoded.uid)
                 .where('academicYear', '==', academicYear)
+                .where('classId', '==', classId)
+                .limit(1)
                 .get();
 
             if (enrollmentsSnapshot.empty) {
+                // If no enrollment is found, the parent is not authorized to view announcements for this class.
+                // Return an empty array to prevent leaking information.
                 return res.json([]);
             }
 
-            const enrolledClassIds = [...new Set(enrollmentsSnapshot.docs.map(doc => doc.data().classId))];
+            // If enrollment is verified, fetch announcements for that class.
+            const announcementsSnapshot = await db.collection('announcements')
+                .where('academicYear', '==', academicYear)
+                .where('classId', '==', classId)
+                .get();
 
-            if (enrolledClassIds.length === 0) {
-                return res.json([]);
-            }
-
-            const announcementsPromises = enrolledClassIds.map(cid => {
-                return db.collection('announcements')
-                    .where('academicYear', '==', academicYear)
-                    .where('classId', '==', cid)
-                    .get();
-            });
-
-            const announcementsSnapshots = await Promise.all(announcementsPromises);
-            announcementsSnapshots.forEach(snapshot => {
-                snapshot.docs.forEach(doc => {
-                    announcementsData.push(doc.data());
-                });
-            });
+            announcementsData = announcementsSnapshot.docs.map(doc => doc.data());
         } else {
             return res.status(403).json({ error: 'Forbidden. User role not permitted.' });
         }
