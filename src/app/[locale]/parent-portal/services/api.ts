@@ -241,3 +241,42 @@ export async function fetchStudentEnrollment(token: string, studentId: string, a
     return null;
   }
 }
+
+// Announcement Types
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  classId: string;
+  academicYear: string;
+  authorId: string;
+  authorName?: string; // Added field
+  createdAt: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+  updatedAt: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+}
+
+
+export async function fetchAnnouncements(token: string, academicYear: string, classId: string): Promise<Announcement[]> {
+  const url = new URL(`${CF_BASE}/manageAnnouncements`);
+  url.searchParams.set('operation', 'listAnnouncements');
+  url.searchParams.set('academicYear', academicYear);
+  url.searchParams.set('classId', classId);
+
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to fetch announcements (${res.status}) ${text}`);
+  }
+
+  const data = await res.json();
+  return data || [];
+}

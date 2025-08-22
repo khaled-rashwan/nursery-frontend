@@ -8,7 +8,7 @@ import { UserRole, getRoleName } from '../../../utils/rolePermissions';
 import { 
   logSecurityEvent 
 } from '../../../utils/parentPortalSecurity';
-import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, fetchHomeworkByClass, fetchStudentEnrollment, fetchHomeworkSubmission, ChildEnriched, StudentAttendanceHistoryResponse, HomeworkItem, HomeworkSubmission } from './services/api';
+import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, fetchHomeworkByClass, fetchStudentEnrollment, fetchHomeworkSubmission, ChildEnriched, StudentAttendanceHistoryResponse, HomeworkItem, HomeworkSubmission, fetchAnnouncements, Announcement } from './services/api';
 import HomeworkSubmissionForm from './components/HomeworkSubmissionForm';
 // Academic Year context & selector
 import { AcademicYearProvider, useAcademicYear } from '../../../contexts/AcademicYearContext';
@@ -858,6 +858,10 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
   const [loadingHomework, setLoadingHomework] = useState(false);
   const [homeworkError, setHomeworkError] = useState<string | null>(null);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [announcementsError, setAnnouncementsError] = useState<string | null>(null);
+
 
   // Reset dashboard state when academic year changes
   useEffect(() => {
@@ -989,6 +993,41 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     loadHomework();
     return () => { cancelled = true; };
   }, [user, selectedChildId, children, selectedAcademicYear]);
+
+  // Fetch announcements for selected child's class
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAnnouncements() {
+      if (!user || !selectedChildId || !selectedAcademicYear) return;
+      const currentChild = children.find(child => child.id === selectedChildId);
+      if (!currentChild || !currentChild.classId) return;
+
+      setLoadingAnnouncements(true);
+      setAnnouncementsError(null);
+      try {
+        const token = await user.getIdToken();
+        const fetchedAnnouncements = await fetchAnnouncements(token, selectedAcademicYear, currentChild.classId);
+        if (!cancelled) {
+          setAnnouncements(fetchedAnnouncements);
+        }
+      } catch (e: unknown) {
+        if (!cancelled) {
+          console.error('Failed to load announcements', e);
+          if (e instanceof Error) {
+            setAnnouncementsError(e.message || 'Failed to load announcements');
+          } else {
+            setAnnouncementsError('An unknown error occurred while fetching announcements.');
+          }
+        }
+      } finally {
+        if (!cancelled) setLoadingAnnouncements(false);
+      }
+    }
+
+    loadAnnouncements();
+    return () => { cancelled = true; };
+  }, [user, selectedChildId, children, selectedAcademicYear]);
+
 
   // Get current child data
   const currentChild = children.find(child => child.id === selectedChildId) || children[0];
@@ -1759,6 +1798,129 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   <React.Suspense fallback={<div style={{textAlign:'center',padding:'2rem'}}>{locale==='ar-SA'?'جاري تحميل الرسائل...':'Loading messages...'}</div>}>
                     <ParentMessagesCenter locale={locale} currentChild={currentChild} />
                   </React.Suspense>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                <h2 style={{
+                  fontSize: '2.5rem',
+                  color: 'var(--primary-purple)',
+                  textAlign: 'center',
+                  marginBottom: '2rem'
+                }}>
+                  🔔 {locale === 'ar-SA' ? 'الإشعارات' : 'Notifications'}
+                </h2>
+
+                {loadingAnnouncements && (
+                  <div style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+                    <p style={{ fontSize: '1.2rem', color: 'var(--primary-purple)' }}>
+                      {locale === 'ar-SA' ? 'جاري تحميل الإشعارات...' : 'Loading announcements...'}
+                    </p>
+                  </div>
+                )}
+
+                {announcementsError && (
+                  <div style={{
+                    background: 'var(--light-red)',
+                    padding: '1.5rem',
+                    borderRadius: 'var(--border-radius)',
+                    marginBottom: '2rem',
+                    border: '3px solid var(--primary-red)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
+                    <p style={{ fontSize: '1.1rem', color: 'var(--primary-red)', margin: 0 }}>
+                      {announcementsError}
+                    </p>
+                  </div>
+                )}
+
+                {!loadingAnnouncements && !announcementsError && announcements.length === 0 && (
+                  <div style={{
+                    background: 'var(--light-green)',
+                    padding: '2rem',
+                    borderRadius: 'var(--border-radius)',
+                    border: '3px solid var(--primary-green)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
+                    <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-green)', marginBottom: '1rem' }}>
+                      {locale === 'ar-SA' ? 'لا توجد إشعارات حالياً' : 'No Announcements Currently'}
+                    </h3>
+                    <p style={{ fontSize: '1.1rem', color: '#666' }}>
+                      {locale === 'ar-SA'
+                        ? 'لا توجد إشعارات جديدة لصف طفلك.'
+                        : 'There are no new announcements for your child\'s class.'
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {!loadingAnnouncements && !announcementsError && announcements.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {announcements.map((announcement: Announcement) => (
+                      <div key={announcement.id} style={{
+                        background: 'white',
+                        padding: '2rem',
+                        borderRadius: 'var(--border-radius)',
+                        boxShadow: 'var(--shadow)',
+                        border: '4px solid var(--primary-blue)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          flexWrap: 'wrap',
+                          gap: '1rem',
+                          marginBottom: '1rem'
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <h3 style={{
+                              fontSize: '1.5rem',
+                              color: 'var(--primary-purple)',
+                              marginBottom: '0.5rem'
+                            }}>
+                              📢 {announcement.title}
+                            </h3>
+                            <p style={{
+                              fontSize: '1rem',
+                              color: '#666',
+                              marginBottom: '0.5rem'
+                            }}>
+                              👨‍🏫 {locale === 'ar-SA' ? 'المرسل:' : 'From:'} {announcement.authorName || 'N/A'}
+                            </p>
+                            <p style={{
+                              fontSize: '1rem',
+                              color: 'var(--primary-blue)',
+                              fontWeight: 'bold'
+                            }}>
+                              📅 {locale === 'ar-SA' ? 'التاريخ:' : 'Date:'} {new Date(announcement.createdAt._seconds * 1000).toLocaleDateString(locale === 'ar-SA' ? 'ar-SA' : 'en-US')}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          background: 'var(--light-blue)',
+                          padding: '1.5rem',
+                          borderRadius: 'var(--border-radius)',
+                          marginBottom: '1rem'
+                        }}>
+                          <p style={{
+                            fontSize: '1.1rem',
+                            color: '#333',
+                            margin: 0,
+                            lineHeight: '1.6',
+                            whiteSpace: 'pre-wrap'
+                          }}>
+                            {announcement.content}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

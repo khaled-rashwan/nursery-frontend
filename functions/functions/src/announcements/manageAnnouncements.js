@@ -44,6 +44,16 @@ const createAnnouncement = async (req, res, decoded) => {
     }
 };
 
+const getAuthorName = async (authorId) => {
+    try {
+        const userRecord = await admin.auth().getUser(authorId);
+        return userRecord.displayName || 'Unknown Author';
+    } catch (error) {
+        console.error(`Error fetching user data for ID ${authorId}:`, error);
+        return 'Unknown Author';
+    }
+};
+
 const listAnnouncements = async (req, res, decoded, role) => {
     const { academicYear, classId } = req.query;
 
@@ -52,7 +62,7 @@ const listAnnouncements = async (req, res, decoded, role) => {
     }
 
     try {
-        let announcements = [];
+        let announcementsData = [];
         if (role === 'teacher') {
             if (!classId) {
                 return res.status(400).json({ error: 'Missing required field for teacher: classId' });
@@ -62,7 +72,7 @@ const listAnnouncements = async (req, res, decoded, role) => {
                 .where('classId', '==', classId);
 
             const snapshot = await query.get();
-            announcements = snapshot.docs.map(doc => doc.data());
+            announcementsData = snapshot.docs.map(doc => doc.data());
 
         } else if (role === 'parent') {
             const enrollmentsSnapshot = await db.collection('enrollments')
@@ -90,14 +100,21 @@ const listAnnouncements = async (req, res, decoded, role) => {
             const announcementsSnapshots = await Promise.all(announcementsPromises);
             announcementsSnapshots.forEach(snapshot => {
                 snapshot.docs.forEach(doc => {
-                    announcements.push(doc.data());
+                    announcementsData.push(doc.data());
                 });
             });
         } else {
             return res.status(403).json({ error: 'Forbidden. User role not permitted.' });
         }
 
-        return res.json(announcements);
+        const announcementsWithAuthors = await Promise.all(
+            announcementsData.map(async (announcement) => {
+                const authorName = await getAuthorName(announcement.authorId);
+                return { ...announcement, authorName };
+            })
+        );
+
+        return res.json(announcementsWithAuthors);
 
     } catch (error) {
         console.error('Error listing announcements:', error);
