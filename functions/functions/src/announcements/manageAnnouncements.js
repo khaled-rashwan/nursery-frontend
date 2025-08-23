@@ -81,6 +81,7 @@ const listAnnouncements = async (req, res, decoded, role) => {
             }
 
             // Verify that the parent is enrolled in the specified class for the given academic year.
+            console.log(`[listAnnouncements] Parent check: Verifying enrollment for parentUID: ${decoded.uid}, academicYear: ${academicYear}, classId: ${classId}`);
             const enrollmentsSnapshot = await db.collection('enrollments')
                 .where('parentUID', '==', decoded.uid)
                 .where('academicYear', '==', academicYear)
@@ -91,8 +92,10 @@ const listAnnouncements = async (req, res, decoded, role) => {
             if (enrollmentsSnapshot.empty) {
                 // If no enrollment is found, the parent is not authorized to view announcements for this class.
                 // Return an empty array to prevent leaking information.
+                console.log(`[listAnnouncements] Parent check failed: No enrollment document found.`);
                 return res.json([]);
             }
+            console.log(`[listAnnouncements] Parent check successful: Found ${enrollmentsSnapshot.size} enrollment document(s).`);
 
             // If enrollment is verified, fetch announcements for that class.
             const announcementsSnapshot = await db.collection('announcements')
