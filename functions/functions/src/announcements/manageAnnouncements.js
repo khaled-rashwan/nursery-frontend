@@ -75,35 +75,61 @@ const listAnnouncements = async (req, res, decoded, role) => {
             announcementsData = snapshot.docs.map(doc => doc.data());
 
         } else if (role === 'parent') {
-            const { classId } = req.query;
-            if (!classId) {
-                return res.status(400).json({ error: 'Missing required field for parent role: classId' });
-            }
-
-            // Verify that the parent is enrolled in the specified class for the given academic year.
-            console.log(`[listAnnouncements] Parent check: Verifying enrollment for parentUID: ${decoded.uid}, academicYear: ${academicYear}, classId: ${classId}`);
-            const enrollmentsSnapshot = await db.collection('enrollments')
+            // 1. Find all students associated with this parent.
+            const studentsSnapshot = await db.collection('students')
                 .where('parentUID', '==', decoded.uid)
-                .where('academicYear', '==', academicYear)
-                .where('classId', '==', classId)
-                .limit(1)
                 .get();
 
-            if (enrollmentsSnapshot.empty) {
-                // If no enrollment is found, the parent is not authorized to view announcements for this class.
-                // Return an empty array to prevent leaking information.
-                console.log(`[listAnnouncements] Parent check failed: No enrollment document found.`);
+            if (studentsSnapshot.empty) {
+                console.log(`[listAnnouncements] No students found for parentUID: ${decoded.uid}`);
                 return res.json([]);
             }
-            console.log(`[listAnnouncements] Parent check successful: Found ${enrollmentsSnapshot.size} enrollment document(s).`);
 
-            // If enrollment is verified, fetch announcements for that class.
-            const announcementsSnapshot = await db.collection('announcements')
-                .where('academicYear', '==', academicYear)
-                .where('classId', '==', classId)
-                .get();
+            const studentUIDs = studentsSnapshot.docs.map(doc => doc.id);
+            console.log(`[listAnnouncements] Found students for parent: ${studentUIDs.join(', ')}`);
 
-            announcementsData = announcementsSnapshot.docs.map(doc => doc.data());
+            // 2. For these students, find their enrollments for the current academic year to get their classIds.
+            const enrollmentsPromises = studentUIDs.map(studentUID => {
+                return db.collection('enrollments')
+                    .where('studentUID', '==', studentUID)
+                    .where('academicYear', '==', academicYear)
+                    .get();
+            });
+
+            const enrollmentsSnapshots = await Promise.all(enrollmentsPromises);
+            const classIds = new Set();
+            enrollmentsSnapshots.forEach(snapshot => {
+                snapshot.docs.forEach(doc => {
+                    if (doc.data().classId) {
+                        classIds.add(doc.data().classId);
+                    }
+                });
+            });
+
+            const enrolledClassIds = Array.from(classIds);
+            console.log(`[listAnnouncements] Parent is authorized for classIds: ${enrolledClassIds.join(', ')}`);
+
+            if (enrolledClassIds.length === 0) {
+                return res.json([]);
+            }
+
+            // 3. Fetch announcements for all authorized classes.
+            // Note: Firestore 'in' queries are limited to 10 items. If a parent has children in more than 10 classes, this will fail.
+            // A better approach for scalability would be to run queries in parallel.
+            const announcementsPromises = enrolledClassIds.map(cid => {
+                return db.collection('announcements')
+                    .where('academicYear', '==', academicYear)
+                    .where('classId', '==', cid)
+                    .get();
+            });
+
+            const announcementsSnapshots = await Promise.all(announcementsPromises);
+            announcementsData = [];
+            announcementsSnapshots.forEach(snapshot => {
+                snapshot.docs.forEach(doc => {
+                    announcementsData.push(doc.data());
+                });
+            });
         } else {
             return res.status(403).json({ error: 'Forbidden. User role not permitted.' });
         }

@@ -137,15 +137,11 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "parentUID",
+          "fieldPath": "studentUID",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "academicYear",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "classId",
           "order": "ASCENDING"
         }
       ]
