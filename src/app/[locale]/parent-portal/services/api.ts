@@ -251,6 +251,7 @@ export interface Announcement {
   academicYear: string;
   authorId: string;
   authorName?: string; // Added field
+  downloads?: { name: string; link: string }[];
   createdAt: {
     _seconds: number;
     _nanoseconds: number;

@@ -1051,7 +1051,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     { id: 'homework', icon: '📚', label: locale === 'ar-SA' ? 'الواجبات' : 'Homework' },
     { id: 'fees', icon: '💳', label: locale === 'ar-SA' ? 'الرسوم' : 'Fees' },
     { id: 'messages', icon: '💬', label: locale === 'ar-SA' ? 'الرسائل' : 'Messages' },
-    { id: 'notifications', icon: '🔔', label: locale === 'ar-SA' ? 'الإشعارات' : 'Notifications' },
+    { id: 'notifications', icon: '🔔', label: locale === 'ar-SA' ? 'الإشعارات والتحميلات' : 'Notifications & Downloads' },
   ];
 
   return (
@@ -1918,6 +1918,36 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                             {announcement.content}
                           </p>
                         </div>
+
+                        {announcement.downloads && announcement.downloads.length > 0 && (
+                          <div style={{
+                            background: 'var(--light-green)',
+                            padding: '1rem',
+                            borderRadius: 'var(--border-radius)'
+                          }}>
+                            <h4 style={{
+                              fontSize: '1.1rem',
+                              color: 'var(--primary-green)',
+                              marginBottom: '0.5rem'
+                            }}>
+                              📎 {locale === 'ar-SA' ? 'التحميلات:' : 'Downloads:'}
+                            </h4>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {announcement.downloads.map((download, index) => (
+                                <a key={index} href={download.link} target="_blank" rel="noopener noreferrer" style={{
+                                  background: 'var(--primary-green)',
+                                  color: 'white',
+                                  padding: '0.5rem 1rem',
+                                  borderRadius: '20px',
+                                  fontSize: '0.9rem',
+                                  textDecoration: 'none'
+                                }}>
+                                  {download.name}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

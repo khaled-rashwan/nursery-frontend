@@ -12,15 +12,40 @@ const hasTeacherRole = (decoded) => {
     return decoded.role === 'teacher' || (decoded.customClaims && decoded.customClaims.role === 'teacher');
 };
 
+// Helper function to validate downloads array
+const validateDownloads = (downloads) => {
+    if (!Array.isArray(downloads)) {
+        return { isValid: false, error: 'Validation failed: downloads must be an array.' };
+    }
+    for (const download of downloads) {
+        if (!download.name || typeof download.name !== 'string' || !download.link || typeof download.link !== 'string') {
+            return { isValid: false, error: 'Validation failed: each download must have a name and a link, both strings.' };
+        }
+        try {
+            new URL(download.link);
+        } catch (_) {
+            return { isValid: false, error: `Validation failed: invalid URL format for link "${download.link}".` };
+        }
+    }
+    return { isValid: true };
+};
+
 const createAnnouncement = async (req, res, decoded) => {
     if (!hasTeacherRole(decoded)) {
         return res.status(403).json({ error: 'Forbidden. Only teachers can create announcements.' });
     }
 
-    const { title, content, classId, academicYear } = req.body;
+    const { title, content, classId, academicYear, downloads } = req.body;
 
     if (!title || !content || !classId || !academicYear) {
         return res.status(400).json({ error: 'Missing required fields: title, content, classId, academicYear' });
+    }
+
+    if (downloads) {
+        const validation = validateDownloads(downloads);
+        if (!validation.isValid) {
+            return res.status(400).json({ error: validation.error });
+        }
     }
 
     try {
@@ -32,6 +57,7 @@ const createAnnouncement = async (req, res, decoded) => {
             classId,
             academicYear,
             authorId: decoded.uid,
+            downloads: downloads || [],
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
@@ -148,10 +174,17 @@ const updateAnnouncement = async (req, res, decoded) => {
         return res.status(403).json({ error: 'Forbidden. Only teachers can update announcements.' });
     }
 
-    const { announcementId, title, content } = req.body;
+    const { announcementId, title, content, downloads } = req.body;
 
     if (!announcementId || !title || !content) {
         return res.status(400).json({ error: 'Missing required fields: announcementId, title, content' });
+    }
+
+    if (downloads) {
+        const validation = validateDownloads(downloads);
+        if (!validation.isValid) {
+            return res.status(400).json({ error: validation.error });
+        }
     }
 
     try {
@@ -169,6 +202,7 @@ const updateAnnouncement = async (req, res, decoded) => {
         await announcementRef.update({
             title,
             content,
+            downloads: downloads || [],
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 

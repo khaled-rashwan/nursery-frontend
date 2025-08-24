@@ -37,6 +37,7 @@ type Announcement = {
   classId: string;
   academicYear: string;
   authorId: string;
+  downloads?: { name: string; link:string }[];
   createdAt: { seconds: number; nanoseconds: number };
   updatedAt: { seconds: number; nanoseconds: number };
 };
@@ -78,6 +79,7 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementContent, setAnnouncementContent] = useState('');
+  const [downloads, setDownloads] = useState<{ name: string, link: string }[]>([]);
   const [composingMessage, setComposingMessage] = useState(false);
 
 
@@ -154,6 +156,7 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
     const body = {
       title: announcementTitle,
       content: announcementContent,
+      downloads: downloads,
       classId: selectedClass,
       academicYear: selectedAcademicYear,
       announcementId: selectedAnnouncement?.id,
@@ -176,7 +179,7 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
     } catch (e) {
       console.error(`Failed to ${operation}:`, e);
     }
-  }, [user, selectedClass, selectedAcademicYear, announcementTitle, announcementContent, selectedAnnouncement, loadAnnouncements]);
+  }, [user, selectedClass, selectedAcademicYear, announcementTitle, announcementContent, downloads, selectedAnnouncement, loadAnnouncements]);
 
   const handleDeleteAnnouncement = useCallback(async (announcementId: string) => {
     if (!user) return;
@@ -322,7 +325,7 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '2px solid var(--light-blue)' }}>
         {[
           { id: 'messages', label: locale === 'ar-SA' ? 'الرسائل' : 'Messages', icon: '💬' },
-          { id: 'announcements', label: locale === 'ar-SA' ? 'الإعلانات' : 'Announcements', icon: '📢' },
+          { id: 'announcements', label: locale === 'ar-SA' ? 'الإعلانات والتحميلات' : 'Announcements & Downloads', icon: '📢' },
         ].map((tab: { id: string; label: string; icon: string }) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id as 'messages' | 'announcements')}
             style={{ background: activeTab === tab.id ? 'var(--primary-blue)' : 'transparent', color: activeTab === tab.id ? 'white' : 'var(--primary-blue)', border: 'none', padding: '1rem 2rem', borderRadius: '15px 15px 0 0', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -503,18 +506,19 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-blue-dark)', fontWeight: 'bold' }}>
-              {isRTL ? 'الإعلانات' : 'Announcements'}
+              {isRTL ? 'الإعلانات والتحميلات' : 'Announcements & Downloads'}
             </h3>
             <button
               onClick={() => {
                 setSelectedAnnouncement(null);
                 setAnnouncementTitle('');
                 setAnnouncementContent('');
+                setDownloads([]);
                 setShowAnnouncementModal(true);
               }}
               style={{ background: 'var(--primary-orange)', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}
             >
-              {isRTL ? 'إنشاء إعلان جديد' : 'Create New Announcement'}
+              {isRTL ? 'إنشاء جديد' : 'Create New'}
             </button>
           </div>
           {loadingAnnouncements && <p>{isRTL ? 'جار التحميل...' : 'Loading...'}</p>}
@@ -529,6 +533,7 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
                       setSelectedAnnouncement(ann);
                       setAnnouncementTitle(ann.title);
                       setAnnouncementContent(ann.content);
+                      setDownloads(ann.downloads || []);
                       setShowAnnouncementModal(true);
                     }} style={{ background: 'none', border: 'none', color: 'var(--primary-blue)', cursor: 'pointer', marginRight: '0.5rem' }}>
                       {isRTL ? 'تعديل' : 'Edit'}
@@ -539,7 +544,19 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
                   </div>
                 </div>
                 <p style={{ color: '#334' }}>{ann.content}</p>
-                 <small style={{ color: '#778', fontSize: '0.8rem' }}>
+                {ann.downloads && ann.downloads.length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{isRTL ? 'التحميلات:' : 'Downloads:'}</h5>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {ann.downloads.map((download, index) => (
+                        <a key={index} href={download.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', background: 'var(--primary-green)', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px' }}>
+                          {download.name}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                 <small style={{ color: '#778', fontSize: '0.8rem', display: 'block', marginTop: '1rem' }}>
                   {new Date(ann.createdAt.seconds * 1000).toLocaleString()}
                 </small>
               </div>
@@ -549,8 +566,8 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
       )}
 
       {showAnnouncementModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', padding: '2rem', borderRadius: '15px', width: '90%', maxWidth: '500px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', padding: '2rem', borderRadius: '15px', width: '90%', maxWidth: '600px' }}>
             <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-blue-dark)', fontWeight: 'bold', marginBottom: '1.5rem' }}>
               {selectedAnnouncement ? (isRTL ? 'تعديل الإعلان' : 'Edit Announcement') : (isRTL ? 'إنشاء إعلان جديد' : 'Create New Announcement')}
             </h3>
@@ -568,6 +585,41 @@ export function CommunicationCenter({ locale, selectedClass }: { locale: string;
                 onChange={(e) => setAnnouncementContent(e.target.value)}
                 style={{ width: '100%', padding: '1rem', fontSize: '1rem', border: '2px solid var(--light-blue)', borderRadius: '15px', minHeight: '120px' }}
               />
+              <div>
+                <h4 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{isRTL ? 'التحميلات' : 'Downloads'}</h4>
+                {downloads.map((download, index) => (
+                  <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="text"
+                      placeholder={isRTL ? 'اسم الملف' : 'File Name'}
+                      value={download.name}
+                      onChange={(e) => {
+                        const newDownloads = [...downloads];
+                        newDownloads[index].name = e.target.value;
+                        setDownloads(newDownloads);
+                      }}
+                      style={{ flex: 1, padding: '0.75rem', border: '1px solid #ccc', borderRadius: '8px' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder={isRTL ? 'رابط الملف' : 'File Link'}
+                      value={download.link}
+                      onChange={(e) => {
+                        const newDownloads = [...downloads];
+                        newDownloads[index].link = e.target.value;
+                        setDownloads(newDownloads);
+                      }}
+                      style={{ flex: 1, padding: '0.75rem', border: '1px solid #ccc', borderRadius: '8px' }}
+                    />
+                    <button onClick={() => setDownloads(downloads.filter((_, i) => i !== index))} style={{ background: '#ff4d4d', color: 'white', border: 'none', borderRadius: '8px', padding: '0 0.75rem' }}>
+                      X
+                    </button>
+                  </div>
+                ))}
+                <button onClick={() => setDownloads([...downloads, { name: '', link: '' }])} style={{ background: 'var(--primary-green)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', marginTop: '0.5rem' }}>
+                  {isRTL ? 'إضافة تحميل' : 'Add Download'}
+                </button>
+              </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
               <button onClick={() => setShowAnnouncementModal(false)} style={{ background: '#eef3fb', color: '#1f3b64', border: '1px solid #d3e0f4', padding: '0.75rem 1.5rem', borderRadius: '12px', fontWeight: 'bold' }}>
