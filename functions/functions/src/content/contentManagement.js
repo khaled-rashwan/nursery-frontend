@@ -42,12 +42,12 @@ exports.getHomePageContent = functions.https.onRequest(async (req, res) => {
 });
 
 /**
- * @name updateHomePageContent
+ * @name saveHomePageContent
  * @description An HTTP-callable function to update the homepage content in Firestore.
  * This function is protected and can only be called by authenticated users with
  * the 'manage_content' permission.
  */
-exports.updateHomePageContent = functions.https.onRequest(async (req, res) => {
+exports.saveHomePageContent = functions.https.onRequest(async (req, res) => {
   setCorsHeaders(res);
 
   if (handleCorsOptions(req, res)) {

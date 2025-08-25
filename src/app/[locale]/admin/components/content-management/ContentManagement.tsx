@@ -237,7 +237,7 @@ export default function ContentManagement() {
     setNotification(null);
     try {
       const token = await user.getIdToken();
-      const functionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/updateHomePageContent`;
+      const functionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/saveHomePageContent`;
 
       const response = await fetch(functionUrl, {
         method: 'POST',
