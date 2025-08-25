@@ -46,41 +46,50 @@ exports.getHomePageContent = functions.https.onRequest(async (req, res) => {
  * @description An HTTP-callable function to update the homepage content in Firestore.
  * This function is protected and can only be called by authenticated users with
  * the 'manage_content' permission.
- *
- * @param {object} data - The data sent to the function, containing the updated content.
- * @param {object} context - The authentication context of the user calling the function.
- * @returns {Promise<{success: boolean, message: string}>} A promise that resolves with a success message or rejects with an error.
  */
-exports.updateHomePageContent = functions.https.onCall(async (data, context) => {
-  // Check for authentication
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to update content.');
+exports.updateHomePageContent = functions.https.onRequest(async (req, res) => {
+  setCorsHeaders(res);
+
+  if (handleCorsOptions(req, res)) {
+    return;
   }
 
-  // Check for 'manage_content' permission
-  const userRole = context.auth.token.role;
-  if (userRole !== 'superadmin' && userRole !== 'admin' && userRole !== 'content-manager') {
-    throw new functions.https.HttpsError('permission-denied', 'You do not have permission to update content.');
-  }
-
-  // Basic data validation (a more robust validation could be added here)
-  if (!data || typeof data !== 'object') {
-    throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a data object.');
+  // Verify Firebase ID token
+  const idToken = req.headers.authorization?.split('Bearer ')[1];
+  if (!idToken) {
+    res.status(401).send({ error: 'Unauthorized. No token provided.' });
+    return;
   }
 
   try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const userRole = decodedToken.role;
+
+    // Check for 'manage_content' permission
+    if (userRole !== 'superadmin' && userRole !== 'admin' && userRole !== 'content-manager') {
+      res.status(403).send({ error: 'Permission denied.' });
+      return;
+    }
+
+    const content = req.body;
+    if (!content || typeof content !== 'object') {
+      res.status(400).send({ error: 'Invalid request body.' });
+      return;
+    }
+
     const db = admin.firestore();
     const docRef = db.collection('websiteContent').doc('homePage');
+    await docRef.set(content, { merge: true });
 
-    // The data received should be the full document content.
-    // We use 'set' with merge: true to be safe, which will update fields or create the doc if it doesn't exist.
-    await docRef.set(data, { merge: true });
-
-    console.log(`Homepage content updated by ${context.auth.uid}`);
-    return { success: true, message: 'Homepage content updated successfully.' };
+    console.log(`Homepage content updated by ${decodedToken.uid}`);
+    res.status(200).send({ success: true, message: 'Homepage content updated successfully.' });
 
   } catch (error) {
     console.error('Error updating homepage content:', error);
-    throw new functions.https.HttpsError('internal', 'An internal error occurred while updating the content.');
+    if (error.code === 'auth/id-token-expired') {
+      res.status(401).send({ error: 'Token expired. Please log in again.' });
+    } else {
+      res.status(500).send({ error: 'Internal server error.' });
+    }
   }
 });

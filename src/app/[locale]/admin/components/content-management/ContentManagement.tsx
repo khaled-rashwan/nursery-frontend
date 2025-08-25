@@ -3,11 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAllHomePageContent } from '../../../../fetchHomePageContent';
 import { FirestoreHomePageContent, LocaleSpecificContent } from '../../../../types';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from '../../../../../firebase';
-
-const functions = getFunctions(app);
-const updateHomePageContent = httpsCallable(functions, 'updateHomePageContent');
+import { useAuth } from '../../../../../hooks/useAuth';
 
 const formStyles = {
   container: {
@@ -211,6 +207,7 @@ function ContentForm({ content, setContent }: { content: LocaleSpecificContent, 
 }
 
 export default function ContentManagement() {
+  const { user } = useAuth();
   const [content, setContent] = useState<FirestoreHomePageContent | null>(null);
   const [activeTab, setActiveTab] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
@@ -232,15 +229,35 @@ export default function ContentManagement() {
   }, []);
 
   const handleSave = async () => {
-    if (!content) return;
+    if (!content || !user) {
+      setNotification({ type: 'error', message: 'You must be logged in to save content.' });
+      return;
+    }
     setSaving(true);
     setNotification(null);
     try {
-      await updateHomePageContent(content);
+      const token = await user.getIdToken();
+      const functionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/updateHomePageContent`;
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(content),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update content.');
+      }
+
       setNotification({ type: 'success', message: 'Content updated successfully!' });
     } catch (error: unknown) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Failed to update content.';
+      const message = error instanceof Error ? error.message : 'An unknown error occurred.';
       setNotification({ type: 'error', message });
     } finally {
       setSaving(false);
