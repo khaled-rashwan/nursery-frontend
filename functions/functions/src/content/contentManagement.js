@@ -38,7 +38,8 @@ exports.getHomePageContent = functions.https.onRequest(async (req, res) => {
     }
 
     const content = doc.data();
-    res.status(200).json(content);
+    // The httpsCallable client SDK expects the response to be an object with a 'data' key.
+    res.status(200).json({ data: content });
   } catch (error) {
     console.error('Error fetching homepage content:', error);
     res.status(500).send({ error: 'Internal server error.' });
