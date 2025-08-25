@@ -45,3 +45,47 @@ exports.getHomePageContent = functions.https.onRequest(async (req, res) => {
     res.status(500).send({ error: 'Internal server error.' });
   }
 });
+
+/**
+ * @name updateHomePageContent
+ * @description An HTTP-callable function to update the homepage content in Firestore.
+ * This function is protected and can only be called by authenticated users with
+ * the 'manage_content' permission.
+ *
+ * @param {object} data - The data sent to the function, containing the updated content.
+ * @param {object} context - The authentication context of the user calling the function.
+ * @returns {Promise<{success: boolean, message: string}>} A promise that resolves with a success message or rejects with an error.
+ */
+exports.updateHomePageContent = functions.https.onCall(async (data, context) => {
+  // Check for authentication
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to update content.');
+  }
+
+  // Check for 'manage_content' permission
+  const userRole = context.auth.token.role;
+  if (userRole !== 'superadmin' && userRole !== 'admin' && userRole !== 'content-manager') {
+    throw new functions.https.HttpsError('permission-denied', 'You do not have permission to update content.');
+  }
+
+  // Basic data validation (a more robust validation could be added here)
+  if (!data || typeof data !== 'object') {
+    throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a data object.');
+  }
+
+  try {
+    const db = admin.firestore();
+    const docRef = db.collection('websiteContent').doc('homePage');
+
+    // The data received should be the full document content.
+    // We use 'set' with merge: true to be safe, which will update fields or create the doc if it doesn't exist.
+    await docRef.set(data, { merge: true });
+
+    console.log(`Homepage content updated by ${context.auth.uid}`);
+    return { success: true, message: 'Homepage content updated successfully.' };
+
+  } catch (error) {
+    console.error('Error updating homepage content:', error);
+    throw new functions.https.HttpsError('internal', 'An internal error occurred while updating the content.');
+  }
+});

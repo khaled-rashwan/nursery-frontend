@@ -102,3 +102,4 @@ exports.manageAdmissions = manageAdmissions;
 // Export Content Management Functions
 const contentManagement = require('./src/content/contentManagement');
 exports.getHomePageContent = contentManagement.getHomePageContent;
+exports.updateHomePageContent = contentManagement.updateHomePageContent;

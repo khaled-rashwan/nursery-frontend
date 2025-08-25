@@ -12,7 +12,9 @@ import { EnrollmentManagement } from '../enrollment-management/EnrollmentManagem
 import { ClassManagement } from '../class-management/ClassManagement';
 import { TeacherManagement } from '../teacher-management/TeacherManagement';
 import AdmissionsManagement from '../admissions-management/AdmissionsManagement';
+import ContentManagement from '../content-management/ContentManagement';
 import { AcademicYearProvider, AcademicYearSelector } from '../../../../../components/academic-year';
+import { hasPermission, UserRole } from '../../../../../utils/rolePermissions';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -47,6 +49,27 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
     fetchUserClaims();
     
   }, [user, getUserCustomClaims]);
+
+  useEffect(() => {
+    if (userClaims) {
+      const availableTabs = [
+        { id: 'overview', permission: 'view_reports' },
+        { id: 'content', permission: 'manage_content' },
+        { id: 'admissions', permission: 'manage_classes' },
+        { id: 'users', permission: 'manage_users' },
+        { id: 'students', permission: 'view_students' },
+        { id: 'enrollments', permission: 'manage_classes' },
+        { id: 'classes', permission: 'manage_classes' },
+        { id: 'teachers', permission: 'manage_users' },
+        { id: 'reports', permission: 'view_reports' },
+        { id: 'settings', permission: 'system_settings' }
+      ].filter(tab => hasPermission(userClaims.role as UserRole, tab.permission));
+
+      if (availableTabs.length > 0 && !availableTabs.some(tab => tab.id === activeTab)) {
+        setActiveTab(availableTabs[0].id);
+      }
+    }
+  }, [userClaims, activeTab]);
 
   // Fetch system statistics
   const fetchSystemStats = useCallback(async () => {
@@ -233,16 +256,19 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
       }}>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           {[
-            { id: 'overview', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview', icon: '📊' },
-            { id: 'admissions', label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', icon: '📝' },
-            { id: 'users', label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', icon: '👥' },
-            { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓' },
-            { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚' },
-            { id: 'classes', label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', icon: '🏫' },
-            { id: 'teachers', label: locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management', icon: '👩‍🏫' },
-            { id: 'reports', label: locale === 'ar-SA' ? 'التقارير' : 'Reports', icon: '📈' },
-            { id: 'settings', label: locale === 'ar-SA' ? 'الإعدادات' : 'Settings', icon: '⚙️' }
-          ].map(tab => (
+            { id: 'overview', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview', icon: '📊', permission: 'view_reports' },
+            { id: 'content', label: locale === 'ar-SA' ? 'إدارة المحتوى' : 'Content Management', icon: '📝', permission: 'manage_content' },
+            { id: 'admissions', label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', icon: '📝', permission: 'manage_classes' },
+            { id: 'users', label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', icon: '👥', permission: 'manage_users' },
+            { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓', permission: 'view_students' },
+            { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚', permission: 'manage_classes' },
+            { id: 'classes', label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', icon: '🏫', permission: 'manage_classes' },
+            { id: 'teachers', label: locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management', icon: '👩‍🏫', permission: 'manage_users' },
+            { id: 'reports', label: locale === 'ar-SA' ? 'التقارير' : 'Reports', icon: '📈', permission: 'view_reports' },
+            { id: 'settings', label: locale === 'ar-SA' ? 'الإعدادات' : 'Settings', icon: '⚙️', permission: 'system_settings' }
+          ]
+          .filter(tab => hasPermission(userClaims?.role as UserRole, tab.permission))
+          .map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -348,7 +374,11 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <AdmissionsManagement locale={locale} />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && (
+      {activeTab === 'content' && (
+        <ContentManagement />
+      )}
+
+      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && activeTab !== 'content' && (
         <div style={{
           background: 'white',
           padding: '3rem',

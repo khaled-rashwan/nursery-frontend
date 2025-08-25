@@ -43,3 +43,19 @@ export async function fetchHomePageContent(locale: string): Promise<LocaleSpecif
     return null;
   }
 }
+
+/**
+ * Fetches the entire homepage content object (both locales) from the 'getHomePageContent' Cloud Function.
+ *
+ * @returns A promise that resolves to the full content object, or null if an error occurs.
+ */
+export async function fetchAllHomePageContent(): Promise<FirestoreHomePageContent | null> {
+  noStore();
+  try {
+    const result = await getHomePageContentCallable();
+    return result.data as FirestoreHomePageContent;
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllHomePageContent:', error);
+    return null;
+  }
+}
