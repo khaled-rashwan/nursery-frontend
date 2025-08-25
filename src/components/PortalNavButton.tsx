@@ -12,7 +12,7 @@ const roleToPortal: Record<string, string> = {
   teacher: "teacher-portal",
   admin: "admin",
   superadmin: "admin",
-  "content-manager": "content-manager",
+  "content-manager": "admin",
 };
 
 export default function PortalNavButton({ locale }: PortalNavButtonProps) {
@@ -38,10 +38,8 @@ export default function PortalNavButton({ locale }: PortalNavButtonProps) {
             break;
           case "admin":
           case "superadmin":
-            setLabel(locale === "ar-SA" ? "لوحة الإدارة" : "Admin Panel");
-            break;
           case "content-manager":
-            setLabel(locale === "ar-SA" ? "إدارة المحتوى" : "Content Manager");
+            setLabel(locale === "ar-SA" ? "لوحة الإدارة" : "Admin Panel");
             break;
           default:
             setLabel(locale === "ar-SA" ? "البوابة" : "Portal");
