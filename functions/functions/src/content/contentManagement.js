@@ -2,6 +2,7 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { setCorsHeaders, handleCorsOptions } = require('../utils/cors');
 
 /**
  * @name getHomePageContent
@@ -14,15 +15,9 @@ const admin = require('firebase-admin');
  * On error, it sends an appropriate HTTP error status and message.
  */
 exports.getHomePageContent = functions.https.onRequest(async (req, res) => {
-  // Set CORS headers for preflight requests and for the main request.
-  // This allows the frontend to call this function from a different origin.
-  res.set('Access-Control-Allow-Origin', '*'); // In production, you should restrict this to your app's domain.
-  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  setCorsHeaders(res);
 
-  if (req.method === 'OPTIONS') {
-    // End request for preflight requests
-    res.status(204).send('');
+  if (handleCorsOptions(req, res)) {
     return;
   }
 
