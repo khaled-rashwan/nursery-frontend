@@ -1,45 +1,45 @@
-import { createDirectus, rest, readItem } from '@directus/sdk';
+// src/app/fetchHomePageContent.ts
+
 import { unstable_noStore as noStore } from 'next/cache';
-import { HomePageAPIResponse, HomePageContent } from "../app/types";
+import { app } from '../firebase'; // Import the initialized Firebase app
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { FirestoreHomePageContent, LocaleSpecificContent } from './types';
 
-const directusUrl: string = process.env.NEXT_PUBLIC_DIRECTUS_URL ?? "";
-if (!directusUrl) {
-  throw new Error("NEXT_PUBLIC_DIRECTUS_URL is not set in environment variables.");
-}
-const directus = createDirectus(directusUrl).with(rest());
+// Initialize Firebase Functions
+const functions = getFunctions(app);
 
-function logDirectusError(error: unknown, context: string) {
-  console.error(`[DIRECTUS_ERROR] in ${context}:`);
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    console.error(JSON.stringify((error as { errors: unknown }).errors, null, 2));
-  } else {
-    console.error(error);
-  }
-}
+// Get a reference to the getHomePageContent cloud function
+const getHomePageContentCallable = httpsCallable(functions, 'getHomePageContent');
 
-export async function fetchHomePageContent(locale: string): Promise<HomePageContent | null> {
+/**
+ * Fetches the homepage content from the 'getHomePageContent' Cloud Function.
+ *
+ * @param locale The desired locale ('en-US' or 'ar-SA').
+ * @returns A promise that resolves to the locale-specific content, or null if an error occurs.
+ */
+export async function fetchHomePageContent(locale: string): Promise<LocaleSpecificContent | null> {
+  // Ensure that this fetch is not cached and runs on every request.
   noStore();
+
   try {
-    const apiData = await directus.request<HomePageAPIResponse>(
-      readItem('home_page', 1, { fields: ['*', { translations: ['*'] }] })
-    );
-    if (!apiData) return null;
-    const arabicTranslation = apiData.translations?.find(t => t.languages_code === 'ar-SA');
-    const source = (locale === 'ar-SA' && arabicTranslation) ? arabicTranslation : apiData;
-    return {
-      principal_title: source.principal_title,
-      principal_message: source.principal_message,
-      principal_name: source.principal_name,
-      why_future_step_title: source.why_future_step_title,
-      why_future_step_points: source.why_future_step_points || [],
-      philosophy_title: source.philosophy_title,
-      philosophy_content: source.philosophy_content,
-      portal_promo_title: source.portal_promo_title,
-      portal_features: source.portal_features || [],
-      program_preview_title: source.program_preview_title,
-    };
+    // Call the cloud function
+    const result = await getHomePageContentCallable();
+
+    // The result.data will contain the full document from Firestore.
+    // We need to cast it to our defined type to get type safety.
+    const fullContent = result.data as FirestoreHomePageContent;
+
+    // Check if the locale is valid and return the corresponding content
+    if (locale === 'en-US' || locale === 'ar-SA') {
+      return fullContent[locale];
+    }
+
+    // Fallback to English if the locale is not supported
+    return fullContent['en-US'];
+
   } catch (error) {
-    logDirectusError(error, 'fetchHomePageContent');
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchHomePageContent:', error);
+    // In case of an error, return null. The frontend component will handle this state.
     return null;
   }
 }
