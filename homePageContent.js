@@ -7,7 +7,8 @@ const homePageContent = {
       subtitle: "Where little minds grow big dreams!",
       description: "A magical place where children discover, learn, and flourish through play-based education, creativity, and joy",
       enrollButton: "Enroll Now",
-      learnMoreButton: "Learn More"
+      learnMoreButton: "Learn More",
+      heroImageUrl: "/her-image.png"
     },
     principalMessage: {
       title: "Principal's Message – From the General Manager",
@@ -58,7 +59,8 @@ const homePageContent = {
       subtitle: "حيث تنمو العقول الصغيرة لتحقق أحلاماً كبيرة!",
       description: "مكان سحري حيث يكتشف الأطفال ويتعلمون وينمون من خلال التعليم القائم على اللعب والإبداع والمرح",
       enrollButton: "سجل الآن",
-      learnMoreButton: "تعرف علينا"
+      learnMoreButton: "تعرف علينا",
+      heroImageUrl: "/her-image.png"
     },
     principalMessage: {
       title: "كلمة من المديرة العامة",

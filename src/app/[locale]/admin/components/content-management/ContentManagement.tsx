@@ -10,6 +10,7 @@ import {
   AboutUsSection
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
+import { uploadImage } from '../../../../../services/storageService';
 
 const formStyles = {
   container: {
@@ -61,6 +62,10 @@ const formStyles = {
 
 
 function HomePageForm({ content, setContent }: { content: LocaleSpecificContent, setContent: (content: LocaleSpecificContent) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const handleChange = (section: keyof LocaleSpecificContent, field: string, value: string) => {
     setContent({
       ...content,
@@ -71,46 +76,63 @@ function HomePageForm({ content, setContent }: { content: LocaleSpecificContent,
     });
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    try {
+      const downloadURL = await uploadImage(selectedFile, 'images/hero', setUploadProgress);
+      handleChange('hero', 'heroImageUrl', downloadURL);
+      setUploading(false);
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Upload failed", error);
+      setUploading(false);
+      // You might want to show an error message to the user here
+    }
+  };
+
   return (
     <div>
       {/* Hero Section */}
       <fieldset style={formStyles.fieldset}>
         <legend style={formStyles.legend}>Hero Section</legend>
         <div style={formStyles.grid}>
+          {/* Text fields */}
           <div>
             <label style={formStyles.label}>Welcome Text</label>
-            <input
-              style={formStyles.input}
-              type="text"
-              value={content.hero.welcome}
-              onChange={(e) => handleChange('hero', 'welcome', e.target.value)}
-            />
+            <input style={formStyles.input} type="text" value={content.hero.welcome} onChange={(e) => handleChange('hero', 'welcome', e.target.value)} />
           </div>
           <div>
             <label style={formStyles.label}>Title</label>
-            <input
-              style={formStyles.input}
-              type="text"
-              value={content.hero.title}
-              onChange={(e) => handleChange('hero', 'title', e.target.value)}
-            />
+            <input style={formStyles.input} type="text" value={content.hero.title} onChange={(e) => handleChange('hero', 'title', e.target.value)} />
           </div>
           <div>
             <label style={formStyles.label}>Subtitle</label>
-            <input
-              style={formStyles.input}
-              type="text"
-              value={content.hero.subtitle}
-              onChange={(e) => handleChange('hero', 'subtitle', e.target.value)}
-            />
+            <input style={formStyles.input} type="text" value={content.hero.subtitle} onChange={(e) => handleChange('hero', 'subtitle', e.target.value)} />
           </div>
           <div>
             <label style={formStyles.label}>Description</label>
-            <textarea
-              style={formStyles.textarea}
-              value={content.hero.description}
-              onChange={(e) => handleChange('hero', 'description', e.target.value)}
-            />
+            <textarea style={formStyles.textarea} value={content.hero.description} onChange={(e) => handleChange('hero', 'description', e.target.value)} />
+          </div>
+
+          {/* Image Upload */}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Hero Image</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <img src={content.hero.heroImageUrl} alt="Hero" style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+              <div>
+                <input type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'block', marginBottom: '0.5rem' }} />
+                <button onClick={handleImageUpload} disabled={!selectedFile || uploading}>
+                  {uploading ? `Uploading... ${uploadProgress.toFixed(0)}%` : 'Upload New Image'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </fieldset>

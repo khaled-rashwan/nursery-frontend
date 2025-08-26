@@ -89,7 +89,7 @@ function HeroSection({ content, locale }: { content: LocaleSpecificContent['hero
             position: 'relative', borderRadius: '30px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
             transform: 'rotate(3deg)', transition: 'transform 0.3s ease'
           }}>
-            <Image src="/her-image.png" alt={content.title} width={500} height={500} style={{
+            <Image src={content.heroImageUrl} alt={content.title} width={500} height={500} style={{
               width: '100%', height: 'auto', maxWidth: '500px', display: 'block', borderRadius: '30px'
             }}/>
           </div>

@@ -30,6 +30,7 @@ export interface LocaleSpecificContent {
     description: string;
     enrollButton: string;
     learnMoreButton: string;
+    heroImageUrl: string;
   };
   principalMessage: {
     title: string;

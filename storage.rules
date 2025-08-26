@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow public read access to all files.
+    // This is necessary so that images can be displayed on the public website.
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Allow write access only to authenticated users with specific roles.
+    // This secures the storage so only authorized personnel can upload/update images.
+    match /images/{allPaths=**} {
+      allow write: if request.auth != null &&
+                      request.auth.token.role in ['superadmin', 'admin', 'content-manager'];
+    }
+  }
+}
