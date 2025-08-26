@@ -98,3 +98,10 @@ exports.manageReportCards = manageReportCards;
 const { submitAdmission, manageAdmissions } = require('./src/admissions/admissionCrud');
 exports.submitAdmission = submitAdmission;
 exports.manageAdmissions = manageAdmissions;
+
+// Export Content Management Functions
+const contentManagement = require('./src/content/contentManagement');
+exports.getHomePageContent = contentManagement.getHomePageContent;
+exports.saveHomePageContent = contentManagement.saveHomePageContent;
+exports.getAboutUsPageContent = contentManagement.getAboutUsPageContent;
+exports.saveAboutUsPageContent = contentManagement.saveAboutUsPageContent;

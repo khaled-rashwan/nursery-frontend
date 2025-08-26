@@ -8,6 +8,7 @@ import { useAuth } from '../../../hooks/useAuth';
 const roleToPortal: Record<string, string> = {
   superadmin: 'admin',
   admin: 'admin',
+  'content-manager': 'admin',
   teacher: 'teacher-portal',
   parent: 'parent-portal',
   // Add more roles as needed

@@ -1,6 +1,7 @@
 // seed-database.js
 const admin = require('firebase-admin');
 const { homePageContent } = require('./homePageContent.js');
+const { aboutUsPageContent } = require('./aboutUsPageContent.js');
 
 // IMPORTANT: Make sure the path to your service account key is correct.
 // You should have this file in the root of your project.
@@ -20,9 +21,13 @@ async function seedDatabase() {
     // The data is structured with locales as top-level keys.
     // We will set the entire object to the 'homePage' document.
     await db.collection('websiteContent').doc('homePage').set(homePageContent);
-    
     console.log('✅ Success! The homepage content has been seeded to Firestore.');
-    console.log("Navigate to Firestore > websiteContent > homePage to see the data.");
+
+    console.log('Starting to seed about us page content...');
+    await db.collection('websiteContent').doc('aboutUsPage').set(aboutUsPageContent);
+    console.log('✅ Success! The about us page content has been seeded to Firestore.');
+
+    console.log("Navigate to Firestore > websiteContent collection to see the data.");
   } catch (error) {
     console.error('❌ Error seeding database:', error);
     process.exit(1); // Exit with an error code

@@ -44,7 +44,7 @@ export function hasPermission(userRole: UserRole | undefined, permission: string
 
 // Check if user can access admin areas
 export function canAccessAdmin(userRole: UserRole | undefined): boolean {
-  return userRole === 'superadmin' || userRole === 'admin';
+  return userRole === 'superadmin' || userRole === 'admin' || userRole === 'content-manager';
 }
 
 // Check if user can manage other users  
