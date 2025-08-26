@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://nursery-f-git-15eb80-khaled-abdelrazek-rashwan-rasheds-projects.vercel.app"],
+    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "header": ["Content-Type", "Authorization"],
+    "maxAgeSeconds": 3600
+  }
+]
