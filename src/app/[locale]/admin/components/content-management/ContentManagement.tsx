@@ -10,12 +10,6 @@ import {
   AboutUsSection
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from '../../../../../firebase';
-
-const functions = getFunctions(app);
-const saveHomePageContent = httpsCallable(functions, 'saveHomePageContent');
-const saveAboutUsPageContent = httpsCallable(functions, 'saveAboutUsPageContent');
 
 const formStyles = {
   container: {
@@ -286,18 +280,51 @@ export default function ContentManagement() {
   }, []);
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      setNotification({ type: 'error', message: 'You must be logged in to save.' });
+      return;
+    }
     setSaving(true);
     setNotification(null);
+
     try {
-      if (activePage === 'home' && homePageContent) {
-        await saveHomePageContent(homePageContent);
-      } else if (activePage === 'about' && aboutUsContent) {
-        await saveAboutUsPageContent(aboutUsContent);
+      const token = await user.getIdToken();
+      let functionName;
+      let contentToSave;
+
+      if (activePage === 'home') {
+        functionName = 'saveHomePageContent';
+        contentToSave = homePageContent;
+      } else {
+        functionName = 'saveAboutUsPageContent';
+        contentToSave = aboutUsContent;
       }
+
+      if (!contentToSave) {
+        throw new Error('No content to save.');
+      }
+
+      const functionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/${functionName}`;
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(contentToSave),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update content.');
+      }
+
       setNotification({ type: 'success', message: 'Content updated successfully!' });
+
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to update content.';
+      const message = error instanceof Error ? error.message : 'An unknown error occurred.';
       setNotification({ type: 'error', message });
     } finally {
       setSaving(false);

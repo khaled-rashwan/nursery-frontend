@@ -61,11 +61,14 @@ exports.saveHomePageContent = functions.https.onRequest(async (req, res) => {
       return;
     }
 
+    console.log(`User ${decodedToken.uid} is authorized to save homepage content.`);
     const db = admin.firestore();
     const docRef = db.collection('websiteContent').doc('homePage');
-    await docRef.set(content, { merge: true });
 
-    console.log(`Homepage content updated by ${decodedToken.uid}`);
+    console.log('Attempting to save the following content to homePage:', JSON.stringify(content, null, 2));
+    await docRef.set(content, { merge: true });
+    console.log('Firestore set operation complete for homePage.');
+
     res.status(200).send({ success: true, message: 'Homepage content updated successfully.' });
 
   } catch (error) {
@@ -135,11 +138,14 @@ exports.saveAboutUsPageContent = functions.https.onRequest(async (req, res) => {
             return;
         }
 
+    console.log(`User ${decodedToken.uid} is authorized to save About Us page content.`);
         const db = admin.firestore();
         const docRef = db.collection('websiteContent').doc('aboutUsPage');
-        await docRef.set(content, { merge: true });
 
-        console.log(`About Us page content updated by ${decodedToken.uid}`);
+    console.log('Attempting to save the following content to aboutUsPage:', JSON.stringify(content, null, 2));
+        await docRef.set(content, { merge: true });
+    console.log('Firestore set operation complete for aboutUsPage.');
+
         res.status(200).send({ success: true, message: 'About Us page content updated successfully.' });
 
     } catch (error) {
