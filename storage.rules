@@ -2,14 +2,16 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access to all files.
-    // This is necessary so that images can be displayed on the public website.
+    // By default, allow public read access to all files.
+    // This allows website assets to be displayed.
+    // Write access is denied by default unless explicitly allowed by a more specific rule.
     match /{allPaths=**} {
       allow read;
+      allow write: if false;
     }
 
-    // Allow write access only to authenticated users with specific roles.
-    // This secures the storage so only authorized personnel can upload/update images.
+    // Allow authorized users to write to the 'images' folder.
+    // This rule is more specific than the one above, so it takes precedence for this path.
     match /images/{allPaths=**} {
       allow write: if request.auth != null &&
                       request.auth.token.role in ['superadmin', 'admin', 'content-manager'];
