@@ -71,6 +71,7 @@ export interface FirestoreHomePageContent {
 export interface AboutUsSection {
   title: string;
   text: string;
+  imageUrl?: string;
 }
 
 export interface LocaleSpecificAboutUsContent {

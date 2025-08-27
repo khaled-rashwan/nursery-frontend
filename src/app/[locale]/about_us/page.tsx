@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { fetchAboutUsPageContent } from '../../../app/fetchContent';
 import { LocaleSpecificAboutUsContent } from '../../../app/types';
 
@@ -106,7 +107,18 @@ export default function AboutUsPage({ params }: { params: Promise<{ locale: stri
         boxShadow: 'var(--shadow)',
       }}>
         <h3>{content.history.title}</h3>
-        <p style={{ whiteSpace: 'pre-wrap' }}>{content.history.text}</p>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '2rem', alignItems: 'center' }}>
+          {content.history.imageUrl && (
+            <Image
+              src={content.history.imageUrl}
+              alt="Our History"
+              width={300}
+              height={300}
+              style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover' }}
+            />
+          )}
+          <p style={{ whiteSpace: 'pre-wrap', flex: 1 }}>{content.history.text}</p>
+        </div>
       </section>
     </div>
   );
