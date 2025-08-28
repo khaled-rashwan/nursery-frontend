@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { fetchAllHomePageContent, fetchAllAboutUsPageContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
@@ -125,7 +126,7 @@ function HomePageForm({ content, setContent }: { content: LocaleSpecificContent,
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={formStyles.label}>Hero Image</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <img src={content.hero.heroImageUrl} alt="Hero" style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+              <Image src={content.hero.heroImageUrl} alt="Hero" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
               <div>
                 <input type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'block', marginBottom: '0.5rem' }} />
                 <button onClick={handleImageUpload} disabled={!selectedFile || uploading}>
@@ -236,20 +237,45 @@ function HomePageForm({ content, setContent }: { content: LocaleSpecificContent,
 }
 
 function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsContent, setContent: (content: LocaleSpecificAboutUsContent) => void }) {
-  const handleChange = (section: keyof LocaleSpecificAboutUsContent, field: keyof AboutUsSection, value: string) => {
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleChange = (sectionKey: keyof LocaleSpecificAboutUsContent, field: keyof AboutUsSection, value: string) => {
     setContent({
       ...content,
-      [section]: {
-        ...content[section],
+      [sectionKey]: {
+        ...content[sectionKey],
         [field]: value,
       },
     });
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleImageUpload = async (sectionKey: keyof LocaleSpecificAboutUsContent) => {
+    if (!selectedFile) return;
+    setUploading(true);
+    try {
+      const downloadURL = await uploadImage(selectedFile, `images/about-us/${sectionKey}`, setUploadProgress);
+      handleChange(sectionKey, 'imageUrl', downloadURL);
+      setUploading(false);
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Upload failed", error);
+      setUploading(false);
+    }
+  };
+
   return (
     <div>
-      {Object.keys(content).map((sectionKey) => {
-        const section = content[sectionKey as keyof LocaleSpecificAboutUsContent];
+      {Object.keys(content).map((sectionKeyStr) => {
+        const sectionKey = sectionKeyStr as keyof LocaleSpecificAboutUsContent;
+        const section = content[sectionKey];
         return (
           <fieldset key={sectionKey} style={formStyles.fieldset}>
             <legend style={formStyles.legend}>{section.title}</legend>
@@ -259,7 +285,7 @@ function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsCo
                 style={formStyles.input}
                 type="text"
                 value={section.title}
-                onChange={(e) => handleChange(sectionKey as keyof LocaleSpecificAboutUsContent, 'title', e.target.value)}
+                onChange={(e) => handleChange(sectionKey, 'title', e.target.value)}
               />
             </div>
             <div style={{marginTop: '1rem'}}>
@@ -267,9 +293,24 @@ function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsCo
               <textarea
                 style={formStyles.textarea}
                 value={section.text}
-                onChange={(e) => handleChange(sectionKey as keyof LocaleSpecificAboutUsContent, 'text', e.target.value)}
+                onChange={(e) => handleChange(sectionKey, 'text', e.target.value)}
               />
             </div>
+
+            {sectionKey === 'history' && (
+              <div style={{ marginTop: '1rem' }}>
+                <label style={formStyles.label}>History Image</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {section.imageUrl && <Image src={section.imageUrl} alt="History" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />}
+                  <div>
+                    <input type="file" accept="image/*" onChange={handleFileSelect} style={{ display: 'block', marginBottom: '0.5rem' }} />
+                    <button onClick={() => handleImageUpload('history')} disabled={!selectedFile || uploading}>
+                      {uploading ? `Uploading... ${uploadProgress.toFixed(0)}%` : 'Upload New Image'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </fieldset>
         );
       })}
