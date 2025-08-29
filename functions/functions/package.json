@@ -14,7 +14,7 @@
   },
   "main": "index.js",
   "dependencies": {
-    "busboy": "^1.6.0",
+    "@fastify/busboy": "^2.1.1",
     "express": "^4.19.2",
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.0.1",

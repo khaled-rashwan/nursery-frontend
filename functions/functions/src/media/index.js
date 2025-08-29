@@ -1,7 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const express = require('express');
-const Busboy = require('busboy');
+const Busboy = require('@fastify/busboy');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -48,7 +48,7 @@ app.get('/', authMiddleware, async (req, res) => {
 
 // POST / - Upload new media
 app.post('/', authMiddleware, (req, res) => {
-    const busboy = Busboy({ headers: req.headers });
+    const busboy = new Busboy({ headers: req.headers });
     const tmpdir = os.tmpdir();
     const uploads = {};
     const fileWrites = [];
