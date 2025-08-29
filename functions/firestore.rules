@@ -116,6 +116,12 @@ service cloud.firestore {
       allow read, update, delete: if hasAnyRole(['admin', 'superadmin']);
     }
 
+    // Media Library collection
+    match /media/{mediaId} {
+      allow read: if isAuthenticated(); // Allow any authenticated user to read
+      allow write: if hasAnyRole(['admin', 'superadmin']); // Only admins can create, update, delete
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
