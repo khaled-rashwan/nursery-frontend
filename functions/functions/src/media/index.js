@@ -115,7 +115,7 @@ app.post('/', authMiddleware, (req, res) => {
         }
     });
 
-    busboy.end(req.rawBody);
+    req.pipe(busboy);
 });
 
 
