@@ -1,18 +1,15 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const express = require('express');
-const Busboy = require('@fastify/busboy');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
-
 const { setCorsHeaders, handleCorsOptions } = require('../utils/cors');
 const { authenticate, requireRole } = require('../utils/auth');
 
 const db = admin.firestore();
 const storage = admin.storage().bucket();
 const app = express();
+
+// Use express.json middleware to parse JSON bodies.
+app.use(express.json());
 
 app.use((req, res, next) => {
     setCorsHeaders(res);
@@ -46,76 +43,27 @@ app.get('/', authMiddleware, async (req, res) => {
     }
 });
 
-// POST / - Upload new media
-app.post('/', authMiddleware, (req, res) => {
-    const busboy = new Busboy({ headers: req.headers });
-    const tmpdir = os.tmpdir();
-    const uploads = {};
-    const fileWrites = [];
+// POST / - Create a new media metadata document in Firestore
+app.post('/', authMiddleware, async (req, res) => {
+    try {
+        const { filename, url, path: filePath } = req.body;
+        if (!filename || !url || !filePath) {
+            return res.status(400).json({ error: 'Missing required metadata fields: filename, url, path' });
+        }
 
-    busboy.on('file', (fieldname, file, { filename, mimeType }) => {
-        const filepath = path.join(tmpdir, filename);
-        const upload = { file: filepath, mimeType };
-        uploads[fieldname] = upload;
-
-        const writeStream = fs.createWriteStream(filepath);
-        file.pipe(writeStream);
-
-        const promise = new Promise((resolve, reject) => {
-            file.on('end', () => {
-                writeStream.end();
-            });
-            writeStream.on('finish', resolve);
-            writeStream.on('error', reject);
+        const docRef = await db.collection('media').add({
+            filename,
+            url,
+            path: filePath,
+            uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+            uploadedBy: req.user.uid,
         });
-        fileWrites.push(promise);
-    });
 
-    busboy.on('finish', async () => {
-        await Promise.all(fileWrites);
-
-        // Assuming single file upload for simplicity
-        const fileUpload = uploads.file;
-        if (!fileUpload) {
-            return res.status(400).json({ error: 'No file uploaded.' });
-        }
-
-        const { file, mimeType } = fileUpload;
-        const uniqueId = uuidv4();
-        const destination = `media/${uniqueId}-${path.basename(file)}`;
-
-        try {
-            const [uploadedFile] = await storage.upload(file, {
-                destination,
-                metadata: {
-                    contentType: mimeType,
-                    cacheControl: 'public, max-age=31536000',
-                },
-            });
-
-            fs.unlinkSync(file); // Clean up temporary file
-
-            const [url] = await uploadedFile.getSignedUrl({
-                action: 'read',
-                expires: '03-09-2491'
-            });
-
-            const docRef = await db.collection('media').add({
-                filename: path.basename(file),
-                url,
-                path: destination,
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
-                uploadedBy: req.user.uid,
-            });
-
-            res.status(201).json({ success: true, id: docRef.id, url });
-        } catch (error) {
-            console.error('Error uploading file:', error);
-            res.status(500).json({ error: 'Failed to upload file.' });
-        }
-    });
-
-    req.pipe(busboy);
+        res.status(201).json({ success: true, id: docRef.id });
+    } catch (error) {
+        console.error('Error creating media document:', error);
+        res.status(500).json({ error: 'Failed to create media document.' });
+    }
 });
 
 
