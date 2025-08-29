@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '../../../../../hooks/useAuth';
+import { uploadImage } from '../../../../../services/storageService';
 
 // Define the structure of a media item
 export interface MediaItem {
@@ -93,6 +94,7 @@ export default function MediaLibraryModal({ isOpen, onClose, onSelect }: MediaLi
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
   const fetchMedia = React.useCallback(async () => {
@@ -126,24 +128,34 @@ export default function MediaLibraryModal({ isOpen, onClose, onSelect }: MediaLi
     if (!event.target.files || event.target.files.length === 0 || !user) return;
     const file = event.target.files[0];
     setUploading(true);
-
-    const formData = new FormData();
-    formData.append('file', file);
+    setUploadProgress(0);
 
     try {
+      // 1. Upload the image using the existing service
+      const storagePath = `media/${file.name}`;
+      const downloadURL = await uploadImage(file, 'media', setUploadProgress);
+
+      // 2. Save metadata to Firestore via our new mediaApi
       const token = await user.getIdToken();
       const functionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/mediaApi`;
       await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify({
+          filename: file.name,
+          url: downloadURL,
+          path: storagePath,
+        }),
       });
-      // Refresh media library after upload
+
+      // 3. Refresh media library to show the new image
       fetchMedia();
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error('Upload and metadata creation failed:', error);
+      // Optionally show an error message to the user
     } finally {
       setUploading(false);
     }
