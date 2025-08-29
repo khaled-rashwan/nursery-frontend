@@ -11,7 +11,7 @@ import {
   AboutUsSection
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
-import { uploadImage } from '../../../../../services/storageService';
+import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
 
 const formStyles = {
   container: {
@@ -63,9 +63,7 @@ const formStyles = {
 
 
 function HomePageForm({ content, setContent }: { content: LocaleSpecificContent, setContent: (content: LocaleSpecificContent) => void }) {
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadComplete, setUploadComplete] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleChange = (section: keyof LocaleSpecificContent, field: string, value: string) => {
     setContent({
@@ -77,32 +75,17 @@ function HomePageForm({ content, setContent }: { content: LocaleSpecificContent,
     });
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!file) return;
-    setUploading(true);
-    setUploadProgress(0);
-    setUploadComplete(false);
-    try {
-      const downloadURL = await uploadImage(file, 'images/hero', setUploadProgress);
-      handleChange('hero', 'heroImageUrl', downloadURL);
-      setUploadComplete(true);
-    } catch (error) {
-      console.error("Upload failed", error);
-      // You might want to show an error message to the user here
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleFileSelectAndUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      handleImageUpload(file);
-    }
+  const handleImageSelect = (media: MediaItem) => {
+    handleChange('hero', 'heroImageUrl', media.url);
   };
 
   return (
     <div>
+      <MediaLibraryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleImageSelect}
+      />
       {/* Hero Section */}
       <fieldset style={formStyles.fieldset}>
         <legend style={formStyles.legend}>Hero Section</legend>
@@ -131,9 +114,9 @@ function HomePageForm({ content, setContent }: { content: LocaleSpecificContent,
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <Image src={content.hero.heroImageUrl} alt="Hero" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
               <div>
-                <input type="file" accept="image/*" onChange={handleFileSelectAndUpload} disabled={uploading} style={{ display: 'block', marginBottom: '0.5rem' }} />
-                {uploading && <div>{`Uploading... ${uploadProgress.toFixed(0)}%`}</div>}
-                {uploadComplete && !uploading && <div style={{ color: 'green', marginTop: '0.5rem' }}>Image uploaded successfully. Don&apos;t forget to click Save Changes.</div>}
+                <button type="button" onClick={() => setIsModalOpen(true)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+                  Choose from Library
+                </button>
               </div>
             </div>
           </div>
@@ -239,9 +222,9 @@ function HomePageForm({ content, setContent }: { content: LocaleSpecificContent,
 }
 
 function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsContent, setContent: (content: LocaleSpecificAboutUsContent) => void }) {
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadComplete, setUploadComplete] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<keyof LocaleSpecificAboutUsContent | null>(null);
+
 
   const handleChange = (sectionKey: keyof LocaleSpecificAboutUsContent, field: keyof AboutUsSection, value: string) => {
     setContent({
@@ -253,31 +236,24 @@ function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsCo
     });
   };
 
-  const handleImageUpload = async (file: File, sectionKey: keyof LocaleSpecificAboutUsContent) => {
-    if (!file) return;
-    setUploading(true);
-    setUploadProgress(0);
-    setUploadComplete(false);
-    try {
-      const downloadURL = await uploadImage(file, `images/about-us/${sectionKey}`, setUploadProgress);
-      handleChange(sectionKey, 'imageUrl', downloadURL);
-      setUploadComplete(true);
-    } catch (error) {
-      console.error("Upload failed", error);
-    } finally {
-      setUploading(false);
+  const handleImageSelect = (media: MediaItem) => {
+    if (activeSection) {
+      handleChange(activeSection, 'imageUrl', media.url);
     }
   };
 
-  const handleFileSelectAndUpload = (e: React.ChangeEvent<HTMLInputElement>, sectionKey: keyof LocaleSpecificAboutUsContent) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      handleImageUpload(file, sectionKey);
-    }
-  };
+  const openMediaLibrary = (sectionKey: keyof LocaleSpecificAboutUsContent) => {
+    setActiveSection(sectionKey);
+    setIsModalOpen(true);
+  }
 
   return (
     <div>
+      <MediaLibraryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleImageSelect}
+      />
       {Object.keys(content).map((sectionKeyStr) => {
         const sectionKey = sectionKeyStr as keyof LocaleSpecificAboutUsContent;
         const section = content[sectionKey];
@@ -308,9 +284,9 @@ function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsCo
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   {section.imageUrl && <Image src={section.imageUrl} alt="History" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />}
                   <div>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileSelectAndUpload(e, 'history')} disabled={uploading} style={{ display: 'block', marginBottom: '0.5rem' }} />
-                    {uploading && <div>{`Uploading... ${uploadProgress.toFixed(0)}%`}</div>}
-                    {uploadComplete && !uploading && <div style={{ color: 'green', marginTop: '0.5rem' }}>Image uploaded successfully. Don&apos;t forget to click Save Changes.</div>}
+                    <button type="button" onClick={() => openMediaLibrary(sectionKey)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+                      Choose from Library
+                    </button>
                   </div>
                 </div>
               </div>
