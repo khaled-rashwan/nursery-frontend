@@ -23,7 +23,7 @@ app.use((req, res, next) => {
 const authMiddleware = async (req, res, next) => {
     try {
         const { decodedToken } = await authenticate(req, res);
-        requireRole(decodedToken, ['admin', 'superadmin']);
+        requireRole(decodedToken, ['admin', 'superadmin', 'content-manager']);
         req.user = decodedToken;
         next();
     } catch (error) {
