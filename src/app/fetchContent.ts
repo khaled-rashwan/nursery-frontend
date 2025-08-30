@@ -7,7 +7,9 @@ import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
   FirestoreAboutUsPageContent,
-  LocaleSpecificAboutUsContent
+  LocaleSpecificAboutUsContent,
+  FirestoreContactUsPageContent,
+  LocaleSpecificContactUsContent
 } from './types';
 
 // Initialize Firebase Functions
@@ -34,6 +36,37 @@ export async function fetchHomePageContent(locale: string): Promise<LocaleSpecif
     return fullContent['en-US'];
   } catch (error) {
     console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchHomePageContent:', error);
+    return null;
+  }
+}
+
+// Fetch content for the Contact Us page for a specific locale
+export async function fetchContactUsPageContent(locale: string): Promise<LocaleSpecificContactUsContent | null> {
+  try {
+    const allContent = await fetchAllContactUsPageContent();
+    if (allContent && (locale === 'en-US' || locale === 'ar-SA')) {
+      return allContent[locale];
+    }
+    console.warn(`Contact Us page content for locale "${locale}" not found.`);
+    return null;
+  } catch (error) {
+    console.error(`Error fetching Contact Us page content for locale ${locale}:`, error);
+    return null;
+  }
+}
+
+// Fetch all content for the Contact Us page
+export async function fetchAllContactUsPageContent(): Promise<FirestoreContactUsPageContent | null> {
+  try {
+    const response = await fetch(`https://us-central1-gen-alpha-school-49349.cloudfunctions.net/getContactUsPageContent`);
+    if (!response.ok) {
+      console.error('Failed to fetch Contact Us page content, status:', response.status);
+      return null;
+    }
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching Contact Us page content:', error);
     return null;
   }
 }

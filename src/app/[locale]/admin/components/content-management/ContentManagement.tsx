@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { fetchAllHomePageContent, fetchAllAboutUsPageContent } from '../../../../fetchContent';
+import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
   FirestoreAboutUsPageContent,
   LocaleSpecificAboutUsContent,
-  AboutUsSection
+  AboutUsSection,
+  FirestoreContactUsPageContent,
+  LocaleSpecificContactUsContent
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
 import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
@@ -299,11 +301,97 @@ function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsCo
   );
 }
 
+function ContactUsForm({ content, setContent }: { content: LocaleSpecificContactUsContent, setContent: (content: LocaleSpecificContactUsContent) => void }) {
+  const handleFaqChange = (index: number, field: 'q' | 'a', value: string) => {
+    const newFaqs = [...content.faqs];
+    newFaqs[index][field] = value;
+    setContent({ ...content, faqs: newFaqs });
+  };
+
+  return (
+    <div>
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Contact Us Page</legend>
+        <div style={formStyles.grid}>
+          <div>
+            <label style={formStyles.label}>Title</label>
+            <input style={formStyles.input} type="text" value={content.title} onChange={(e) => setContent({ ...content, title: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Section 1 Title</label>
+            <input style={formStyles.input} type="text" value={content.section1_title} onChange={(e) => setContent({ ...content, section1_title: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Phone</label>
+            <input style={formStyles.input} type="text" value={content.phone} onChange={(e) => setContent({ ...content, phone: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Address</label>
+            <input style={formStyles.input} type="text" value={content.address} onChange={(e) => setContent({ ...content, address: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Working Hours</label>
+            <input style={formStyles.input} type="text" value={content.workingHours} onChange={(e) => setContent({ ...content, workingHours: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Email</label>
+            <input style={formStyles.input} type="text" value={content.email} onChange={(e) => setContent({ ...content, email: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Section 2 Title</label>
+            <input style={formStyles.input} type="text" value={content.section2_title} onChange={(e) => setContent({ ...content, section2_title: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Section 2 Subtitle</label>
+            <input style={formStyles.input} type="text" value={content.section2_subtitle} onChange={(e) => setContent({ ...content, section2_subtitle: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Section 2 Text</label>
+            <input style={formStyles.input} type="text" value={content.section2_text} onChange={(e) => setContent({ ...content, section2_text: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Form Full Name</label>
+            <input style={formStyles.input} type="text" value={content.form_fullName} onChange={(e) => setContent({ ...content, form_fullName: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Form Phone Number</label>
+            <input style={formStyles.input} type="text" value={content.form_phoneNumber} onChange={(e) => setContent({ ...content, form_phoneNumber: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Form Your Message</label>
+            <input style={formStyles.input} type="text" value={content.form_yourMessage} onChange={(e) => setContent({ ...content, form_yourMessage: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Form Submit Button</label>
+            <input style={formStyles.input} type="text" value={content.form_submitButton} onChange={(e) => setContent({ ...content, form_submitButton: e.target.value })} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Section 3 Title</label>
+            <input style={formStyles.input} type="text" value={content.section3_title} onChange={(e) => setContent({ ...content, section3_title: e.target.value })} />
+          </div>
+        </div>
+      </fieldset>
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>FAQs</legend>
+        {content.faqs.map((faq: { q: string, a: string }, index: number) => (
+          <div key={index} style={{ marginBottom: '1rem', borderBottom: '1px solid #ccc', paddingBottom: '1rem' }}>
+            <label style={formStyles.label}>Question {index + 1}</label>
+            <input style={formStyles.input} type="text" value={faq.q} onChange={(e) => handleFaqChange(index, 'q', e.target.value)} />
+            <label style={formStyles.label}>Answer {index + 1}</label>
+            <textarea style={formStyles.textarea} value={faq.a} onChange={(e) => handleFaqChange(index, 'a', e.target.value)} />
+          </div>
+        ))}
+      </fieldset>
+    </div>
+  );
+}
+
 export default function ContentManagement() {
   const { user } = useAuth();
   const [homePageContent, setHomePageContent] = useState<FirestoreHomePageContent | null>(null);
   const [aboutUsContent, setAboutUsContent] = useState<FirestoreAboutUsPageContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about' | 'media'>('home');
+  const [contactUsContent, setContactUsContent] = useState<FirestoreContactUsPageContent | null>(null);
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -312,12 +400,14 @@ export default function ContentManagement() {
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
-      const [homeContent, aboutContent] = await Promise.all([
+      const [homeContent, aboutContent, contactContent] = await Promise.all([
         fetchAllHomePageContent(),
-        fetchAllAboutUsPageContent()
+        fetchAllAboutUsPageContent(),
+        fetchAllContactUsPageContent()
       ]);
       if (homeContent) setHomePageContent(homeContent);
       if (aboutContent) setAboutUsContent(aboutContent);
+      if (contactContent) setContactUsContent(contactContent);
       setLoading(false);
     };
     loadContent();
@@ -339,9 +429,12 @@ export default function ContentManagement() {
       if (activePage === 'home') {
         functionName = 'saveHomePageContent';
         contentToSave = homePageContent;
-      } else {
+      } else if (activePage === 'about') {
         functionName = 'saveAboutUsPageContent';
         contentToSave = aboutUsContent;
+      } else {
+        functionName = 'saveContactUsPageContent';
+        contentToSave = contactUsContent;
       }
 
       if (!contentToSave) {
@@ -383,6 +476,7 @@ export default function ContentManagement() {
       <div style={{ marginBottom: '1rem', borderBottom: '2px solid #ccc' }}>
         <button onClick={() => setActivePage('home')} style={{ padding: '1rem', border: 'none', background: activePage === 'home' ? '#eee' : 'transparent', fontWeight: activePage === 'home' ? 'bold' : 'normal' }}>Homepage</button>
         <button onClick={() => setActivePage('about')} style={{ padding: '1rem', border: 'none', background: activePage === 'about' ? '#eee' : 'transparent', fontWeight: activePage === 'about' ? 'bold' : 'normal' }}>About Us</button>
+        <button onClick={() => setActivePage('contact')} style={{ padding: '1rem', border: 'none', background: activePage === 'contact' ? '#eee' : 'transparent', fontWeight: activePage === 'contact' ? 'bold' : 'normal' }}>Contact Us</button>
         <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
       </div>
 
@@ -405,6 +499,12 @@ export default function ContentManagement() {
         <AboutUsForm
           content={aboutUsContent[activeLocale]}
           setContent={(newContent) => setAboutUsContent({ ...aboutUsContent, [activeLocale]: newContent })}
+        />
+      )}
+      {activePage === 'contact' && contactUsContent && (
+        <ContactUsForm
+          content={contactUsContent[activeLocale]}
+          setContent={(newContent) => setContactUsContent({ ...contactUsContent, [activeLocale]: newContent })}
         />
       )}
       {activePage === 'media' && (

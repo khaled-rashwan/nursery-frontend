@@ -1,131 +1,37 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { fetchContactUsPageContent } from '../../../app/fetchContent';
+import { LocaleSpecificContactUsContent } from '../../../app/types';
 
 export default function ContactUsPage({ params }: { params: Promise<{ locale: string }> }) {
-  const [locale, setLocale] = useState<string>('en-US');
-  const [mounted, setMounted] = useState(false);
+  const [content, setContent] = useState<LocaleSpecificContactUsContent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [locale, setLocale] = useState<string>('en-US');
 
   useEffect(() => {
-    params.then(({ locale: paramLocale }) => {
-      setLocale(paramLocale);
-      setMounted(true);
-    });
+    const loadContent = async () => {
+      try {
+        setLoading(true);
+        const { locale: resolvedLocale } = await params;
+        setLocale(resolvedLocale);
+        const fetchedContent = await fetchContactUsPageContent(resolvedLocale);
+        if (fetchedContent) {
+          setContent(fetchedContent);
+        } else {
+          setError('Failed to load contact content. Please try again later.');
+        }
+      } catch (err) {
+        console.error(err);
+        setError('An unexpected error occurred. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadContent();
   }, [params]);
-
-  if (!mounted) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '50vh'
-      }}>
-        <div className="loading-spinner"></div>
-      </div>
-    );
-  }
-
-  const content = locale === 'ar-SA' ? {
-    title: 'اتصل بنا',
-    section1_title: 'معلومات الاتصال',
-    phone: '920016074',
-    address: 'يمكنكم زيارتنا في الخبر - المنطقة الشرقية، المملكة العربية السعودية',
-    workingHours: 'ساعات العمل: من الأحد إلى الخميس - من 7:30 صباحًا حتى 2:00 ظهرًا',
-    email: 'info@futurestep.edu.sa',
-    section2_title: 'اتصل بنا',
-    section2_subtitle: 'هل لديك سؤال؟',
-    section2_text: 'لا تتردد في الاتصال بنا.',
-    form_fullName: 'الاسم الكامل',
-    form_phoneNumber: 'رقم الهاتف',
-    form_yourMessage: 'رسالتك',
-    form_submitButton: 'إرسال',
-    section3_title: 'الأسئلة الشائعة',
-    faqs: [
-      {
-        q: 'ما هي الأعمار المقبولة في الحضانة؟',
-        a: 'نقبل الأطفال من سن 3 إلى 5 سنوات في برامج KG1 و KG2.'
-      },
-      {
-        q: 'هل تقدمون برنامجًا ثنائي اللغة؟',
-        a: 'نعم، نحن نقدم منهجًا ثنائي اللغة (عربي-إنجليزي) يركز على تطوير اللغة في مرحلة مبكرة.'
-      },
-      {
-        q: 'ما هو المنهج الذي تتبعونه؟',
-        a: 'نحن نتبع إطار EYFS (المرحلة التأسيسية للسنوات المبكرة) البريطاني المتكيف مع الثقافة المحلية.'
-      },
-      {
-        q: 'هل تتوفر وسائل نقل؟',
-        a: 'نعم، نحن نوفر وسائل نقل مدرسية آمنة داخل مناطق محددة في الخبر.'
-      },
-      {
-        q: 'كيف يمكنني حجز جولة في المدرسة؟',
-        a: 'يمكنك حجز جولة شخصية عن طريق الاتصال بنا أو تقديم طلب عبر موقعنا الإلكتروني.'
-      },
-      {
-        q: 'ماذا لو كان طفلي ينتقل من حضانة أخرى؟',
-        a: 'نطلب تقريرًا من الحضانة السابقة ونقدم الدعم الكامل لانتقال أكاديمي وعاطفي سلس.'
-      },
-      {
-        q: 'هل جميع الأنشطة مشمولة في الرسوم الدراسية؟',
-        a: 'نعم، جميع الأنشطة التعليمية والترفيهية مشمولة، باستثناء الرحلات الميدانية الخارجية الخاصة.'
-      },
-      {
-        q: 'هل لديكم سياسة استرداد؟',
-        a: 'نعم، تتوفر سياسة واضحة وسيتم مشاركتها أثناء عملية التقديم.'
-      }
-    ]
-  } : {
-    title: 'Contact Us',
-    section1_title: 'Contact Information',
-    phone: '920016074',
-    address: 'You can visit us in Al Khobar – Eastern Province, Saudi Arabia',
-    workingHours: 'Working Hours: Sunday to Thursday – 7:30 AM to 2:00 PM',
-    email: 'info@futurestep.edu.sa',
-    section2_title: 'Contact Us',
-    section2_subtitle: 'Have a question?',
-    section2_text: 'Feel free to contact us.',
-    form_fullName: 'Full Name',
-    form_phoneNumber: 'Phone Number',
-    form_yourMessage: 'Your Message',
-    form_submitButton: 'Submit',
-    section3_title: 'Frequently Asked Questions',
-    faqs: [
-      {
-        q: 'What ages are accepted at the nursery?',
-        a: 'We accept children aged 3 to 5 years in KG1 and KG2 programs.'
-      },
-      {
-        q: 'Do you offer a bilingual program?',
-        a: 'Yes, we provide a bilingual Arabic-English curriculum focused on early language development.'
-      },
-      {
-        q: 'What curriculum do you follow?',
-        a: 'We follow the EYFS (Early Years Foundation Stage) British framework adapted to local culture.'
-      },
-      {
-        q: 'Is transportation available?',
-        a: 'Yes, we offer safe school transport within select zones in Al Khobar.'
-      },
-      {
-        q: 'How can I schedule a school tour?',
-        a: 'You can schedule a personal tour by contacting us or submitting a request through our website.'
-      },
-      {
-        q: 'What if my child is transferring from another nursery?',
-        a: 'We require a report from the previous nursery and offer full support for a smooth academic and emotional transition.'
-      },
-      {
-        q: 'Are all activities included in the tuition?',
-        a: 'Yes, all educational and recreational activities are included, except for special external field trips.'
-      },
-      {
-        q: 'Do you have a refund policy?',
-        a: 'Yes, a clear policy is available and will be shared during the application process.'
-      }
-    ]
-  };
 
   const formInputStyle = {
     width: '100%',
@@ -148,6 +54,41 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
   };
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '50vh'
+      }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh',
+        background: 'linear-gradient(135deg, #ffdddd, #ffd1d1)', color: '#d8000c', padding: '2rem'
+      }}>
+        <div style={{ textAlign: 'center', background: 'white', padding: '3rem', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>😟 {locale === 'ar-SA' ? 'خطأ في تحميل الصفحة' : 'Error Loading Page'}</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!content) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <h2>{locale === 'ar-SA' ? 'المحتوى غير متوفر' : 'Content not available'}</h2>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -300,7 +241,7 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
           {content.section3_title}
         </h2>
         <div>
-          {content.faqs.map((faq, index) => (
+          {content.faqs.map((faq: { q: string, a: string }, index: number) => (
             <div key={index} style={{ marginBottom: '1rem', borderBottom: '2px solid var(--light-blue)', paddingBottom: '1rem' }}>
               <button onClick={() => toggleFaq(index)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', color: 'var(--primary-purple)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>{faq.q}</span>
