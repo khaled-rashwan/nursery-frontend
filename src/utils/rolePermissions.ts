@@ -11,7 +11,7 @@ export const ROLE_PERMISSIONS = {
     'manage_fees',
     'system_settings',
     'manage_content',
-    'manage_media', // New permission
+    'upload_media',
     'view_students',
     'view_child_progress'
   ],
@@ -20,20 +20,19 @@ export const ROLE_PERMISSIONS = {
     'view_reports',
     'manage_fees',
     'manage_content',
-    'manage_media', // New permission
     'view_students'
   ],
   teacher: [
     'manage_classes',
     'view_students',
-    'upload_media' // Teachers can upload, but not manage all media
+    'upload_media'
   ],
   parent: [
     'view_child_progress'
   ],
   'content-manager': [
     'manage_content',
-    'manage_media' // New permission
+    'upload_media'
   ]
 } as const;
 

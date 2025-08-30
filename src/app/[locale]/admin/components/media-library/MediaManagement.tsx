@@ -182,7 +182,7 @@ export default function MediaManagement({ locale }: MediaManagementProps) {
             id="bulk-media-upload"
             type="file"
             accept="image/*"
-            multiple
+            multiple={true}
             onChange={handleBulkUpload}
             style={{ display: 'none' }}
             disabled={uploading}
