@@ -1,7 +1,7 @@
 {
   "functions": [
     {
-      "source": "functions",
+      "source": "functions/functions",
       "codebase": "default",
       "ignore": [
         "node_modules",
@@ -13,7 +13,7 @@
     }
   ],
   "firestore": {
-    "rules": "firestore.rules",
+    "rules": "functions/firestore.rules",
     "indexes": "firestore.indexes.json"
   },
   "storage": {

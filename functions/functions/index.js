@@ -105,3 +105,7 @@ exports.getHomePageContent = contentManagement.getHomePageContent;
 exports.saveHomePageContent = contentManagement.saveHomePageContent;
 exports.getAboutUsPageContent = contentManagement.getAboutUsPageContent;
 exports.saveAboutUsPageContent = contentManagement.saveAboutUsPageContent;
+
+// Export Media Library API
+const mediaApi = require('./src/media/index');
+exports.mediaApi = mediaApi.mediaApi;
