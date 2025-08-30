@@ -7,7 +7,9 @@ import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
   FirestoreAboutUsPageContent,
-  LocaleSpecificAboutUsContent
+  LocaleSpecificAboutUsContent,
+  FirestoreAcademicProgramPageContent,
+  LocaleSpecificAcademicProgramContent
 } from './types';
 
 // Initialize Firebase Functions
@@ -16,6 +18,7 @@ const functions = getFunctions(app);
 // Get a reference to the Cloud Functions
 const getHomePageContentCallable = httpsCallable(functions, 'getHomePageContent');
 const getAboutUsPageContentCallable = httpsCallable(functions, 'getAboutUsPageContent');
+const getAcademicProgramPageContentCallable = httpsCallable(functions, 'getAcademicProgramPageContent');
 
 /**
  * Fetches the homepage content from the 'getHomePageContent' Cloud Function.
@@ -34,6 +37,43 @@ export async function fetchHomePageContent(locale: string): Promise<LocaleSpecif
     return fullContent['en-US'];
   } catch (error) {
     console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchHomePageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the "Academic Program" page content from the 'getAcademicProgramPageContent' Cloud Function.
+ *
+ * @param locale The desired locale ('en-US' or 'ar-SA').
+ * @returns A promise that resolves to the locale-specific content, or null if an error occurs.
+ */
+export async function fetchAcademicProgramPageContent(locale: string): Promise<LocaleSpecificAcademicProgramContent | null> {
+  noStore();
+  try {
+    const result = await getAcademicProgramPageContentCallable();
+    const fullContent = result.data as FirestoreAcademicProgramPageContent;
+    if (locale === 'en-US' || locale === 'ar-SA') {
+      return fullContent[locale];
+    }
+    return fullContent['en-US'];
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAcademicProgramPageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the entire "Academic Program" page content object (both locales) from the 'getAcademicProgramPageContent' Cloud Function.
+ *
+ * @returns A promise that resolves to the full content object, or null if an error occurs.
+ */
+export async function fetchAllAcademicProgramPageContent(): Promise<FirestoreAcademicProgramPageContent | null> {
+  noStore();
+  try {
+    const result = await getAcademicProgramPageContentCallable();
+    return result.data as FirestoreAcademicProgramPageContent;
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllAcademicProgramPageContent:', error);
     return null;
   }
 }

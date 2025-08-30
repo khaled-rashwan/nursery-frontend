@@ -85,3 +85,50 @@ export interface FirestoreAboutUsPageContent {
   'en-US': LocaleSpecificAboutUsContent;
   'ar-SA': LocaleSpecificAboutUsContent;
 }
+
+export interface FirestoreAcademicProgramPageContent {
+  'en-US': LocaleSpecificAcademicProgramContent;
+  'ar-SA': LocaleSpecificAcademicProgramContent;
+}
+
+export interface LocaleSpecificAcademicProgramContent {
+  educationalPhilosophy: EducationalPhilosophy;
+  programs: AcademicProgram[];
+  cta: Cta;
+}
+
+export interface EducationalPhilosophy {
+  title: string;
+  eyfsFramework: string;
+  frameworkDescription: string;
+  nurturingTheWholeChild: string;
+  coreValues: CoreValue[];
+}
+
+export interface CoreValue {
+  icon: string;
+  title: string;
+  color: string;
+}
+
+export interface AcademicProgram {
+  id: string;
+  title: string;
+  ageRange: string;
+  icon: string;
+  image: string;
+  primaryColor: string;
+  lightColor1: string;
+  lightColor2: string;
+  bgIcon1: string;
+  bgIcon2: string;
+  overview: string;
+  experiences: string[];
+}
+
+export interface Cta {
+  title: string;
+  description: string;
+  enrollButton: string;
+  contactButton: string;
+}

@@ -105,6 +105,8 @@ exports.getHomePageContent = contentManagement.getHomePageContent;
 exports.saveHomePageContent = contentManagement.saveHomePageContent;
 exports.getAboutUsPageContent = contentManagement.getAboutUsPageContent;
 exports.saveAboutUsPageContent = contentManagement.saveAboutUsPageContent;
+exports.getAcademicProgramPageContent = contentManagement.getAcademicProgramPageContent;
+exports.saveAcademicProgramPageContent = contentManagement.saveAcademicProgramPageContent;
 
 // Export Media Library API
 const mediaApi = require('./src/media/index');

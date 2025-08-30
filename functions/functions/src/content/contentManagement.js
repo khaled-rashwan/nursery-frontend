@@ -157,3 +157,80 @@ exports.saveAboutUsPageContent = functions.https.onRequest(async (req, res) => {
         }
     }
 });
+
+/**
+ * @name getAcademicProgramPageContent
+ * @description Fetches the content for the "Academic Program" page.
+ */
+exports.getAcademicProgramPageContent = functions.https.onRequest(async (req, res) => {
+    setCorsHeaders(res);
+    if (handleCorsOptions(req, res)) {
+        return;
+    }
+
+    try {
+        const db = admin.firestore();
+        const docRef = db.collection('websiteContent').doc('academicProgramPage');
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            res.status(404).send({ error: 'Academic Program page content not found.' });
+            return;
+        }
+        res.status(200).json({ data: doc.data() });
+    } catch (error) {
+        console.error('Error fetching Academic Program page content:', error);
+        res.status(500).send({ error: 'Internal server error.' });
+    }
+});
+
+/**
+ * @name saveAcademicProgramPageContent
+ * @description Updates the content for the "Academic Program" page.
+ */
+exports.saveAcademicProgramPageContent = functions.https.onRequest(async (req, res) => {
+    setCorsHeaders(res);
+    if (handleCorsOptions(req, res)) {
+        return;
+    }
+
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send({ error: 'Unauthorized. No token provided.' });
+        return;
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const userRole = decodedToken.role;
+
+        if (userRole !== 'superadmin' && userRole !== 'admin' && userRole !== 'content-manager') {
+            res.status(403).send({ error: 'Permission denied.' });
+            return;
+        }
+
+        const content = req.body;
+        if (!content || typeof content !== 'object') {
+            res.status(400).send({ error: 'Invalid request body.' });
+            return;
+        }
+
+        console.log(`User ${decodedToken.uid} is authorized to save Academic Program page content.`);
+        const db = admin.firestore();
+        const docRef = db.collection('websiteContent').doc('academicProgramPage');
+
+        console.log('Attempting to save the following content to academicProgramPage:', JSON.stringify(content, null, 2));
+        await docRef.set(content, { merge: true });
+        console.log('Firestore set operation complete for academicProgramPage.');
+
+        res.status(200).send({ success: true, message: 'Academic Program page content updated successfully.' });
+
+    } catch (error) {
+        console.error('Error updating Academic Program page content:', error);
+        if (error.code === 'auth/id-token-expired') {
+            res.status(401).send({ error: 'Token expired. Please log in again.' });
+        } else {
+            res.status(500).send({ error: 'Internal server error.' });
+        }
+    }
+});

@@ -2,6 +2,7 @@
 const admin = require('firebase-admin');
 const { homePageContent } = require('./homePageContent.js');
 const { aboutUsPageContent } = require('./aboutUsPageContent.js');
+const { academicProgramPageContent } = require('./academicProgramPageContent.js');
 
 // IMPORTANT: Make sure the path to your service account key is correct.
 // You should have this file in the root of your project.
@@ -26,6 +27,10 @@ async function seedDatabase() {
     console.log('Starting to seed about us page content...');
     await db.collection('websiteContent').doc('aboutUsPage').set(aboutUsPageContent);
     console.log('✅ Success! The about us page content has been seeded to Firestore.');
+
+    console.log('Starting to seed academic program page content...');
+    await db.collection('websiteContent').doc('academicProgramPage').set(academicProgramPageContent);
+    console.log('✅ Success! The academic program page content has been seeded to Firestore.');
 
     console.log("Navigate to Firestore > websiteContent collection to see the data.");
   } catch (error) {
