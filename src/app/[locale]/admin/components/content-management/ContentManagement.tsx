@@ -12,6 +12,7 @@ import {
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
 import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
+import MediaManagement from '../media-library/MediaManagement';
 
 const formStyles = {
   container: {
@@ -302,7 +303,7 @@ export default function ContentManagement() {
   const { user } = useAuth();
   const [homePageContent, setHomePageContent] = useState<FirestoreHomePageContent | null>(null);
   const [aboutUsContent, setAboutUsContent] = useState<FirestoreAboutUsPageContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -382,15 +383,18 @@ export default function ContentManagement() {
       <div style={{ marginBottom: '1rem', borderBottom: '2px solid #ccc' }}>
         <button onClick={() => setActivePage('home')} style={{ padding: '1rem', border: 'none', background: activePage === 'home' ? '#eee' : 'transparent', fontWeight: activePage === 'home' ? 'bold' : 'normal' }}>Homepage</button>
         <button onClick={() => setActivePage('about')} style={{ padding: '1rem', border: 'none', background: activePage === 'about' ? '#eee' : 'transparent', fontWeight: activePage === 'about' ? 'bold' : 'normal' }}>About Us</button>
+        <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
       </div>
 
-      {/* Locale Tabs */}
-      <div style={{ marginBottom: '2rem' }}>
-        <button onClick={() => setActiveLocale('en-US')} style={{ padding: '0.5rem 1rem', border: `2px solid ${activeLocale === 'en-US' ? 'var(--primary-blue)' : '#ccc'}`, background: activeLocale === 'en-US' ? 'var(--light-blue)' : 'transparent', marginRight: '1rem' }}>English</button>
-        <button onClick={() => setActiveLocale('ar-SA')} style={{ padding: '0.5rem 1rem', border: `2px solid ${activeLocale === 'ar-SA' ? 'var(--primary-blue)' : '#ccc'}`, background: activeLocale === 'ar-SA' ? 'var(--light-blue)' : 'transparent' }}>Arabic</button>
-      </div>
+      {/* Locale Tabs (hide for media library) */}
+      {activePage !== 'media' && (
+        <div style={{ marginBottom: '2rem' }}>
+          <button onClick={() => setActiveLocale('en-US')} style={{ padding: '0.5rem 1rem', border: `2px solid ${activeLocale === 'en-US' ? 'var(--primary-blue)' : '#ccc'}`, background: activeLocale === 'en-US' ? 'var(--light-blue)' : 'transparent', marginRight: '1rem' }}>English</button>
+          <button onClick={() => setActiveLocale('ar-SA')} style={{ padding: '0.5rem 1rem', border: `2px solid ${activeLocale === 'ar-SA' ? 'var(--primary-blue)' : '#ccc'}`, background: activeLocale === 'ar-SA' ? 'var(--light-blue)' : 'transparent' }}>Arabic</button>
+        </div>
+      )}
 
-      {/* Forms */}
+      {/* Forms and Media Library */}
       {activePage === 'home' && homePageContent && (
         <HomePageForm
           content={homePageContent[activeLocale]}
@@ -403,14 +407,21 @@ export default function ContentManagement() {
           setContent={(newContent) => setAboutUsContent({ ...aboutUsContent, [activeLocale]: newContent })}
         />
       )}
+      {activePage === 'media' && (
+        <MediaManagement locale={activeLocale} />
+      )}
 
-      {/* Save Button & Notification */}
-      <div style={{ marginTop: '2rem', textAlign: 'right' }}>
-        <button onClick={handleSave} disabled={saving} style={{ padding: '1rem 2rem', fontSize: '1.2rem', fontWeight: 'bold', background: saving ? '#ccc' : 'var(--primary-green)', color: 'white', border: 'none', borderRadius: '8px', cursor: saving ? 'not-allowed' : 'pointer' }}>
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
-      {notification && <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '8px', background: notification.type === 'success' ? '#d4edda' : '#f8d7da', color: notification.type === 'success' ? '#155724' : '#721c24' }}>{notification.message}</div>}
+      {/* Save Button & Notification (hide for media library) */}
+      {activePage !== 'media' && (
+        <>
+          <div style={{ marginTop: '2rem', textAlign: 'right' }}>
+            <button onClick={handleSave} disabled={saving} style={{ padding: '1rem 2rem', fontSize: '1.2rem', fontWeight: 'bold', background: saving ? '#ccc' : 'var(--primary-green)', color: 'white', border: 'none', borderRadius: '8px', cursor: saving ? 'not-allowed' : 'pointer' }}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+          {notification && <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '8px', background: notification.type === 'success' ? '#d4edda' : '#f8d7da', color: notification.type === 'success' ? '#155724' : '#721c24' }}>{notification.message}</div>}
+        </>
+      )}
     </div>
   );
 }

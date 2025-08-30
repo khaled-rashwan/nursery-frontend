@@ -6,7 +6,7 @@ export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-
 export const ROLE_PERMISSIONS = {
   superadmin: [
     'manage_users',
-    'manage_classes', 
+    'manage_classes',
     'view_reports',
     'manage_fees',
     'system_settings',
@@ -17,7 +17,7 @@ export const ROLE_PERMISSIONS = {
   ],
   admin: [
     'manage_classes',
-    'view_reports', 
+    'view_reports',
     'manage_fees',
     'manage_content',
     'view_students'
