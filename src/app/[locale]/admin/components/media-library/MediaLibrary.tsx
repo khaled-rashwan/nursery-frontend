@@ -168,6 +168,38 @@ export default function MediaLibraryModal({ isOpen, onClose, onSelect }: MediaLi
     }
   };
 
+  const handleDelete = async (mediaId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent image selection when clicking delete
+    if (!user) return;
+
+    if (window.confirm('Are you sure you want to delete this image?')) {
+      try {
+        const token = await user.getIdToken();
+        const functionUrl = `https://us-central1-${process.env.NEXT_PUBLIC_PROJECT_ID}.cloudfunctions.net/mediaApi/${mediaId}`;
+        const response = await fetch(functionUrl, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete media');
+        }
+
+        // Unselect if the deleted media was selected
+        if (selectedMedia?.id === mediaId) {
+          setSelectedMedia(null);
+        }
+
+        fetchMedia(); // Refresh media list
+      } catch (error) {
+        console.error('Error deleting media:', error);
+        alert('Failed to delete media.');
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -192,6 +224,27 @@ export default function MediaLibraryModal({ isOpen, onClose, onSelect }: MediaLi
                   onClick={() => setSelectedMedia(item)}
                 >
                   <Image src={item.url} alt={item.filename} width={150} height={150} style={modalStyles.image} />
+                  <button
+                    onClick={(e) => handleDelete(item.id, e)}
+                    style={{
+                      position: 'absolute',
+                      top: '5px',
+                      right: '5px',
+                      background: 'rgba(255, 0, 0, 0.7)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '25px',
+                      height: '25px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px'
+                    }}
+                  >
+                    X
+                  </button>
                 </div>
               ))}
             </div>

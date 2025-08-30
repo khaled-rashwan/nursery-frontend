@@ -6,33 +6,34 @@ export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'parent' | 'content-
 export const ROLE_PERMISSIONS = {
   superadmin: [
     'manage_users',
-    'manage_classes', 
+    'manage_classes',
     'view_reports',
     'manage_fees',
     'system_settings',
     'manage_content',
-    'upload_media',
+    'manage_media', // New permission
     'view_students',
     'view_child_progress'
   ],
   admin: [
     'manage_classes',
-    'view_reports', 
+    'view_reports',
     'manage_fees',
     'manage_content',
+    'manage_media', // New permission
     'view_students'
   ],
   teacher: [
     'manage_classes',
     'view_students',
-    'upload_media'
+    'upload_media' // Teachers can upload, but not manage all media
   ],
   parent: [
     'view_child_progress'
   ],
   'content-manager': [
     'manage_content',
-    'upload_media'
+    'manage_media' // New permission
   ]
 } as const;
 
