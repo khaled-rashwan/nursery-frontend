@@ -8,47 +8,41 @@ const { corsMiddleware, setCorsHeaders, handleCorsOptions } = require('../utils/
  * @name getHomePageContent
  * @description Fetches the content for the "Home" page.
  */
-exports.getHomePageContent = functions.https.onRequest(async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) {
-    return;
-  }
-
-  try {
-    const db = admin.firestore();
-    const docRef = db.collection('websiteContent').doc('homePage');
-    const doc = await docRef.get();
+exports.getHomePageContent = functions.https.onRequest((req, res) => {
+  corsMiddleware(req, res, async () => {
+    console.log('getHomePageContent function triggered for diagnostics.'); // Diagnostic log
+    try {
+      const db = admin.firestore();
+      const docRef = db.collection('websiteContent').doc('homePage');
+      const doc = await docRef.get();
 
     if (!doc.exists) {
       res.status(404).send({ error: 'Homepage content not found.' });
       return;
     }
     res.status(200).json({ data: doc.data() });
-  } catch (error) {
-    console.error('Error fetching homepage content:', error);
-    res.status(500).send({ error: 'Internal server error.' });
-  }
+    } catch (error) {
+      console.error('Error fetching homepage content:', error);
+      res.status(500).send({ error: 'Internal server error.' });
+    }
+  });
 });
 
 /**
  * @name saveHomePageContent
  * @description Updates the content for the "Home" page.
  */
-exports.saveHomePageContent = functions.https.onRequest(async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) {
-    return;
-  }
+exports.saveHomePageContent = functions.https.onRequest((req, res) => {
+  corsMiddleware(req, res, async () => {
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+      res.status(401).send({ error: 'Unauthorized. No token provided.' });
+      return;
+    }
 
-  const idToken = req.headers.authorization?.split('Bearer ')[1];
-  if (!idToken) {
-    res.status(401).send({ error: 'Unauthorized. No token provided.' });
-    return;
-  }
-
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const userRole = decodedToken.role;
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const userRole = decodedToken.role;
 
     if (userRole !== 'superadmin' && userRole !== 'admin' && userRole !== 'content-manager') {
       res.status(403).send({ error: 'Permission denied.' });
@@ -71,61 +65,55 @@ exports.saveHomePageContent = functions.https.onRequest(async (req, res) => {
 
     res.status(200).send({ success: true, message: 'Homepage content updated successfully.' });
 
-  } catch (error) {
-    console.error('Error updating homepage content:', error);
-    if (error.code === 'auth/id-token-expired') {
-      res.status(401).send({ error: 'Token expired. Please log in again.' });
-    } else {
-      res.status(500).send({ error: 'Internal server error.' });
+    } catch (error) {
+      console.error('Error updating homepage content:', error);
+      if (error.code === 'auth/id-token-expired') {
+        res.status(401).send({ error: 'Token expired. Please log in again.' });
+      } else {
+        res.status(500).send({ error: 'Internal server error.' });
+      }
     }
-  }
+  });
 });
 
 /**
  * @name getAboutUsPageContent
  * @description Fetches the content for the "About Us" page.
  */
-exports.getAboutUsPageContent = functions.https.onRequest(async (req, res) => {
-    setCorsHeaders(res);
-    if (handleCorsOptions(req, res)) {
-        return;
-    }
-
-    try {
-        const db = admin.firestore();
-        const docRef = db.collection('websiteContent').doc('aboutUsPage');
-        const doc = await docRef.get();
+exports.getAboutUsPageContent = functions.https.onRequest((req, res) => {
+    corsMiddleware(req, res, async () => {
+        try {
+            const db = admin.firestore();
+            const docRef = db.collection('websiteContent').doc('aboutUsPage');
+            const doc = await docRef.get();
 
         if (!doc.exists) {
             res.status(404).send({ error: 'About Us page content not found.' });
             return;
         }
         res.status(200).json({ data: doc.data() });
-    } catch (error) {
-        console.error('Error fetching About Us page content:', error);
-        res.status(500).send({ error: 'Internal server error.' });
-    }
+        } catch (error) {
+            console.error('Error fetching About Us page content:', error);
+            res.status(500).send({ error: 'Internal server error.' });
+        }
+    });
 });
 
 /**
  * @name saveAboutUsPageContent
  * @description Updates the content for the "About Us" page.
  */
-exports.saveAboutUsPageContent = functions.https.onRequest(async (req, res) => {
-    setCorsHeaders(res);
-    if (handleCorsOptions(req, res)) {
-        return;
-    }
+exports.saveAboutUsPageContent = functions.https.onRequest((req, res) => {
+    corsMiddleware(req, res, async () => {
+        const idToken = req.headers.authorization?.split('Bearer ')[1];
+        if (!idToken) {
+            res.status(401).send({ error: 'Unauthorized. No token provided.' });
+            return;
+        }
 
-    const idToken = req.headers.authorization?.split('Bearer ')[1];
-    if (!idToken) {
-        res.status(401).send({ error: 'Unauthorized. No token provided.' });
-        return;
-    }
-
-    try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const userRole = decodedToken.role;
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            const userRole = decodedToken.role;
 
         if (userRole !== 'superadmin' && userRole !== 'admin' && userRole !== 'content-manager') {
             res.status(403).send({ error: 'Permission denied.' });
@@ -148,14 +136,15 @@ exports.saveAboutUsPageContent = functions.https.onRequest(async (req, res) => {
 
         res.status(200).send({ success: true, message: 'About Us page content updated successfully.' });
 
-    } catch (error) {
-        console.error('Error updating About Us page content:', error);
-        if (error.code === 'auth/id-token-expired') {
-            res.status(401).send({ error: 'Token expired. Please log in again.' });
-        } else {
-            res.status(500).send({ error: 'Internal server error.' });
+        } catch (error) {
+            console.error('Error updating About Us page content:', error);
+            if (error.code === 'auth/id-token-expired') {
+                res.status(401).send({ error: 'Token expired. Please log in again.' });
+            } else {
+                res.status(500).send({ error: 'Internal server error.' });
+            }
         }
-    }
+    });
 });
 
 /**
