@@ -13,6 +13,7 @@ import { ClassManagement } from '../class-management/ClassManagement';
 import { TeacherManagement } from '../teacher-management/TeacherManagement';
 import AdmissionsManagement from '../admissions-management/AdmissionsManagement';
 import ContentManagement from '../content-management/ContentManagement';
+import MediaManagement from '../media-library/MediaManagement';
 import { AcademicYearProvider, AcademicYearSelector } from '../../../../../components/academic-year';
 import { hasPermission, UserRole } from '../../../../../utils/rolePermissions';
 
@@ -258,6 +259,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
           {[
             { id: 'overview', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview', icon: '📊', permission: 'view_reports' },
             { id: 'content', label: locale === 'ar-SA' ? 'إدارة المحتوى' : 'Content Management', icon: '📝', permission: 'manage_content' },
+            { id: 'media', label: locale === 'ar-SA' ? 'مكتبة الوسائط' : 'Media Library', icon: '🖼️', permission: 'manage_media' },
             { id: 'admissions', label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', icon: '📝', permission: 'manage_classes' },
             { id: 'users', label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', icon: '👥', permission: 'manage_users' },
             { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓', permission: 'view_students' },
@@ -378,7 +380,11 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <ContentManagement />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && activeTab !== 'content' && (
+      {activeTab === 'media' && (
+        <MediaManagement locale={locale} />
+      )}
+
+      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && activeTab !== 'content' && activeTab !== 'media' && (
         <div style={{
           background: 'white',
           padding: '3rem',
