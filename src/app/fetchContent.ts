@@ -13,7 +13,9 @@ import {
   FirestoreAcademicProgramPageContent,
   LocaleSpecificAcademicProgramContent,
   FirestoreCareersPageContent,
-  LocaleSpecificCareersContent
+  LocaleSpecificCareersContent,
+  FirestoreAdmissionsPageContent,
+  LocaleSpecificAdmissionsContent
 } from './types';
 
 // Initialize Firebase Functions
@@ -25,6 +27,7 @@ const getAboutUsPageContentCallable = httpsCallable(functions, 'getAboutUsPageCo
 const getContactUsPageContentCallable = httpsCallable(functions, 'getContactUsPageContent');
 const getAcademicProgramPageContentCallable = httpsCallable(functions, 'getAcademicProgramPageContent');
 const getCareersPageContentCallable = httpsCallable(functions, 'getCareersPageContent');
+const getAdmissionsPageContentCallable = httpsCallable(functions, 'getAdmissionsPageContent');
 
 /**
  * Fetches the homepage content from the 'getHomePageContent' Cloud Function.
@@ -202,6 +205,43 @@ export async function fetchAllCareersPageContent(): Promise<FirestoreCareersPage
     return result.data as FirestoreCareersPageContent;
   } catch (error) {
     console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllCareersPageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the "Admissions" page content from the 'getAdmissionsPageContent' Cloud Function.
+ *
+ * @param locale The desired locale ('en-US' or 'ar-SA').
+ * @returns A promise that resolves to the locale-specific content, or null if an error occurs.
+ */
+export async function fetchAdmissionsPageContent(locale: string): Promise<LocaleSpecificAdmissionsContent | null> {
+  noStore();
+  try {
+    const result = await getAdmissionsPageContentCallable();
+    const fullContent = result.data as FirestoreAdmissionsPageContent;
+    if (locale === 'en-US' || locale === 'ar-SA') {
+      return fullContent[locale];
+    }
+    return fullContent['en-US'];
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAdmissionsPageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the entire "Admissions" page content object (both locales) from the 'getAdmissionsPageContent' Cloud Function.
+ *
+ * @returns A promise that resolves to the full content object, or null if an error occurs.
+ */
+export async function fetchAllAdmissionsPageContent(): Promise<FirestoreAdmissionsPageContent | null> {
+  noStore();
+  try {
+    const result = await getAdmissionsPageContentCallable();
+    return result.data as FirestoreAdmissionsPageContent;
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllAdmissionsPageContent:', error);
     return null;
   }
 }

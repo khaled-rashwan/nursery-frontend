@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent } from '../../../../fetchContent';
+import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent, fetchAllAdmissionsPageContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
@@ -16,7 +16,9 @@ import {
   LocaleSpecificAcademicProgramContent,
   Program,
   FirestoreCareersPageContent,
-  LocaleSpecificCareersContent
+  LocaleSpecificCareersContent,
+  FirestoreAdmissionsPageContent,
+  LocaleSpecificAdmissionsContent
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
 import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
@@ -730,6 +732,295 @@ function CareersForm({ content, setContent }: { content: LocaleSpecificCareersCo
   );
 }
 
+function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmissionsContent, setContent: (content: LocaleSpecificAdmissionsContent) => void }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleChange = (field: keyof LocaleSpecificAdmissionsContent, value: string) => {
+    setContent({
+      ...content,
+      [field]: value
+    });
+  };
+
+  const handleKeyDateChange = (index: number, field: 'title' | 'image', value: string) => {
+    const newItems = [...content.keyDates.items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setContent({
+      ...content,
+      keyDates: {
+        ...content.keyDates,
+        items: newItems
+      }
+    });
+  };
+
+  const handleEnrollmentStepChange = (index: number, field: 'title' | 'description', value: string) => {
+    const newSteps = [...content.enrollmentProcess.steps];
+    newSteps[index] = { ...newSteps[index], [field]: value };
+    setContent({
+      ...content,
+      enrollmentProcess: {
+        ...content.enrollmentProcess,
+        steps: newSteps
+      }
+    });
+  };
+
+  const handleDocumentChange = (index: number, value: string) => {
+    const newDocuments = [...content.requiredDocuments.documents];
+    newDocuments[index] = value;
+    setContent({
+      ...content,
+      requiredDocuments: {
+        ...content.requiredDocuments,
+        documents: newDocuments
+      }
+    });
+  };
+
+  const addDocument = () => {
+    setContent({
+      ...content,
+      requiredDocuments: {
+        ...content.requiredDocuments,
+        documents: [...content.requiredDocuments.documents, '']
+      }
+    });
+  };
+
+  const removeDocument = (index: number) => {
+    const newDocuments = content.requiredDocuments.documents.filter((_, i) => i !== index);
+    setContent({
+      ...content,
+      requiredDocuments: {
+        ...content.requiredDocuments,
+        documents: newDocuments
+      }
+    });
+  };
+
+  const handleFormFieldChange = (field: keyof typeof content.admissionForm.fields, value: string) => {
+    setContent({
+      ...content,
+      admissionForm: {
+        ...content.admissionForm,
+        fields: {
+          ...content.admissionForm.fields,
+          [field]: value
+        }
+      }
+    });
+  };
+
+  const handleImageSelect = (mediaItem: MediaItem, imageField: 'boy' | 'girl') => {
+    setContent({
+      ...content,
+      images: {
+        ...content.images,
+        [imageField]: mediaItem.url
+      }
+    });
+    setIsModalOpen(false);
+  };
+
+  return (
+    <div>
+      <MediaLibraryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={(media) => handleImageSelect(media, 'boy')} // Default to boy, this will be overridden when modal opens
+      />
+
+      {/* Hero Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Hero Section</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Page Title</label>
+            <input style={formStyles.input} type="text" value={content.title} onChange={(e) => handleChange('title', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Subtitle</label>
+            <input style={formStyles.input} type="text" value={content.subtitle} onChange={(e) => handleChange('subtitle', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Welcome Text</label>
+            <textarea style={formStyles.textarea} value={content.welcome} onChange={(e) => handleChange('welcome', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Look Forward Text</label>
+            <textarea style={formStyles.textarea} value={content.lookForward} onChange={(e) => handleChange('lookForward', e.target.value)} />
+          </div>
+        </div>
+      </fieldset>
+
+      {/* Key Dates Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Key Dates & Deadlines</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.keyDates.title} onChange={(e) => setContent({...content, keyDates: {...content.keyDates, title: e.target.value}})} />
+          </div>
+          {content.keyDates.items.map((item, index) => (
+            <div key={index} style={{ gridColumn: '1 / -1', border: '1px solid #ddd', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+              <h4>Key Date {index + 1}</h4>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={formStyles.label}>Title</label>
+                <input style={formStyles.input} type="text" value={item.title} onChange={(e) => handleKeyDateChange(index, 'title', e.target.value)} />
+              </div>
+              <div>
+                <label style={formStyles.label}>Image URL</label>
+                <input style={formStyles.input} type="text" value={item.image} onChange={(e) => handleKeyDateChange(index, 'image', e.target.value)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </fieldset>
+
+      {/* Enrollment Process Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Enrollment Process</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.enrollmentProcess.title} onChange={(e) => setContent({...content, enrollmentProcess: {...content.enrollmentProcess, title: e.target.value}})} />
+          </div>
+          {content.enrollmentProcess.steps.map((step, index) => (
+            <div key={index} style={{ gridColumn: '1 / -1', border: '1px solid #ddd', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+              <h4>Step {index + 1}</h4>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={formStyles.label}>Step Title</label>
+                <input style={formStyles.input} type="text" value={step.title} onChange={(e) => handleEnrollmentStepChange(index, 'title', e.target.value)} />
+              </div>
+              <div>
+                <label style={formStyles.label}>Step Description</label>
+                <textarea style={formStyles.textarea} value={step.description} onChange={(e) => handleEnrollmentStepChange(index, 'description', e.target.value)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </fieldset>
+
+      {/* Required Documents Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Required Documents</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.requiredDocuments.title} onChange={(e) => setContent({...content, requiredDocuments: {...content.requiredDocuments, title: e.target.value}})} />
+          </div>
+          {content.requiredDocuments.documents.map((doc, index) => (
+            <div key={index} style={{ gridColumn: '1 / -1', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <label style={formStyles.label}>Document {index + 1}</label>
+              <input style={formStyles.input} type="text" value={doc} onChange={(e) => handleDocumentChange(index, e.target.value)} />
+              <button type="button" onClick={() => removeDocument(index)} style={{padding: '0.5rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Remove</button>
+            </div>
+          ))}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <button type="button" onClick={addDocument} style={{padding: '0.8rem 1.5rem', background: 'var(--primary-green)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer'}}>Add Document</button>
+          </div>
+        </div>
+      </fieldset>
+
+      {/* Tuition & Fees Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Tuition & Fees</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.tuitionFees.title} onChange={(e) => setContent({...content, tuitionFees: {...content.tuitionFees, title: e.target.value}})} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Description</label>
+            <textarea style={formStyles.textarea} value={content.tuitionFees.description} onChange={(e) => setContent({...content, tuitionFees: {...content.tuitionFees, description: e.target.value}})} />
+          </div>
+        </div>
+      </fieldset>
+
+      {/* Images Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Images</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Boy Image</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <Image src={content.images.boy.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} alt="Boy" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+              <button type="button" onClick={() => setIsModalOpen(true)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+                Choose Boy Image
+              </button>
+            </div>
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Girl Image</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <Image src={content.images.girl.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} alt="Girl" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+              <button type="button" onClick={() => setIsModalOpen(true)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+                Choose Girl Image
+              </button>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      {/* Admission Form Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Admission Form Labels</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Form Title</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.title} onChange={(e) => setContent({...content, admissionForm: {...content.admissionForm, title: e.target.value}})} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Subtitle 1</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.subtitle1} onChange={(e) => setContent({...content, admissionForm: {...content.admissionForm, subtitle1: e.target.value}})} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Subtitle 2</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.subtitle2} onChange={(e) => setContent({...content, admissionForm: {...content.admissionForm, subtitle2: e.target.value}})} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Parent Name Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.parentName} onChange={(e) => handleFormFieldChange('parentName', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Email Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.email} onChange={(e) => handleFormFieldChange('email', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Phone Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.phone} onChange={(e) => handleFormFieldChange('phone', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Best Time Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.bestTime} onChange={(e) => handleFormFieldChange('bestTime', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>WhatsApp Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.whatsapp} onChange={(e) => handleFormFieldChange('whatsapp', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Preferred Language Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.preferredLang} onChange={(e) => handleFormFieldChange('preferredLang', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Relationship Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.relationship} onChange={(e) => handleFormFieldChange('relationship', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Message Label</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.fields.message} onChange={(e) => handleFormFieldChange('message', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Submit Button Text</label>
+            <input style={formStyles.input} type="text" value={content.admissionForm.submit} onChange={(e) => setContent({...content, admissionForm: {...content.admissionForm, submit: e.target.value}})} />
+          </div>
+        </div>
+      </fieldset>
+    </div>
+  );
+}
+
 
 export default function ContentManagement() {
   const { user } = useAuth();
@@ -738,7 +1029,8 @@ export default function ContentManagement() {
   const [contactUsContent, setContactUsContent] = useState<FirestoreContactUsPageContent | null>(null);
   const [academicProgramContent, setAcademicProgramContent] = useState<FirestoreAcademicProgramPageContent | null>(null);
   const [careersContent, setCareersContent] = useState<FirestoreCareersPageContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'media'>('home');
+  const [admissionsContent, setAdmissionsContent] = useState<FirestoreAdmissionsPageContent | null>(null);
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'admissions' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -747,18 +1039,20 @@ export default function ContentManagement() {
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
-      const [homeContent, aboutContent, contactContent, academicContent, careersContent] = await Promise.all([
+      const [homeContent, aboutContent, contactContent, academicContent, careersContent, admissionsContent] = await Promise.all([
         fetchAllHomePageContent(),
         fetchAllAboutUsPageContent(),
         fetchAllContactUsPageContent(),
         fetchAllAcademicProgramPageContent(),
-        fetchAllCareersPageContent()
+        fetchAllCareersPageContent(),
+        fetchAllAdmissionsPageContent()
       ]);
       if (homeContent) setHomePageContent(homeContent);
       if (aboutContent) setAboutUsContent(aboutContent);
       if (contactContent) setContactUsContent(contactContent);
       if (academicContent) setAcademicProgramContent(academicContent);
       if (careersContent) setCareersContent(careersContent);
+      if (admissionsContent) setAdmissionsContent(admissionsContent);
       setLoading(false);
     };
     loadContent();
@@ -792,6 +1086,9 @@ export default function ContentManagement() {
       } else if (activePage === 'careers') {
         functionName = 'saveCareersPageContent';
         contentToSave = careersContent;
+      } else if (activePage === 'admissions') {
+        functionName = 'saveAdmissionsPageContent';
+        contentToSave = admissionsContent;
       }
 
       if (!contentToSave) {
@@ -836,6 +1133,7 @@ export default function ContentManagement() {
         <button onClick={() => setActivePage('contact')} style={{ padding: '1rem', border: 'none', background: activePage === 'contact' ? '#eee' : 'transparent', fontWeight: activePage === 'contact' ? 'bold' : 'normal' }}>Contact Us</button>
         <button onClick={() => setActivePage('academic')} style={{ padding: '1rem', border: 'none', background: activePage === 'academic' ? '#eee' : 'transparent', fontWeight: activePage === 'academic' ? 'bold' : 'normal' }}>Academic Program</button>
         <button onClick={() => setActivePage('careers')} style={{ padding: '1rem', border: 'none', background: activePage === 'careers' ? '#eee' : 'transparent', fontWeight: activePage === 'careers' ? 'bold' : 'normal' }}>Careers</button>
+        <button onClick={() => setActivePage('admissions')} style={{ padding: '1rem', border: 'none', background: activePage === 'admissions' ? '#eee' : 'transparent', fontWeight: activePage === 'admissions' ? 'bold' : 'normal' }}>Admissions</button>
         <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
       </div>
 
@@ -876,6 +1174,12 @@ export default function ContentManagement() {
         <CareersForm
           content={careersContent[activeLocale]}
           setContent={(newContent) => setCareersContent({ ...careersContent, [activeLocale]: newContent })}
+        />
+      )}
+      {activePage === 'admissions' && admissionsContent && (
+        <AdmissionsForm
+          content={admissionsContent[activeLocale]}
+          setContent={(newContent) => setAdmissionsContent({ ...admissionsContent, [activeLocale]: newContent })}
         />
       )}
       {activePage === 'media' && (
