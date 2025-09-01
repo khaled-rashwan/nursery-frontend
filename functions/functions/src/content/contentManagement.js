@@ -518,7 +518,7 @@ exports.saveGalleryPageContent = functions.https.onRequest(async (req, res) => {
             return;
         }
 
-        const { content } = req.body;
+        const content = req.body;
         if (!content) {
             res.status(400).send({ error: 'Invalid request body.' });
             return;
