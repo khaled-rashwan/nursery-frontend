@@ -1,327 +1,263 @@
-'use client';
+"use client";
+import { useEffect, useState } from "react";
+import { db } from "../../../firebase";
+import { doc, getDoc, collection, addDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+interface JobListing {
+  title: string;
+  description: string;
+}
 
-export default function CareersPage({ params }: { params: Promise<{ locale: string }> }) {
-  const [locale, setLocale] = useState<string>('en-US');
-  const [mounted, setMounted] = useState(false);
+interface HeroSection {
+  title: string;
+  subtitle: string;
+  image: string;
+}
+
+interface CareersPageContent {
+  heroSection: HeroSection;
+  jobListings: JobListing[];
+}
+
+const CareersPage = () => {
+  const [pageContent, setPageContent] = useState<CareersPageContent | null>(
+    null
+  );
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    jobTitle: "",
+    resume: null as File | null,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    params.then(({ locale: paramLocale }) => {
-      setLocale(paramLocale);
-      setMounted(true);
-    });
-  }, [params]);
+    const fetchPageContent = async () => {
+      try {
+        const docRef = doc(db, "websiteContent", "careers");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setPageContent(docSnap.data() as CareersPageContent);
+        } else {
+          setError("Careers page content not found.");
+        }
+      } catch (err) {
+        setError("Failed to fetch page content.");
+        console.error(err);
+      }
+    };
+    fetchPageContent();
+  }, []);
 
-  if (!mounted) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '50vh'
-      }}>
-        <div className="loading-spinner"></div>
-      </div>
-    );
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFormData({ ...formData, resume: e.target.files[0] });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formData.resume) {
+      setError("Please upload a resume.");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const storage = getStorage();
+      const storageRef = ref(
+        storage,
+        `resumes/${Date.now()}_${formData.resume.name}`
+      );
+      const uploadTask = await uploadBytes(storageRef, formData.resume);
+      const resumeUrl = await getDownloadURL(uploadTask.ref);
+
+      const applicationData = {
+        name: formData.name,
+        email: formData.email,
+        jobTitle: formData.jobTitle,
+        resumeUrl: resumeUrl,
+        submittedAt: new Date(),
+      };
+
+      const response = await fetch('/api/submitApplication', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(applicationData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit application');
+      }
+
+      setSuccess("Application submitted successfully!");
+      setFormData({
+        name: "",
+        email: "",
+        jobTitle: "",
+        resume: null,
+      });
+      const resumeInput = document.getElementById("resume") as HTMLInputElement;
+      if (resumeInput) {
+        resumeInput.value = "";
+      }
+    } catch (error) {
+      console.error("Error submitting application:", error);
+      setError("An error occurred while submitting the application.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (error && !pageContent) {
+    return <div className="text-red-500 text-center p-8">{error}</div>;
   }
 
-  const content = locale === 'ar-SA' ? {
-    title: 'الوظائف',
-    section1_title: 'كن جزءًا من عائلتنا',
-    section1_p1: 'نحن نبحث دائمًا عن محترفين متحمسين ومبدعين ومتفانين ومتحمسين لإحداث فرق في حياة الأطفال الصغار. في حضانة خطوة المستقبل، ستكون جزءًا من فريق داعم يقدر الابتكار والتعاون والنمو المهني.',
-    section1_p2: 'سواء كنت معلمًا ذا خبرة، أو مساعدًا مربيًا، أو عضوًا متحمسًا في الفريق الإداري - نرحب بالأفراد الذين يشاركوننا رؤيتنا لإلهام الجيل القادم.',
-    section2_title: 'لماذا تعمل معنا؟',
-    section2_points: [
-      'بيئة تتمحور حول الطفل وهادفة',
-      'تدريب مستمر وتطوير مهني',
-      'ثقافة عمل تعاونية ومحترمة',
-      'مرافق حديثة مصممة للتميز',
-      'فرص للنمو مع رؤيتنا المتوسعة'
-    ],
-    section3_title: 'الوظائف الشاغرة',
-    section3_p1: 'ندعوكم لاستكشاف وظائفنا الشاغرة الحالية لـ:',
-    section3_positions: [
-      'معلمو KG1 و KG2 (مسار عربي وإنجليزي)',
-      'مساعدو تدريس',
-      'موظفون إداريون',
-      'فريق خدمات الدعم (مثل الاستقبال والمرافق)'
-    ],
-    section4_title: 'أرسل سيرتك الذاتية ورسالة التغطية',
-    section4_p1: 'أرسل سيرتك الذاتية ورسالة التغطية إلى: careers@futurestep.edu.sa',
-    section4_p2: 'أو أكمل نموذج الاهتمام أدناه:',
-    form_fullName: 'الاسم الكامل',
-    form_phoneNumber: 'رقم الهاتف',
-    form_emailAddress: 'عنوان البريد الإلكتروني',
-    form_jobTitle: 'المسمى الوظيفي',
-    form_attachResume: 'إرفاق السيرة الذاتية',
-    form_yourMessage: 'رسالتك',
-    form_submitButton: 'إرسال'
-  } : {
-    title: 'Careers',
-    section1_title: 'Be part of our family',
-    section1_p1: 'We are always looking for passionate, creative, and dedicated professionals who are excited to make a difference in the lives of young children. At Future Step Nursery, you’ll be part of a supportive team that values innovation, collaboration, and professional growth.',
-    section1_p2: 'Whether you\'re an experienced educator, a nurturing assistant, or an enthusiastic administrative team member — we welcome individuals who share our vision of inspiring the next generation.',
-    section2_title: 'Why Work With Us?',
-    section2_points: [
-      'A purpose-driven, child-centered environment',
-      'Ongoing training and professional development',
-      'Collaborative and respectful workplace culture',
-      'Modern facilities designed for excellence',
-      'Opportunities to grow with our expanding vision'
-    ],
-    section3_title: 'Open Positions',
-    section3_p1: 'We invite you to explore our current openings for:',
-    section3_positions: [
-      'KG1 & KG2 Teachers (Arabic & English Tracks)',
-      'Teaching Assistants',
-      'Administrative Staff',
-      'Support Services Team (e.g., Reception, Facilities)'
-    ],
-    section4_title: 'Submit Your CV & Cover Letter',
-    section4_p1: 'Submit Your CV & Cover Letter to: careers@futurestep.edu.sa',
-    section4_p2: 'Or complete the interest form below:',
-    form_fullName: 'Full Name',
-    form_phoneNumber: 'Phone Number',
-    form_emailAddress: 'Email Address',
-    form_jobTitle: 'Job Title',
-    form_attachResume: 'Attach resume',
-    form_yourMessage: 'Your message',
-    form_submitButton: 'Submit'
-  };
+  if (!pageContent) {
+    return <div className="text-center p-8">Loading...</div>;
+  }
 
-  const formInputStyle = {
-    width: '100%',
-    padding: '12px',
-    marginBottom: '1rem',
-    borderRadius: 'var(--border-radius)',
-    border: '2px solid var(--light-blue)',
-    background: '#fff',
-    fontSize: '1rem',
-    transition: 'border-color 0.3s, box-shadow 0.3s',
-  };
-
-  const formLabelStyle = {
-    display: 'block',
-    marginBottom: '0.5rem',
-    fontWeight: 'bold',
-    color: 'var(--primary-purple)',
-  };
+  const { heroSection, jobListings } = pageContent;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
-      padding: '2rem 1rem'
-    }}>
-      {/* Hero Section */}
-      <section style={{
-        textAlign: 'center',
-        padding: '4rem 2rem',
-        background: 'linear-gradient(135deg, var(--light-blue), var(--light-green))',
-        borderRadius: 'var(--border-radius)',
-        margin: '2rem auto',
-        maxWidth: '1200px',
-        boxShadow: 'var(--shadow)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <h1 style={{
-          fontSize: '3.5rem',
-          color: 'var(--primary-purple)',
-          marginBottom: '1rem',
-          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.1)',
-          fontWeight: 'bold'
-        }}>
-          {content.title}
-        </h1>
-      </section>
+    <div className="bg-gray-50 min-h-screen">
+      <header className="bg-blue-600 text-white text-center p-12">
+        <h1 className="text-5xl font-bold">{heroSection.title}</h1>
+        <p className="text-xl mt-2">{heroSection.subtitle}</p>
+      </header>
 
-      {/* Section 1: Be part of our family */}
-      <section style={{
-        background: 'white',
-        padding: '3rem',
-        borderRadius: 'var(--border-radius)',
-        margin: '3rem auto',
-        maxWidth: '1000px',
-        boxShadow: 'var(--shadow)',
-        textAlign: 'center',
-      }}>
-        <h2 style={{
-          fontSize: '2.5rem',
-          color: 'var(--primary-orange)',
-          marginBottom: '1.5rem',
-          fontWeight: 'bold'
-        }}>
-          {content.section1_title}
-        </h2>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'left' }}>
-          {content.section1_p1}
-        </p>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'left', marginTop: '1rem' }}>
-          {content.section1_p2}
-        </p>
-      </section>
-
-      {/* Section 2: Why Work With Us? */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '2rem',
-        maxWidth: '1200px',
-        margin: '3rem auto',
-        alignItems: 'center'
-      }}>
-        <div style={{
-          background: 'linear-gradient(135deg, var(--light-yellow), white)',
-          padding: '3rem',
-          borderRadius: 'var(--border-radius)',
-          boxShadow: 'var(--shadow)',
-          border: '4px solid var(--primary-yellow)',
-        }}>
-          <h2 style={{
-            fontSize: '2.5rem',
-            color: 'var(--primary-green)',
-            marginBottom: '1.5rem',
-            fontWeight: 'bold'
-          }}>
-            {content.section2_title}
+      <main className="container mx-auto p-8">
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold text-center mb-8">
+            Open Positions
           </h2>
-          <ul style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', paddingLeft: '20px' }}>
-            {content.section2_points.map((point, index) => (
-              <li key={index} className="stagger-item" style={{ marginBottom: '0.5rem' }}>{point}</li>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {jobListings.map((job, index) => (
+              <div
+                key={index}
+                className="bg-white p-6 rounded-lg shadow-md"
+              >
+                <h3 className="text-2xl font-bold text-blue-600">
+                  {job.title}
+                </h3>
+                <p className="mt-2 text-gray-700">{job.description}</p>
+              </div>
             ))}
-          </ul>
-        </div>
-        <div>
-          <Image
-            src="/careers/boy.jpg"
-            alt="Happy boy"
-            width={500}
-            height={500}
-            style={{
-              objectFit: 'cover',
-              borderRadius: 'var(--border-radius)',
-              boxShadow: 'var(--shadow)',
-            }}
-          />
-        </div>
-      </div>
+          </div>
+        </section>
 
-      {/* Section 3: Open Positions */}
-      <section style={{
-        background: 'linear-gradient(135deg, var(--light-orange), white)',
-        padding: '3rem',
-        borderRadius: 'var(--border-radius)',
-        margin: '3rem auto',
-        maxWidth: '1000px',
-        boxShadow: 'var(--shadow)',
-        textAlign: 'center',
-      }}>
-        <h2 style={{
-          fontSize: '2.5rem',
-          color: 'var(--primary-blue)',
-          marginBottom: '1.5rem',
-          fontWeight: 'bold'
-        }}>
-          {content.section3_title}
-        </h2>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8' }}>
-          {content.section3_p1}
-        </p>
-        <ul style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', listStyle: 'none', padding: 0, marginTop: '1rem' }}>
-          {content.section3_positions.map((position, index) => (
-            <li key={index} style={{
-              background: 'rgba(255,255,255,0.7)',
-              padding: '1rem',
-              borderRadius: 'var(--border-radius)',
-              marginBottom: '0.5rem',
-              border: '2px solid var(--light-blue)'
-            }}>{position}</li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Section 4: Submit Your CV */}
-      <section style={{
-        background: 'white',
-        padding: '3rem',
-        borderRadius: 'var(--border-radius)',
-        margin: '3rem auto',
-        maxWidth: '800px',
-        boxShadow: 'var(--shadow)',
-      }}>
-        <h2 style={{
-          fontSize: '2.5rem',
-          color: 'var(--primary-purple)',
-          marginBottom: '1.5rem',
-          fontWeight: 'bold',
-          textAlign: 'center'
-        }}>
-          {content.section4_title}
-        </h2>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'center' }}>
-          {content.section4_p1}
-        </p>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'center', marginBottom: '2rem' }}>
-          {content.section4_p2}
-        </p>
-        <form>
-          <div>
-            <label htmlFor="fullName" style={formLabelStyle}>{content.form_fullName}</label>
-            <input type="text" id="fullName" name="fullName" style={formInputStyle} />
-          </div>
-          <div>
-            <label htmlFor="phoneNumber" style={formLabelStyle}>{content.form_phoneNumber}</label>
-            <input type="text" id="phoneNumber" name="phoneNumber" style={formInputStyle} />
-          </div>
-          <div>
-            <label htmlFor="emailAddress" style={formLabelStyle}>{content.form_emailAddress}</label>
-            <input type="email" id="emailAddress" name="emailAddress" style={formInputStyle} />
-          </div>
-          <div>
-            <label htmlFor="jobTitle" style={formLabelStyle}>{content.form_jobTitle}</label>
-            <select id="jobTitle" name="jobTitle" style={formInputStyle}>
-              {content.section3_positions.map((position, index) => (
-                <option key={index} value={position}>{position}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="resume" style={formLabelStyle}>{content.form_attachResume}</label>
-            <input type="file" id="resume" name="resume" style={formInputStyle} />
-          </div>
-          <div>
-            <label htmlFor="message" style={formLabelStyle}>{content.form_yourMessage}</label>
-            <textarea id="message" name="message" style={{...formInputStyle, minHeight: '150px'}}></textarea>
-          </div>
-          <button type="submit" style={{
-            display: 'block',
-            width: '100%',
-            padding: '1rem',
-            background: 'var(--primary-green)',
-            color: 'white',
-            border: 'none',
-            borderRadius: 'var(--border-radius)',
-            fontSize: '1.2rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'background 0.3s, transform 0.3s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--primary-blue-dark)';
-            e.currentTarget.style.transform = 'scale(1.02)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--primary-green)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-          >
-            {content.form_submitButton}
-          </button>
-        </form>
-      </section>
+        <section className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold text-center mb-8">Apply Now</h2>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label
+                htmlFor="name"
+                className="block text-gray-700 font-bold mb-2"
+              >
+                Full Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label
+                htmlFor="email"
+                className="block text-gray-700 font-bold mb-2"
+              >
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label
+                htmlFor="jobTitle"
+                className="block text-gray-700 font-bold mb-2"
+              >
+                Job Title
+              </label>
+              <select
+                id="jobTitle"
+                name="jobTitle"
+                value={formData.jobTitle}
+                onChange={handleInputChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              >
+                <option value="">Select a position</option>
+                {jobListings.map((job, index) => (
+                  <option key={index} value={job.title}>
+                    {job.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-6">
+              <label
+                htmlFor="resume"
+                className="block text-gray-700 font-bold mb-2"
+              >
+                Upload Resume
+              </label>
+              <input
+                type="file"
+                id="resume"
+                name="resume"
+                onChange={handleFileChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+            </div>
+            {error && (
+              <p className="text-red-500 text-xs italic mb-4">{error}</p>
+            )}
+            {success && (
+              <p className="text-green-500 text-xs italic mb-4">
+                {success}
+              </p>
+            )}
+            <div className="flex items-center justify-between">
+              <button
+                type="submit"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Application"}
+              </button>
+            </div>
+          </form>
+        </section>
+      </main>
     </div>
   );
-}
+};
+
+export default CareersPage;

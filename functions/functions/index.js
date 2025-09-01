@@ -113,3 +113,7 @@ exports.saveAcademicProgramPageContent = contentManagement.saveAcademicProgramPa
 // Export Media Library API
 const mediaApi = require('./src/media/index');
 exports.mediaApi = mediaApi.mediaApi;
+
+// Export Application Management Functions
+const applicationCrud = require('./src/applications/applicationCrud');
+exports.submitApplication = applicationCrud.submitApplication;
