@@ -465,3 +465,81 @@ exports.saveAdmissionsPageContent = functions.https.onRequest(async (req, res) =
         }
     }
 });
+
+/**
+ * @name getGalleryPageContent
+ * @description Fetches the content for the "Gallery" page.
+ */
+exports.getGalleryPageContent = functions.https.onRequest(async (req, res) => {
+    setCorsHeaders(res);
+    if (handleCorsOptions(req, res)) {
+        return;
+    }
+
+    try {
+        const db = admin.firestore();
+        const docRef = db.collection('websiteContent').doc('galleryPage');
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            res.status(404).send({ error: 'Gallery page content not found.' });
+            return;
+        }
+        res.status(200).json({ data: doc.data() });
+    } catch (error) {
+        console.error('Error fetching Gallery page content:', error);
+        res.status(500).send({ error: 'Internal server error.' });
+    }
+});
+
+/**
+ * @name saveGalleryPageContent
+ * @description Updates the content for the "Gallery" page.
+ */
+exports.saveGalleryPageContent = functions.https.onRequest(async (req, res) => {
+    setCorsHeaders(res);
+    if (handleCorsOptions(req, res)) {
+        return;
+    }
+
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send({ error: 'Unauthorized. No token provided.' });
+        return;
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const userRole = decodedToken.role;
+
+        // Check permissions: admin, superadmin, and content-manager can update gallery content
+        if (!['admin', 'superadmin', 'content-manager'].includes(userRole)) {
+            res.status(403).send({ error: 'Permission denied. Insufficient privileges to update Gallery page content.' });
+            return;
+        }
+
+        const { content } = req.body;
+        if (!content) {
+            res.status(400).send({ error: 'Invalid request body.' });
+            return;
+        }
+
+        console.log(`User ${decodedToken.uid} is authorized to save Gallery page content.`);
+        const db = admin.firestore();
+        const docRef = db.collection('websiteContent').doc('galleryPage');
+
+        console.log('Attempting to save the following content to galleryPage:', JSON.stringify(content, null, 2));
+        await docRef.set(content, { merge: true });
+        console.log('Firestore set operation complete for galleryPage.');
+
+        res.status(200).send({ success: true, message: 'Gallery page content updated successfully.' });
+
+    } catch (error) {
+        console.error('Error updating Gallery page content:', error);
+        if (error.code === 'auth/id-token-expired') {
+            res.status(401).send({ error: 'Token expired. Please log in again.' });
+        } else {
+            res.status(500).send({ error: 'Internal server error.' });
+        }
+    }
+});
