@@ -85,3 +85,32 @@ export interface FirestoreAboutUsPageContent {
   'en-US': LocaleSpecificAboutUsContent;
   'ar-SA': LocaleSpecificAboutUsContent;
 }
+
+// Types for the "Contact Us" page content
+export interface Faq {
+  q: string;
+  a: string;
+}
+
+export interface LocaleSpecificContactUsContent {
+  title: string;
+  section1_title: string;
+  phone: string;
+  address: string;
+  workingHours: string;
+  email: string;
+  section2_title: string;
+  section2_subtitle: string;
+  section2_text: string;
+  form_fullName: string;
+  form_phoneNumber: string;
+  form_yourMessage: string;
+  form_submitButton: string;
+  section3_title: string;
+  faqs: Faq[];
+}
+
+export interface FirestoreContactUsPageContent {
+  'en-US': LocaleSpecificContactUsContent;
+  'ar-SA': LocaleSpecificContactUsContent;
+}
