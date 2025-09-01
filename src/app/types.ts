@@ -85,3 +85,22 @@ export interface FirestoreAboutUsPageContent {
   'en-US': LocaleSpecificAboutUsContent;
   'ar-SA': LocaleSpecificAboutUsContent;
 }
+
+// Types for the "Academic Program" page content
+export interface AcademicProgram {
+  title: string;
+  age: string;
+  image: string;
+  description: string;
+}
+
+export interface LocaleSpecificAcademicProgramContent {
+  title: string;
+  description: string;
+  programs: AcademicProgram[];
+}
+
+export interface FirestoreAcademicProgramPageContent {
+  'en-US': LocaleSpecificAcademicProgramContent;
+  'ar-SA': LocaleSpecificAcademicProgramContent;
+}
