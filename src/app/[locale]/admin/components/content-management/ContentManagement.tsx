@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent, fetchAllAdmissionsPageContent } from '../../../../fetchContent';
+import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent, fetchAllAdmissionsPageContent, fetchAllGalleryPageContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
@@ -18,7 +18,10 @@ import {
   FirestoreCareersPageContent,
   LocaleSpecificCareersContent,
   FirestoreAdmissionsPageContent,
-  LocaleSpecificAdmissionsContent
+  LocaleSpecificAdmissionsContent,
+  FirestoreGalleryPageContent,
+  LocaleSpecificGalleryContent,
+  GalleryImage
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
 import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
@@ -1075,6 +1078,213 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
   );
 }
 
+function GalleryForm({ content, setContent }: { content: LocaleSpecificGalleryContent, setContent: (content: LocaleSpecificGalleryContent) => void }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleChange = (field: keyof LocaleSpecificGalleryContent, value: string) => {
+    setContent({
+      ...content,
+      [field]: value,
+    });
+  };
+
+  const handleImageSelect = (media: MediaItem) => {
+    const newImage: GalleryImage = {
+      id: media.id,
+      url: media.url,
+      filename: media.filename,
+      description: '',
+      uploadedAt: media.uploadedAt
+    };
+    
+    setContent({
+      ...content,
+      images: [...content.images, newImage]
+    });
+    setIsModalOpen(false);
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = [...content.images];
+    newImages.splice(index, 1);
+    setContent({
+      ...content,
+      images: newImages
+    });
+  };
+
+  const updateImageDescription = (index: number, description: string) => {
+    const newImages = [...content.images];
+    newImages[index] = { ...newImages[index], description };
+    setContent({
+      ...content,
+      images: newImages
+    });
+  };
+
+  return (
+    <div>
+      <MediaLibraryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleImageSelect}
+      />
+      
+      {/* Basic Content Fields */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Page Content</legend>
+        <div style={formStyles.grid}>
+          <div>
+            <label style={formStyles.label}>Title</label>
+            <input 
+              style={formStyles.input} 
+              type="text" 
+              value={content.title} 
+              onChange={(e) => handleChange('title', e.target.value)} 
+            />
+          </div>
+          <div>
+            <label style={formStyles.label}>Subtitle</label>
+            <input 
+              style={formStyles.input} 
+              type="text" 
+              value={content.subtitle} 
+              onChange={(e) => handleChange('subtitle', e.target.value)} 
+            />
+          </div>
+          <div>
+            <label style={formStyles.label}>Heading</label>
+            <input 
+              style={formStyles.input} 
+              type="text" 
+              value={content.heading} 
+              onChange={(e) => handleChange('heading', e.target.value)} 
+            />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Description 1</label>
+            <textarea 
+              style={formStyles.textarea} 
+              value={content.description1} 
+              onChange={(e) => handleChange('description1', e.target.value)} 
+            />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Description 2</label>
+            <textarea 
+              style={formStyles.textarea} 
+              value={content.description2} 
+              onChange={(e) => handleChange('description2', e.target.value)} 
+            />
+          </div>
+          <div>
+            <label style={formStyles.label}>Images Section Title</label>
+            <input 
+              style={formStyles.input} 
+              type="text" 
+              value={content.imagesTitle} 
+              onChange={(e) => handleChange('imagesTitle', e.target.value)} 
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      {/* Gallery Images Section */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Gallery Images</legend>
+        <div style={{ marginBottom: '1rem' }}>
+          <button 
+            type="button" 
+            onClick={() => setIsModalOpen(true)} 
+            style={{
+              padding: '0.8rem 1.5rem', 
+              borderRadius: '8px', 
+              border: 'none', 
+              cursor: 'pointer', 
+              background: 'var(--primary-purple)', 
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: 'bold'
+            }}
+          >
+            Add Image from Library
+          </button>
+        </div>
+        
+        {content.images.length > 0 ? (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '1.5rem' 
+          }}>
+            {content.images.map((image, index) => (
+              <div 
+                key={image.id || index} 
+                style={{
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  background: '#f9f9f9'
+                }}
+              >
+                <div style={{ marginBottom: '1rem' }}>
+                  <Image
+                    src={image.url}
+                    alt={image.description || image.filename}
+                    width={250}
+                    height={200}
+                    style={{ 
+                      objectFit: 'cover', 
+                      borderRadius: '8px',
+                      width: '100%',
+                      height: '200px'
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={formStyles.label}>Description (Optional)</label>
+                  <textarea 
+                    style={{...formStyles.textarea, minHeight: '80px'}} 
+                    value={image.description || ''} 
+                    placeholder="Add a description for this image..."
+                    onChange={(e) => updateImageDescription(index, e.target.value)} 
+                  />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => removeImage(index)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Remove Image
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            background: '#f0f0f0',
+            borderRadius: '8px',
+            color: '#666'
+          }}>
+            <p>No images added yet. Click &quot;Add Image from Library&quot; to get started.</p>
+          </div>
+        )}
+      </fieldset>
+    </div>
+  );
+}
+
 
 export default function ContentManagement() {
   const { user } = useAuth();
@@ -1084,7 +1294,8 @@ export default function ContentManagement() {
   const [academicProgramContent, setAcademicProgramContent] = useState<FirestoreAcademicProgramPageContent | null>(null);
   const [careersContent, setCareersContent] = useState<FirestoreCareersPageContent | null>(null);
   const [admissionsContent, setAdmissionsContent] = useState<FirestoreAdmissionsPageContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'admissions' | 'media'>('home');
+  const [galleryContent, setGalleryContent] = useState<FirestoreGalleryPageContent | null>(null);
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'admissions' | 'gallery' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1093,13 +1304,14 @@ export default function ContentManagement() {
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
-      const [homeContent, aboutContent, contactContent, academicContent, careersContent, admissionsContent] = await Promise.all([
+      const [homeContent, aboutContent, contactContent, academicContent, careersContent, admissionsContent, galleryContentData] = await Promise.all([
         fetchAllHomePageContent(),
         fetchAllAboutUsPageContent(),
         fetchAllContactUsPageContent(),
         fetchAllAcademicProgramPageContent(),
         fetchAllCareersPageContent(),
-        fetchAllAdmissionsPageContent()
+        fetchAllAdmissionsPageContent(),
+        fetchAllGalleryPageContent()
       ]);
       if (homeContent) setHomePageContent(homeContent);
       if (aboutContent) setAboutUsContent(aboutContent);
@@ -1107,6 +1319,7 @@ export default function ContentManagement() {
       if (academicContent) setAcademicProgramContent(academicContent);
       if (careersContent) setCareersContent(careersContent);
       if (admissionsContent) setAdmissionsContent(admissionsContent);
+      if (galleryContentData) setGalleryContent(galleryContentData);
       setLoading(false);
     };
     loadContent();
@@ -1143,6 +1356,9 @@ export default function ContentManagement() {
       } else if (activePage === 'admissions') {
         functionName = 'saveAdmissionsPageContent';
         contentToSave = admissionsContent;
+      } else if (activePage === 'gallery') {
+        functionName = 'saveGalleryPageContent';
+        contentToSave = galleryContent;
       }
 
       if (!contentToSave) {
@@ -1188,6 +1404,7 @@ export default function ContentManagement() {
         <button onClick={() => setActivePage('academic')} style={{ padding: '1rem', border: 'none', background: activePage === 'academic' ? '#eee' : 'transparent', fontWeight: activePage === 'academic' ? 'bold' : 'normal' }}>Academic Program</button>
         <button onClick={() => setActivePage('careers')} style={{ padding: '1rem', border: 'none', background: activePage === 'careers' ? '#eee' : 'transparent', fontWeight: activePage === 'careers' ? 'bold' : 'normal' }}>Careers</button>
         <button onClick={() => setActivePage('admissions')} style={{ padding: '1rem', border: 'none', background: activePage === 'admissions' ? '#eee' : 'transparent', fontWeight: activePage === 'admissions' ? 'bold' : 'normal' }}>Admissions</button>
+        <button onClick={() => setActivePage('gallery')} style={{ padding: '1rem', border: 'none', background: activePage === 'gallery' ? '#eee' : 'transparent', fontWeight: activePage === 'gallery' ? 'bold' : 'normal' }}>Gallery</button>
         <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
       </div>
 
@@ -1234,6 +1451,12 @@ export default function ContentManagement() {
         <AdmissionsForm
           content={admissionsContent[activeLocale]}
           setContent={(newContent) => setAdmissionsContent({ ...admissionsContent, [activeLocale]: newContent })}
+        />
+      )}
+      {activePage === 'gallery' && galleryContent && (
+        <GalleryForm
+          content={galleryContent[activeLocale]}
+          setContent={(newContent) => setGalleryContent({ ...galleryContent, [activeLocale]: newContent })}
         />
       )}
       {activePage === 'media' && (
