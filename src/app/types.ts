@@ -157,3 +157,36 @@ export interface FirestoreAcademicProgramPageContent {
   'en-US': LocaleSpecificAcademicProgramContent;
   'ar-SA': LocaleSpecificAcademicProgramContent;
 }
+
+// Types for the "Careers" page content
+export interface JobOpening {
+  title: string;
+  description: string;
+  applyLink: string;
+}
+
+export interface LocaleSpecificCareersPageContent {
+  hero: {
+    title: string;
+    subtitle: string;
+  };
+  whyWorkWithUs: {
+    title: string;
+    text: string;
+    imageUrl: string;
+  };
+  jobOpenings: {
+    title: string;
+    openings: JobOpening[];
+  };
+  cta: {
+    title:string;
+    subtitle: string;
+    buttonText: string;
+  };
+}
+
+export interface FirestoreCareersPageContent {
+  'en-US': LocaleSpecificCareersPageContent;
+  'ar-SA': LocaleSpecificCareersPageContent;
+}

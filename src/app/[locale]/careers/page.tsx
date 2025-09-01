@@ -2,94 +2,25 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { fetchCareersPageContent } from '../../../app/fetchContent';
+import { LocaleSpecificCareersPageContent } from '../../../app/types';
 
 export default function CareersPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
-  const [mounted, setMounted] = useState(false);
+  const [content, setContent] = useState<LocaleSpecificCareersPageContent | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    params.then(({ locale: paramLocale }) => {
-      setLocale(paramLocale);
-      setMounted(true);
-    });
+    const loadContent = async () => {
+      setLoading(true);
+      const { locale: resolvedLocale } = await params;
+      setLocale(resolvedLocale);
+      const fetchedContent = await fetchCareersPageContent(resolvedLocale);
+      setContent(fetchedContent);
+      setLoading(false);
+    };
+    loadContent();
   }, [params]);
-
-  if (!mounted) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '50vh'
-      }}>
-        <div className="loading-spinner"></div>
-      </div>
-    );
-  }
-
-  const content = locale === 'ar-SA' ? {
-    title: 'الوظائف',
-    section1_title: 'كن جزءًا من عائلتنا',
-    section1_p1: 'نحن نبحث دائمًا عن محترفين متحمسين ومبدعين ومتفانين ومتحمسين لإحداث فرق في حياة الأطفال الصغار. في حضانة خطوة المستقبل، ستكون جزءًا من فريق داعم يقدر الابتكار والتعاون والنمو المهني.',
-    section1_p2: 'سواء كنت معلمًا ذا خبرة، أو مساعدًا مربيًا، أو عضوًا متحمسًا في الفريق الإداري - نرحب بالأفراد الذين يشاركوننا رؤيتنا لإلهام الجيل القادم.',
-    section2_title: 'لماذا تعمل معنا؟',
-    section2_points: [
-      'بيئة تتمحور حول الطفل وهادفة',
-      'تدريب مستمر وتطوير مهني',
-      'ثقافة عمل تعاونية ومحترمة',
-      'مرافق حديثة مصممة للتميز',
-      'فرص للنمو مع رؤيتنا المتوسعة'
-    ],
-    section3_title: 'الوظائف الشاغرة',
-    section3_p1: 'ندعوكم لاستكشاف وظائفنا الشاغرة الحالية لـ:',
-    section3_positions: [
-      'معلمو KG1 و KG2 (مسار عربي وإنجليزي)',
-      'مساعدو تدريس',
-      'موظفون إداريون',
-      'فريق خدمات الدعم (مثل الاستقبال والمرافق)'
-    ],
-    section4_title: 'أرسل سيرتك الذاتية ورسالة التغطية',
-    section4_p1: 'أرسل سيرتك الذاتية ورسالة التغطية إلى: careers@futurestep.edu.sa',
-    section4_p2: 'أو أكمل نموذج الاهتمام أدناه:',
-    form_fullName: 'الاسم الكامل',
-    form_phoneNumber: 'رقم الهاتف',
-    form_emailAddress: 'عنوان البريد الإلكتروني',
-    form_jobTitle: 'المسمى الوظيفي',
-    form_attachResume: 'إرفاق السيرة الذاتية',
-    form_yourMessage: 'رسالتك',
-    form_submitButton: 'إرسال'
-  } : {
-    title: 'Careers',
-    section1_title: 'Be part of our family',
-    section1_p1: 'We are always looking for passionate, creative, and dedicated professionals who are excited to make a difference in the lives of young children. At Future Step Nursery, you’ll be part of a supportive team that values innovation, collaboration, and professional growth.',
-    section1_p2: 'Whether you\'re an experienced educator, a nurturing assistant, or an enthusiastic administrative team member — we welcome individuals who share our vision of inspiring the next generation.',
-    section2_title: 'Why Work With Us?',
-    section2_points: [
-      'A purpose-driven, child-centered environment',
-      'Ongoing training and professional development',
-      'Collaborative and respectful workplace culture',
-      'Modern facilities designed for excellence',
-      'Opportunities to grow with our expanding vision'
-    ],
-    section3_title: 'Open Positions',
-    section3_p1: 'We invite you to explore our current openings for:',
-    section3_positions: [
-      'KG1 & KG2 Teachers (Arabic & English Tracks)',
-      'Teaching Assistants',
-      'Administrative Staff',
-      'Support Services Team (e.g., Reception, Facilities)'
-    ],
-    section4_title: 'Submit Your CV & Cover Letter',
-    section4_p1: 'Submit Your CV & Cover Letter to: careers@futurestep.edu.sa',
-    section4_p2: 'Or complete the interest form below:',
-    form_fullName: 'Full Name',
-    form_phoneNumber: 'Phone Number',
-    form_emailAddress: 'Email Address',
-    form_jobTitle: 'Job Title',
-    form_attachResume: 'Attach resume',
-    form_yourMessage: 'Your message',
-    form_submitButton: 'Submit'
-  };
 
   const formInputStyle = {
     width: '100%',
@@ -108,6 +39,23 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
     fontWeight: 'bold',
     color: 'var(--primary-purple)',
   };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
+
+  if (!content) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem' }}>
+        <h1>Content Not Available</h1>
+        <p>We&apos;re sorry, the content for this page could not be loaded.</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -134,34 +82,9 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
           textShadow: '2px 2px 4px rgba(0, 0, 0, 0.1)',
           fontWeight: 'bold'
         }}>
-          {content.title}
+          {content.hero.title}
         </h1>
-      </section>
-
-      {/* Section 1: Be part of our family */}
-      <section style={{
-        background: 'white',
-        padding: '3rem',
-        borderRadius: 'var(--border-radius)',
-        margin: '3rem auto',
-        maxWidth: '1000px',
-        boxShadow: 'var(--shadow)',
-        textAlign: 'center',
-      }}>
-        <h2 style={{
-          fontSize: '2.5rem',
-          color: 'var(--primary-orange)',
-          marginBottom: '1.5rem',
-          fontWeight: 'bold'
-        }}>
-          {content.section1_title}
-        </h2>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'left' }}>
-          {content.section1_p1}
-        </p>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'left', marginTop: '1rem' }}>
-          {content.section1_p2}
-        </p>
+        <p style={{ fontSize: '1.5rem', color: 'var(--dark-blue)' }}>{content.hero.subtitle}</p>
       </section>
 
       {/* Section 2: Why Work With Us? */}
@@ -186,17 +109,15 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
             marginBottom: '1.5rem',
             fontWeight: 'bold'
           }}>
-            {content.section2_title}
+            {content.whyWorkWithUs.title}
           </h2>
-          <ul style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', paddingLeft: '20px' }}>
-            {content.section2_points.map((point, index) => (
-              <li key={index} className="stagger-item" style={{ marginBottom: '0.5rem' }}>{point}</li>
-            ))}
-          </ul>
+          <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8' }}>
+            {content.whyWorkWithUs.text}
+          </p>
         </div>
         <div>
           <Image
-            src="/careers/boy.jpg"
+            src={content.whyWorkWithUs.imageUrl}
             alt="Happy boy"
             width={500}
             height={500}
@@ -225,22 +146,17 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
           marginBottom: '1.5rem',
           fontWeight: 'bold'
         }}>
-          {content.section3_title}
+          {content.jobOpenings.title}
         </h2>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8' }}>
-          {content.section3_p1}
-        </p>
-        <ul style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', listStyle: 'none', padding: 0, marginTop: '1rem' }}>
-          {content.section3_positions.map((position, index) => (
-            <li key={index} style={{
-              background: 'rgba(255,255,255,0.7)',
-              padding: '1rem',
-              borderRadius: 'var(--border-radius)',
-              marginBottom: '0.5rem',
-              border: '2px solid var(--light-blue)'
-            }}>{position}</li>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+          {content.jobOpenings.openings.map((opening, index) => (
+            <div key={index} style={{ background: 'white', padding: '2rem', borderRadius: 'var(--border-radius)', boxShadow: 'var(--shadow)' }}>
+              <h4>{opening.title}</h4>
+              <p>{opening.description}</p>
+              <a href={opening.applyLink} style={{ color: 'var(--primary-purple)', textDecoration: 'none', fontWeight: 'bold' }}>Apply Now</a>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
 
       {/* Section 4: Submit Your CV */}
@@ -259,41 +175,38 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
           fontWeight: 'bold',
           textAlign: 'center'
         }}>
-          {content.section4_title}
+          {content.cta.title}
         </h2>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'center' }}>
-          {content.section4_p1}
-        </p>
         <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'center', marginBottom: '2rem' }}>
-          {content.section4_p2}
+          {content.cta.subtitle}
         </p>
         <form>
           <div>
-            <label htmlFor="fullName" style={formLabelStyle}>{content.form_fullName}</label>
+            <label htmlFor="fullName" style={formLabelStyle}>Full Name</label>
             <input type="text" id="fullName" name="fullName" style={formInputStyle} />
           </div>
           <div>
-            <label htmlFor="phoneNumber" style={formLabelStyle}>{content.form_phoneNumber}</label>
+            <label htmlFor="phoneNumber" style={formLabelStyle}>Phone Number</label>
             <input type="text" id="phoneNumber" name="phoneNumber" style={formInputStyle} />
           </div>
           <div>
-            <label htmlFor="emailAddress" style={formLabelStyle}>{content.form_emailAddress}</label>
+            <label htmlFor="emailAddress" style={formLabelStyle}>Email Address</label>
             <input type="email" id="emailAddress" name="emailAddress" style={formInputStyle} />
           </div>
           <div>
-            <label htmlFor="jobTitle" style={formLabelStyle}>{content.form_jobTitle}</label>
+            <label htmlFor="jobTitle" style={formLabelStyle}>Job Title</label>
             <select id="jobTitle" name="jobTitle" style={formInputStyle}>
-              {content.section3_positions.map((position, index) => (
-                <option key={index} value={position}>{position}</option>
+              {content.jobOpenings.openings.map((opening, index) => (
+                <option key={index} value={opening.title}>{opening.title}</option>
               ))}
             </select>
           </div>
           <div>
-            <label htmlFor="resume" style={formLabelStyle}>{content.form_attachResume}</label>
+            <label htmlFor="resume" style={formLabelStyle}>Attach resume</label>
             <input type="file" id="resume" name="resume" style={formInputStyle} />
           </div>
           <div>
-            <label htmlFor="message" style={formLabelStyle}>{content.form_yourMessage}</label>
+            <label htmlFor="message" style={formLabelStyle}>Your message</label>
             <textarea id="message" name="message" style={{...formInputStyle, minHeight: '150px'}}></textarea>
           </div>
           <button type="submit" style={{
@@ -318,7 +231,7 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
             e.currentTarget.style.transform = 'scale(1)';
           }}
           >
-            {content.form_submitButton}
+            {content.cta.buttonText}
           </button>
         </form>
       </section>
