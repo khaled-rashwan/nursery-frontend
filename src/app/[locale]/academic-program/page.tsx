@@ -3,9 +3,35 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { fetchAcademicProgramPageContent } from '../../../app/fetchContent';
+import { LocaleSpecificAcademicProgramContent, Program } from '../../../app/types';
+
+const programDetails: { [key: string]: { primaryColor: string; lightColor1: string; lightColor2: string; bgIcon1: string; bgIcon2: string } } = {
+  'pre-kg': {
+    primaryColor: 'var(--primary-orange)',
+    lightColor1: 'var(--light-orange)',
+    lightColor2: '#ffe5dc',
+    bgIcon1: '🎨',
+    bgIcon2: '🧸',
+  },
+  'kg1': {
+    primaryColor: 'var(--primary-blue)',
+    lightColor1: 'var(--light-blue)',
+    lightColor2: 'var(--light-blue-alt)',
+    bgIcon1: '📚',
+    bgIcon2: '🎪',
+  },
+  'kg2': {
+    primaryColor: 'var(--primary-green)',
+    lightColor1: 'var(--light-green)',
+    lightColor2: '#f0f8e8',
+    bgIcon1: '🎓',
+    bgIcon2: '⭐',
+  },
+};
 
 // Educational Philosophy Section
-function EducationalPhilosophySection({ locale }: { locale: string }) {
+function EducationalPhilosophySection({ content, locale }: { content: LocaleSpecificAcademicProgramContent['educationalPhilosophy']; locale: string }) {
   return (
     <section style={{
       padding: '6rem 2rem',
@@ -58,7 +84,7 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
             fontWeight: 'bold',
             textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
           }}>
-            🌟 {locale === 'ar-SA' ? 'فلسفتنا التعليمية' : 'Our Educational Philosophy'}
+            🌟 {content.title}
           </h1>
         </div>
 
@@ -83,7 +109,7 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
             fontWeight: 'bold',
             boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
           }}>
-            📖 {locale === 'ar-SA' ? 'منهجنا التعليمي' : 'EYFS Framework'}
+            📖 {content.framework}
           </div>
 
           <div style={{
@@ -104,10 +130,7 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
             textAlign: 'center',
             fontStyle: 'italic'
           }}>
-            {locale === 'ar-SA' 
-              ? 'في روضة خطوة المستقبل، نتبع إطار عمل السنوات المبكرة (EYFS) - وهو نموذج محترم عالمياً يؤكد على أهمية الاستكشاف الذي يقوده الطفل، والتعلم من خلال اللعب، والتطوير العاطفي في السنوات المبكرة.'
-              : 'At Future Step Nursery, we follow the Early Years Foundation Stage (EYFS) framework — a globally respected model that emphasizes the importance of child-led exploration, learning through play, and emotional development in the early years.'
-            }
+            {content.frameworkDescription}
           </p>
 
           <p style={{
@@ -117,10 +140,7 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
             textAlign: 'center',
             marginBottom: '3rem'
           }}>
-            {locale === 'ar-SA' 
-              ? 'نؤمن أن الأطفال يزدهرون في البيئات التي تشجع الفضول والإبداع والثقة. نركز على رعاية الطفل ككل: اجتماعياً وعاطفياً وجسدياً وفكرياً - مما يضمن رؤية كل متعلم صغير ودعمه والاحتفال به.'
-              : 'We believe that children thrive in environments that encourage curiosity, creativity, and confidence. We focus on nurturing the whole child: socially, emotionally, physically, and intellectually — ensuring that each young learner is seen, supported, and celebrated.'
-            }
+            {content.philosophy}
           </p>
 
           {/* Core Values Grid */}
@@ -130,34 +150,13 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
             gap: '2rem',
             marginTop: '3rem'
           }}>
-            {[
-              {
-                icon: '🎯',
-                title: locale === 'ar-SA' ? 'الاستكشاف الموجه' : 'Child-Led Exploration',
-                color: 'var(--primary-blue)'
-              },
-              {
-                icon: '🎮',
-                title: locale === 'ar-SA' ? 'التعلم باللعب' : 'Learning Through Play',
-                color: 'var(--primary-green)'
-              },
-              {
-                icon: '💝',
-                title: locale === 'ar-SA' ? 'التطوير العاطفي' : 'Emotional Development',
-                color: 'var(--primary-orange)'
-              },
-              {
-                icon: '🌱',
-                title: locale === 'ar-SA' ? 'النمو الشامل' : 'Holistic Growth',
-                color: 'var(--primary-yellow)'
-              }
-            ].map((value, index) => (
+            {content.coreValues.map((value, index) => (
               <div key={index} style={{
                 textAlign: 'center',
                 padding: '1.5rem',
-                background: `${value.color}15`,
+                background: `${['var(--primary-blue)', 'var(--primary-green)', 'var(--primary-orange)', 'var(--primary-yellow)'][index % 4]}15`,
                 borderRadius: '20px',
-                border: `2px solid ${value.color}`,
+                border: `2px solid ${['var(--primary-blue)', 'var(--primary-green)', 'var(--primary-orange)', 'var(--primary-yellow)'][index % 4]}`,
                 transition: 'transform 0.3s ease'
               }}
               onMouseEnter={(e) => {
@@ -174,7 +173,7 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
                 </div>
                 <h4 style={{
                   fontSize: '1.1rem',
-                  color: value.color,
+                  color: ['var(--primary-blue)', 'var(--primary-green)', 'var(--primary-orange)', 'var(--primary-yellow)'][index % 4],
                   fontWeight: 'bold'
                 }}>
                   {value.title}
@@ -188,27 +187,14 @@ function EducationalPhilosophySection({ locale }: { locale: string }) {
   );
 }
 
-// Program interface
-interface Program {
-  lightColor1: string;
-  lightColor2: string;
-  bgIcon1: string;
-  bgIcon2: string;
-  image: string;
-  title: string;
-  ageRange: string;
-  primaryColor: string;
-  icon: string;
-  overview: string;
-  experiences: string[];
-}
 
 // Program Detail Component
 function ProgramDetailSection({ program, locale }: { program: Program; locale: string }) {
+  const details = programDetails[program.id];
   return (
     <section style={{
       padding: '6rem 2rem',
-      background: `linear-gradient(135deg, ${program.lightColor1} 0%, ${program.lightColor2} 100%)`,
+      background: `linear-gradient(135deg, ${details.lightColor1} 0%, ${details.lightColor2} 100%)`,
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -220,7 +206,7 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
         fontSize: '3rem',
         opacity: 0.1,
         animation: 'float 8s ease-in-out infinite'
-      }}>{program.bgIcon1}</div>
+      }}>{details.bgIcon1}</div>
       <div style={{
         position: 'absolute',
         bottom: '20%',
@@ -229,7 +215,7 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
         opacity: 0.1,
         animation: 'float 8s ease-in-out infinite',
         animationDelay: '3s'
-      }}>{program.bgIcon2}</div>
+      }}>{details.bgIcon2}</div>
 
       <div style={{
         maxWidth: '1400px',
@@ -268,7 +254,7 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
               e.currentTarget.style.transform = 'rotate(-3deg) scale(1)';
             }}>
               <Image
-                src={program.image} 
+                src={`https://firebasestorage.googleapis.com/v0/b/future-step-nursery.appspot.com/o/media%2F${program.image}?alt=media`}
                 alt={program.title}
                 width={450}
                 height={450}
@@ -310,7 +296,7 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
               padding: '3rem',
               borderRadius: '25px',
               boxShadow: '0 15px 50px rgba(0,0,0,0.15)',
-              border: `3px solid ${program.primaryColor}`,
+              border: `3px solid ${details.primaryColor}`,
               position: 'relative'
             }}>
               {/* Program Title Badge */}
@@ -319,7 +305,7 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
                 top: '-15px',
                 left: locale === 'ar-SA' ? 'auto' : '30px',
                 right: locale === 'ar-SA' ? '30px' : 'auto',
-                background: program.primaryColor,
+                background: details.primaryColor,
                 color: 'white',
                 padding: '0.75rem 2rem',
                 borderRadius: '25px',
@@ -333,7 +319,7 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
               {/* Overview */}
               <h2 style={{
                 fontSize: '2.5rem',
-                color: program.primaryColor,
+                color: details.primaryColor,
                 marginBottom: '1.5rem',
                 marginTop: '2rem',
                 fontWeight: 'bold'
@@ -353,11 +339,11 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
               {/* What Your Child Will Experience */}
               <h3 style={{
                 fontSize: '2rem',
-                color: program.primaryColor,
+                color: details.primaryColor,
                 marginBottom: '2rem',
                 fontWeight: 'bold'
               }}>
-                {locale === 'ar-SA' ? 'ما سيختبره طفلك:' : 'What Your Child Will Experience:'}
+                {program.experiencesTitle}
               </h3>
 
               <div style={{
@@ -370,23 +356,23 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
                     alignItems: 'flex-start',
                     gap: '1rem',
                     padding: '1.5rem',
-                    background: `${program.primaryColor}10`,
+                    background: `${details.primaryColor}10`,
                     borderRadius: '15px',
-                    border: `2px solid ${program.primaryColor}30`,
+                    border: `2px solid ${details.primaryColor}30`,
                     transition: 'transform 0.3s ease'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateX(10px)';
-                    e.currentTarget.style.background = `${program.primaryColor}20`;
+                    e.currentTarget.style.background = `${details.primaryColor}20`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateX(0)';
-                    e.currentTarget.style.background = `${program.primaryColor}10`;
+                    e.currentTarget.style.background = `${details.primaryColor}10`;
                   }}>
                     <div style={{
                       width: '30px',
                       height: '30px',
-                      background: program.primaryColor,
+                      background: details.primaryColor,
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
@@ -420,161 +406,34 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
 // Main Academic Program Page Component
 export default function AcademicProgramPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
-  const [mounted, setMounted] = useState(false);
+  const [content, setContent] = useState<LocaleSpecificAcademicProgramContent | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    params.then(({ locale: paramLocale }) => {
-      setLocale(paramLocale);
-      setMounted(true);
-    });
+    const loadContent = async () => {
+      setLoading(true);
+      const { locale: resolvedLocale } = await params;
+      setLocale(resolvedLocale);
+      const fetchedContent = await fetchAcademicProgramPageContent(resolvedLocale);
+      setContent(fetchedContent);
+      setLoading(false);
+    };
+    loadContent();
   }, [params]);
 
-  const programs = locale === 'ar-SA' ? [
-    {
-      id: 'pre-kg',
-      title: 'ما قبل الروضة',
-      ageRange: '2.5-3.5 سنوات',
-      icon: '🌱',
-      image: '/prekg.avif',
-      primaryColor: 'var(--primary-orange)',
-      lightColor1: 'var(--light-orange)',
-      lightColor2: '#ffe5dc',
-      bgIcon1: '🎨',
-      bgIcon2: '🧸',
-      overview: 'يوفر برنامج ما قبل الروضة لدينا بداية دافئة ومرحبة للتعليم المبكر. وهو مصمم لتعريف الأطفال الصغار بلطف على البيئة التعليمية، وتعزيز الشعور بالأمان والانتماء والفضول.',
-      experiences: [
-        'محو الأمية والحساب المبكر باستخدام الصوتيات والعد الممتع',
-        'تطوير الذكاء العاطفي من خلال القصص والنقاش',
-        'الاستكشاف العلمي والطبيعي القائم على الاستقصاء',
-        'الفن والموسيقى والحركة لتقوية التعبير',
-        'أنشطة لتشجيع الاستقلالية والاستعداد للمدرسة'
-      ]
-    },
-    {
-      id: 'kg1',
-      title: 'الروضة الأولى',
-      ageRange: '3-4 سنوات',
-      icon: '🎯',
-      image: '/kg1.png',
-      primaryColor: 'var(--primary-blue)',
-      lightColor1: 'var(--light-blue)',
-      lightColor2: 'var(--light-blue-alt)',
-      bgIcon1: '📚',
-      bgIcon2: '🎪',
-      overview: 'يوفر برنامج الروضة الأولى مقدمة دافئة وآمنة لرحلة التعلم. في هذه المرحلة، نركز على مساعدة الأطفال على تطوير التواصل الأساسي والمهارات الحركية المبكرة والاستقلالية والثقة.',
-      experiences: [
-        'الروتين اليومي الذي يعزز الشعور بالبنية والراحة',
-        'أنشطة لتطوير المهارات الحركية الكبرى والدقيقة',
-        'الأغاني والقصص ووقت الحلقة لتعزيز اللغة',
-        'لعب الأدوار واللعب التخيلي لإثارة الخيال',
-        'التنشئة الاجتماعية اللطيفة والعمل الجماعي من خلال اللعب الموجه'
-      ]
-    },
-    {
-      id: 'kg2',
-      title: 'الروضة الثانية',
-      ageRange: '4-5 سنوات',
-      icon: '🚀',
-      image: '/kg2.png',
-      primaryColor: 'var(--primary-green)',
-      lightColor1: 'var(--light-green)',
-      lightColor2: '#f0f8e8',
-      bgIcon1: '🎓',
-      bgIcon2: '⭐',
-      overview: 'تبني الروضة الثانية على أساس الروضة الأولى، وتعرف الأطفال على المفاهيم الأكاديمية المبكرة من خلال الأنشطة العملية والتجارب ذات المعنى. يتم تشجيع الأطفال على التفكير النقدي والتعاون مع الأقران والتعبير عن أنفسهم بثقة.',
-      experiences: [
-        'محو الأمية والحساب المبكر باستخدام الصوتيات والعد الممتع',
-        'تطوير الذكاء العاطفي من خلال القصص والنقاش',
-        'الاستكشاف العلمي والطبيعي القائم على الاستقصاء',
-        'الفن والموسيقى والحركة لتقوية التعبير',
-        'أنشطة لتشجيع الاستقلالية والاستعداد للمدرسة'
-      ]
-    }
-  ] : [
-    {
-      id: 'pre-kg',
-      title: 'Pre-KG',
-      ageRange: '2.5–3.5 Years',
-      icon: '🌱',
-      image: '/prekg.avif',
-      primaryColor: 'var(--primary-orange)',
-      lightColor1: 'var(--light-orange)',
-      lightColor2: '#ffe5dc',
-      bgIcon1: '🎨',
-      bgIcon2: '🧸',
-      overview: 'Our Pre-KG program offers a warm, welcoming start to early education. It is designed to gently introduce young children to the learning environment, fostering a sense of security, belonging, and curiosity.',
-      experiences: [
-        'Early literacy and numeracy using phonics and playful counting',
-        'Emotional intelligence development through storytelling and discussion',
-        'Inquiry–based science and nature exploration',
-        'Art, music, and movement to strengthen expression',
-        'Activities to encourage independence and school readiness'
-      ]
-    },
-    {
-      id: 'kg1',
-      title: 'KG1',
-      ageRange: '3–4 Years Old',
-      icon: '🎯',
-      image: '/kg1.png',
-      primaryColor: 'var(--primary-blue)',
-      lightColor1: 'var(--light-blue)',
-      lightColor2: 'var(--light-blue-alt)',
-      bgIcon1: '📚',
-      bgIcon2: '🎪',
-      overview: 'Our KG1 program offers a warm, secure introduction to the learning journey. At this stage, our focus is on helping children develop basic communication, early motor skills, independence, and confidence.',
-      experiences: [
-        'Daily routines that promote a sense of structure and comfort',
-        'Activities to develop gross and fine motor skills',
-        'Songs, stories, and circle time to enhance language',
-        'Role–playing and pretend play to spark imagination',
-        'Gentle socialization and teamwork through guided play'
-      ]
-    },
-    {
-      id: 'kg2',
-      title: 'KG2',
-      ageRange: '4–5 Years Old',
-      icon: '🚀',
-      image: '/kg2.png',
-      primaryColor: 'var(--primary-green)',
-      lightColor1: 'var(--light-green)',
-      lightColor2: '#f0f8e8',
-      bgIcon1: '🎓',
-      bgIcon2: '⭐',
-      overview: 'KG2 builds upon the KG1 foundation, introducing children to early academic concepts through hands-on activities and meaningful experiences. Children are encouraged to think critically, collaborate with peers, and express themselves confidently.',
-      experiences: [
-        'Early literacy and numeracy using phonics and playful counting',
-        'Emotional intelligence development through storytelling and discussion',
-        'Inquiry–based science and nature exploration',
-        'Art, music, and movement to strengthen expression',
-        'Activities to encourage independence and school readiness'
-      ]
-    }
-  ];
-
-  if (!mounted) {
+  if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        background: 'linear-gradient(135deg, var(--light-blue), var(--light-yellow))'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          color: 'var(--primary-blue-dark)'
-        }}>
-          <div className="loading-spinner" style={{
-            width: '60px',
-            height: '60px',
-            margin: '0 auto 2rem'
-          }}></div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-            {locale === 'ar-SA' ? 'جاري التحميل...' : 'Loading...'}
-          </h2>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
+
+  if (!content) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem' }}>
+        <h1>Content Not Available</h1>
+        <p>We&apos;re sorry, the content for this page could not be loaded.</p>
       </div>
     );
   }
@@ -584,9 +443,9 @@ export default function AcademicProgramPage({ params }: { params: Promise<{ loca
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)'
     }}>
-      <EducationalPhilosophySection locale={locale} />
+      <EducationalPhilosophySection content={content.educationalPhilosophy} locale={locale} />
       
-      {programs.map((program) => (
+      {content.programs.map((program) => (
         <ProgramDetailSection 
           key={program.id} 
           program={program} 
@@ -610,7 +469,7 @@ export default function AcademicProgramPage({ params }: { params: Promise<{ loca
             marginBottom: '2rem',
             fontWeight: 'bold'
           }}>
-            {locale === 'ar-SA' ? '🎓 هل أنت مستعد لبدء رحلة طفلك؟' : '🎓 Ready to Start Your Child\'s Journey?'}
+            {content.cta.title}
           </h2>
           
           <p style={{
@@ -619,10 +478,7 @@ export default function AcademicProgramPage({ params }: { params: Promise<{ loca
             marginBottom: '3rem',
             opacity: 0.9
           }}>
-            {locale === 'ar-SA' 
-              ? 'انضم إلى عائلة روضة خطوة المستقبل واكتشف كيف يمكن لطفلك أن يزدهر في بيئة تعليمية محبة ومحفزة.'
-              : 'Join the Future Step Nursery family and discover how your child can thrive in a nurturing, stimulating educational environment.'
-            }
+            {content.cta.subtitle}
           </p>
 
           <div style={{
@@ -655,7 +511,7 @@ export default function AcademicProgramPage({ params }: { params: Promise<{ loca
                 e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
               }}
             >
-              📝 {locale === 'ar-SA' ? 'ابدأ التسجيل' : 'Start Enrollment'}
+              📝 {content.cta.enrollButton}
             </Link>
 
             <Link 
@@ -683,7 +539,7 @@ export default function AcademicProgramPage({ params }: { params: Promise<{ loca
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              💬 {locale === 'ar-SA' ? 'تواصل معنا' : 'Contact Us'}
+              💬 {content.cta.contactButton}
             </Link>
           </div>
         </div>
