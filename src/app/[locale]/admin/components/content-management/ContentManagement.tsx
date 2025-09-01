@@ -735,6 +735,7 @@ function CareersForm({ content, setContent }: { content: LocaleSpecificCareersCo
 function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmissionsContent, setContent: (content: LocaleSpecificAdmissionsContent) => void }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeImageField, setActiveImageField] = useState<'boy' | 'girl' | null>(null);
+  const [activeKeyDateIndex, setActiveKeyDateIndex] = useState<number | null>(null);
 
   const handleChange = (field: keyof LocaleSpecificAdmissionsContent, value: string) => {
     setContent({
@@ -824,6 +825,19 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
       });
       setIsModalOpen(false);
       setActiveImageField(null);
+    } else if (activeKeyDateIndex !== null) {
+      // Handle Key Date image selection
+      const newItems = [...content.keyDates.items];
+      newItems[activeKeyDateIndex] = { ...newItems[activeKeyDateIndex], image: mediaItem.url };
+      setContent({
+        ...content,
+        keyDates: {
+          ...content.keyDates,
+          items: newItems
+        }
+      });
+      setIsModalOpen(false);
+      setActiveKeyDateIndex(null);
     }
   };
 
@@ -832,11 +846,20 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
     setIsModalOpen(true);
   };
 
+  const openKeyDateMediaLibrary = (keyDateIndex: number) => {
+    setActiveKeyDateIndex(keyDateIndex);
+    setIsModalOpen(true);
+  };
+
   return (
     <div>
       <MediaLibraryModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setActiveImageField(null);
+          setActiveKeyDateIndex(null);
+        }}
         onSelect={handleImageSelect}
       />
 
@@ -879,8 +902,30 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
                 <input style={formStyles.input} type="text" value={item.title} onChange={(e) => handleKeyDateChange(index, 'title', e.target.value)} />
               </div>
               <div>
-                <label style={formStyles.label}>Image URL</label>
-                <input style={formStyles.input} type="text" value={item.image} onChange={(e) => handleKeyDateChange(index, 'image', e.target.value)} />
+                <label style={formStyles.label}>Image</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <Image 
+                    src={item.image.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} 
+                    alt={item.title} 
+                    width={150} 
+                    height={150} 
+                    style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => openKeyDateMediaLibrary(index)} 
+                    style={{
+                      padding: '0.8rem 1.5rem', 
+                      borderRadius: '8px', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      background: 'var(--primary-purple)', 
+                      color: 'white'
+                    }}
+                  >
+                    Choose Image
+                  </button>
+                </div>
               </div>
             </div>
           ))}

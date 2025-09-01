@@ -208,20 +208,20 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
             {tabContent[activeTab as keyof typeof tabContent]}
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gap: '1rem', maxWidth: isRTL ? '300px' : '300px' }}>
           <Image 
             src={content.images.girl.replace('gs://future-step-nursery.firebasestorage.app', '')} 
             alt="Happy student" 
             width={300} 
             height={225} 
-            style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} 
+            style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto', maxWidth: '300px' }} 
           />
           <Image 
             src={content.images.boy.replace('gs://future-step-nursery.firebasestorage.app', '')} 
             alt="Happy student" 
             width={300} 
             height={225} 
-            style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} 
+            style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto', maxWidth: '300px' }} 
           />
         </div>
       </section>
