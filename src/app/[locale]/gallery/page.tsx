@@ -1,19 +1,29 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { fetchGalleryPageContent } from '../../../app/fetchContent';
+import { LocaleSpecificGalleryContent, GalleryImage } from '../../../app/types';
 
 export default function GalleryPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
-  const [mounted, setMounted] = useState(false);
+  const [content, setContent] = useState<LocaleSpecificGalleryContent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
 
   useEffect(() => {
-    params.then(({ locale: paramLocale }) => {
-      setLocale(paramLocale);
-      setMounted(true);
-    });
+    const loadContent = async () => {
+      setLoading(true);
+      const { locale: resolvedLocale } = await params;
+      setLocale(resolvedLocale);
+      const fetchedContent = await fetchGalleryPageContent(resolvedLocale);
+      setContent(fetchedContent);
+      setLoading(false);
+    };
+    loadContent();
   }, [params]);
 
-  if (!mounted) {
+  if (loading) {
     return (
       <div style={{
         display: 'flex',
@@ -26,21 +36,24 @@ export default function GalleryPage({ params }: { params: Promise<{ locale: stri
     );
   }
 
-  const content = locale === 'ar-SA' ? {
-    title: 'المعرض',
-    subtitle: 'روضة خطوة المستقبل',
-    heading: 'استكشف عالمنا',
-    p1: 'يقدم معرضنا نافذة على الحياة اليومية في روضة خطوة المستقبل. شاهد كيف يتعلم أطفالنا وينمون ويضحكون في بيئة نابضة بالحياة مصممة خصيصًا لهم.',
-    p2: 'من المغامرات الفنية واللعب في الهواء الطلق إلى الاحتفالات ذات الطابع الخاص والاكتشافات في الفصول الدراسية - كل صورة تحكي قصة تعلم ممتعة.',
-    placeholder: 'سيتم إضافة الصور قريبًا...'
-  } : {
-    title: 'Gallery',
-    subtitle: 'Future Step Kindergarten',
-    heading: 'Explore Our World',
-    p1: 'Our gallery offers a window into daily life at Future Step Kindergarten. See how our children learn, grow, and laugh in a vibrant environment designed just for them.',
-    p2: 'From artistic adventures and outdoor play to themed celebrations and classroom discoveries — every photo tells a story of joyful learning.',
-    placeholder: 'Images will be added soon...'
-  };
+  if (!content) {
+    return (
+      <div style={{
+        textAlign: 'center',
+        padding: '4rem',
+        minHeight: '50vh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <h1 style={{ color: 'var(--primary-purple)', marginBottom: '1rem' }}>Content Not Available</h1>
+        <p style={{ color: '#666' }}>We&apos;re sorry, the gallery content could not be loaded.</p>
+      </div>
+    );
+  }
+
+  const hasImages = content.images && content.images.length > 0;
 
   return (
     <div style={{
@@ -78,6 +91,7 @@ export default function GalleryPage({ params }: { params: Promise<{ locale: stri
         </h2>
       </section>
 
+      {/* Description Section */}
       <section style={{
         background: 'white',
         padding: '3rem',
@@ -95,29 +109,198 @@ export default function GalleryPage({ params }: { params: Promise<{ locale: stri
         }}>
           {content.heading}
         </h2>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'left' }}>
-          {content.p1}
+        <p style={{ 
+          fontSize: '1.2rem', 
+          color: '#555', 
+          lineHeight: '1.8', 
+          textAlign: locale === 'ar-SA' ? 'right' : 'left',
+          marginBottom: '1rem'
+        }}>
+          {content.description1}
         </p>
-        <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'left', marginTop: '1rem' }}>
-          {content.p2}
+        <p style={{ 
+          fontSize: '1.2rem', 
+          color: '#555', 
+          lineHeight: '1.8', 
+          textAlign: locale === 'ar-SA' ? 'right' : 'left'
+        }}>
+          {content.description2}
         </p>
       </section>
 
+      {/* Gallery Section */}
       <section style={{
-        textAlign: 'center',
-        padding: '4rem 2rem',
-        background: 'linear-gradient(135deg, var(--light-blue), var(--light-yellow))',
+        background: 'white',
+        padding: '3rem',
         borderRadius: 'var(--border-radius)',
-        margin: '2rem auto',
+        margin: '3rem auto',
         maxWidth: '1200px',
         boxShadow: 'var(--shadow)',
       }}>
-        <h3 style={{
-            fontSize: '2rem',
-            color: 'var(--primary-purple)',
-            fontWeight: 'bold'
-        }}>{content.placeholder}</h3>
+        <h2 style={{
+          fontSize: '2.5rem',
+          color: 'var(--primary-purple)',
+          marginBottom: '2rem',
+          fontWeight: 'bold',
+          textAlign: 'center'
+        }}>
+          {content.imagesTitle}
+        </h2>
+        
+        {hasImages ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '2rem',
+            justifyItems: 'center'
+          }}>
+            {content.images.map((image, index) => (
+              <div
+                key={image.id || index}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '250px',
+                  borderRadius: '15px',
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                  cursor: 'pointer',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                }}
+                onClick={() => setSelectedImage(image)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                  e.currentTarget.style.boxShadow = '0 12px 35px rgba(0,0,0,0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                }}
+              >
+                <Image
+                  src={image.url}
+                  alt={image.description || image.filename}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+                {image.description && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                    color: 'white',
+                    padding: '1rem',
+                    fontSize: '0.9rem'
+                  }}>
+                    {image.description}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '4rem 2rem',
+            background: 'linear-gradient(135deg, var(--light-blue), var(--light-yellow))',
+            borderRadius: 'var(--border-radius)',
+            margin: '2rem 0',
+          }}>
+            <h3 style={{
+              fontSize: '2rem',
+              color: 'var(--primary-purple)',
+              fontWeight: 'bold'
+            }}>
+              {locale === 'ar-SA' ? 'سيتم إضافة الصور قريبًا...' : 'Images will be added soon...'}
+            </h3>
+          </div>
+        )}
       </section>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '2rem'
+          }}
+          onClick={() => setSelectedImage(null)}
+        >
+          <div style={{
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            backgroundColor: 'white',
+            borderRadius: '15px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+          }}
+          onClick={(e) => e.stopPropagation()}>
+            <button 
+              onClick={() => setSelectedImage(null)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                zIndex: 1001,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ×
+            </button>
+            <Image
+              src={selectedImage.url}
+              alt={selectedImage.description || selectedImage.filename}
+              width={800}
+              height={600}
+              style={{ 
+                width: '100%', 
+                height: 'auto',
+                maxHeight: '80vh',
+                objectFit: 'contain'
+              }}
+            />
+            {selectedImage.description && (
+              <div style={{
+                padding: '1.5rem',
+                background: 'white',
+                borderTop: '1px solid #eee'
+              }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: '1.1rem',
+                  color: '#333',
+                  textAlign: locale === 'ar-SA' ? 'right' : 'left'
+                }}>
+                  {selectedImage.description}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -259,3 +259,30 @@ export interface FirestoreAdmissionsPageContent {
   'en-US': LocaleSpecificAdmissionsContent;
   'ar-SA': LocaleSpecificAdmissionsContent;
 }
+
+// Types for the "Gallery" page content
+export interface GalleryImage {
+  id: string;
+  url: string;
+  filename: string;
+  description?: string;
+  uploadedAt?: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+}
+
+export interface LocaleSpecificGalleryContent {
+  title: string;
+  subtitle: string;
+  heading: string;
+  description1: string;
+  description2: string;
+  imagesTitle: string;
+  images: GalleryImage[];
+}
+
+export interface FirestoreGalleryPageContent {
+  'en-US': LocaleSpecificGalleryContent;
+  'ar-SA': LocaleSpecificGalleryContent;
+}

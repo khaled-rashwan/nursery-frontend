@@ -15,7 +15,9 @@ import {
   FirestoreCareersPageContent,
   LocaleSpecificCareersContent,
   FirestoreAdmissionsPageContent,
-  LocaleSpecificAdmissionsContent
+  LocaleSpecificAdmissionsContent,
+  FirestoreGalleryPageContent,
+  LocaleSpecificGalleryContent
 } from './types';
 
 // Initialize Firebase Functions
@@ -28,6 +30,7 @@ const getContactUsPageContentCallable = httpsCallable(functions, 'getContactUsPa
 const getAcademicProgramPageContentCallable = httpsCallable(functions, 'getAcademicProgramPageContent');
 const getCareersPageContentCallable = httpsCallable(functions, 'getCareersPageContent');
 const getAdmissionsPageContentCallable = httpsCallable(functions, 'getAdmissionsPageContent');
+const getGalleryPageContentCallable = httpsCallable(functions, 'getGalleryPageContent');
 
 /**
  * Fetches the homepage content from the 'getHomePageContent' Cloud Function.
@@ -242,6 +245,43 @@ export async function fetchAllAdmissionsPageContent(): Promise<FirestoreAdmissio
     return result.data as FirestoreAdmissionsPageContent;
   } catch (error) {
     console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllAdmissionsPageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the gallery page content from the 'getGalleryPageContent' Cloud Function.
+ *
+ * @param locale The desired locale ('en-US' or 'ar-SA').
+ * @returns A promise that resolves to the locale-specific content, or null if an error occurs.
+ */
+export async function fetchGalleryPageContent(locale: string): Promise<LocaleSpecificGalleryContent | null> {
+  noStore();
+  try {
+    const result = await getGalleryPageContentCallable();
+    const fullContent = result.data as FirestoreGalleryPageContent;
+    if (locale === 'en-US' || locale === 'ar-SA') {
+      return fullContent[locale];
+    }
+    return fullContent['en-US'];
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchGalleryPageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the complete gallery page content from the 'getGalleryPageContent' Cloud Function.
+ *
+ * @returns A promise that resolves to the complete content object, or null if an error occurs.
+ */
+export async function fetchAllGalleryPageContent(): Promise<FirestoreGalleryPageContent | null> {
+  noStore();
+  try {
+    const result = await getGalleryPageContentCallable();
+    return result.data as FirestoreGalleryPageContent;
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllGalleryPageContent:', error);
     return null;
   }
 }
