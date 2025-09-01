@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent } from '../../../../fetchContent';
+import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
@@ -11,7 +11,10 @@ import {
   AboutUsSection,
   FirestoreContactUsPageContent,
   LocaleSpecificContactUsContent,
-  Faq
+  Faq,
+  FirestoreAcademicProgramPageContent,
+  LocaleSpecificAcademicProgramContent,
+  Program
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
 import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
@@ -369,12 +372,162 @@ function AboutUsForm({ content, setContent }: { content: LocaleSpecificAboutUsCo
   );
 }
 
+function AcademicProgramForm({ content, setContent }: { content: LocaleSpecificAcademicProgramContent, setContent: (content: LocaleSpecificAcademicProgramContent) => void }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeProgramIndex, setActiveProgramIndex] = useState<number | null>(null);
+
+  const handleImageSelect = (media: MediaItem) => {
+    if (activeProgramIndex !== null) {
+      const newPrograms = [...content.programs];
+      newPrograms[activeProgramIndex].image = media.url;
+      setContent({ ...content, programs: newPrograms });
+    }
+  };
+
+  const openMediaLibrary = (index: number) => {
+    setActiveProgramIndex(index);
+    setIsModalOpen(true);
+  };
+
+  const handlePhilosophyChange = (field: keyof LocaleSpecificAcademicProgramContent['educationalPhilosophy'], value: string) => {
+    setContent({
+      ...content,
+      educationalPhilosophy: {
+        ...content.educationalPhilosophy,
+        [field]: value,
+      },
+    });
+  };
+
+  const handleProgramChange = (index: number, field: keyof Program, value: string) => {
+    const newPrograms = [...content.programs];
+    newPrograms[index] = { ...newPrograms[index], [field]: value };
+    setContent({ ...content, programs: newPrograms });
+  };
+
+  const handleExperienceChange = (programIndex: number, experienceIndex: number, value: string) => {
+    const newPrograms = [...content.programs];
+    newPrograms[programIndex].experiences[experienceIndex] = value;
+    setContent({ ...content, programs: newPrograms });
+  };
+
+  const handleCtaChange = (field: keyof LocaleSpecificAcademicProgramContent['cta'], value: string) => {
+    setContent({
+      ...content,
+      cta: {
+        ...content.cta,
+        [field]: value,
+      },
+    });
+  };
+
+  return (
+    <div>
+      <MediaLibraryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleImageSelect}
+      />
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Educational Philosophy</legend>
+        <div style={formStyles.grid}>
+          <div>
+            <label style={formStyles.label}>Title</label>
+            <input style={formStyles.input} type="text" value={content.educationalPhilosophy.title} onChange={(e) => handlePhilosophyChange('title', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Framework</label>
+            <input style={formStyles.input} type="text" value={content.educationalPhilosophy.framework} onChange={(e) => handlePhilosophyChange('framework', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Framework Description</label>
+            <textarea style={formStyles.textarea} value={content.educationalPhilosophy.frameworkDescription} onChange={(e) => handlePhilosophyChange('frameworkDescription', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Philosophy</label>
+            <textarea style={formStyles.textarea} value={content.educationalPhilosophy.philosophy} onChange={(e) => handlePhilosophyChange('philosophy', e.target.value)} />
+          </div>
+        </div>
+      </fieldset>
+
+      {content.programs.map((program, index) => (
+        <fieldset key={program.id} style={formStyles.fieldset}>
+          <legend style={formStyles.legend}>{program.title}</legend>
+          <div style={formStyles.grid}>
+            <div>
+              <label style={formStyles.label}>Title</label>
+              <input style={formStyles.input} type="text" value={program.title} onChange={(e) => handleProgramChange(index, 'title', e.target.value)} />
+            </div>
+            <div>
+              <label style={formStyles.label}>Age Range</label>
+              <input style={formStyles.input} type="text" value={program.ageRange} onChange={(e) => handleProgramChange(index, 'ageRange', e.target.value)} />
+            </div>
+            <div>
+              <label style={formStyles.label}>Icon</label>
+              <input style={formStyles.input} type="text" value={program.icon} onChange={(e) => handleProgramChange(index, 'icon', e.target.value)} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={formStyles.label}>Overview</label>
+              <textarea style={formStyles.textarea} value={program.overview} onChange={(e) => handleProgramChange(index, 'overview', e.target.value)} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={formStyles.label}>Image</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <Image src={program.image} alt={program.title} width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+                <div>
+                  <button type="button" onClick={() => openMediaLibrary(index)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+                    Choose from Library
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={formStyles.label}>Experiences Title</label>
+              <input style={formStyles.input} type="text" value={program.experiencesTitle} onChange={(e) => handleProgramChange(index, 'experiencesTitle', e.target.value)} />
+            </div>
+            {program.experiences.map((experience, expIndex) => (
+              <div key={expIndex} style={{ gridColumn: '1 / -1' }}>
+                <label style={formStyles.label}>Experience {expIndex + 1}</label>
+                <textarea style={formStyles.textarea} value={experience} onChange={(e) => handleExperienceChange(index, expIndex, e.target.value)} />
+              </div>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Call to Action</legend>
+        <div style={formStyles.grid}>
+          <div>
+            <label style={formStyles.label}>Title</label>
+            <input style={formStyles.input} type="text" value={content.cta.title} onChange={(e) => handleCtaChange('title', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Subtitle</label>
+            <textarea style={formStyles.textarea} value={content.cta.subtitle} onChange={(e) => handleCtaChange('subtitle', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Enroll Button Text</label>
+            <input style={formStyles.input} type="text" value={content.cta.enrollButton} onChange={(e) => handleCtaChange('enrollButton', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Contact Button Text</label>
+            <input style={formStyles.input} type="text" value={content.cta.contactButton} onChange={(e) => handleCtaChange('contactButton', e.target.value)} />
+          </div>
+        </div>
+      </fieldset>
+    </div>
+  );
+}
+
+
 export default function ContentManagement() {
   const { user } = useAuth();
   const [homePageContent, setHomePageContent] = useState<FirestoreHomePageContent | null>(null);
   const [aboutUsContent, setAboutUsContent] = useState<FirestoreAboutUsPageContent | null>(null);
   const [contactUsContent, setContactUsContent] = useState<FirestoreContactUsPageContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'media'>('home');
+  const [academicProgramContent, setAcademicProgramContent] = useState<FirestoreAcademicProgramPageContent | null>(null);
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -383,14 +536,16 @@ export default function ContentManagement() {
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
-      const [homeContent, aboutContent, contactContent] = await Promise.all([
+      const [homeContent, aboutContent, contactContent, academicContent] = await Promise.all([
         fetchAllHomePageContent(),
         fetchAllAboutUsPageContent(),
-        fetchAllContactUsPageContent()
+        fetchAllContactUsPageContent(),
+        fetchAllAcademicProgramPageContent()
       ]);
       if (homeContent) setHomePageContent(homeContent);
       if (aboutContent) setAboutUsContent(aboutContent);
       if (contactContent) setContactUsContent(contactContent);
+      if (academicContent) setAcademicProgramContent(academicContent);
       setLoading(false);
     };
     loadContent();
@@ -415,9 +570,12 @@ export default function ContentManagement() {
       } else if (activePage === 'about') {
         functionName = 'saveAboutUsPageContent';
         contentToSave = aboutUsContent;
-      } else {
+      } else if (activePage === 'contact') {
         functionName = 'saveContactUsPageContent';
         contentToSave = contactUsContent;
+      } else if (activePage === 'academic') {
+        functionName = 'saveAcademicProgramPageContent';
+        contentToSave = academicProgramContent;
       }
 
       if (!contentToSave) {
@@ -460,6 +618,7 @@ export default function ContentManagement() {
         <button onClick={() => setActivePage('home')} style={{ padding: '1rem', border: 'none', background: activePage === 'home' ? '#eee' : 'transparent', fontWeight: activePage === 'home' ? 'bold' : 'normal' }}>Homepage</button>
         <button onClick={() => setActivePage('about')} style={{ padding: '1rem', border: 'none', background: activePage === 'about' ? '#eee' : 'transparent', fontWeight: activePage === 'about' ? 'bold' : 'normal' }}>About Us</button>
         <button onClick={() => setActivePage('contact')} style={{ padding: '1rem', border: 'none', background: activePage === 'contact' ? '#eee' : 'transparent', fontWeight: activePage === 'contact' ? 'bold' : 'normal' }}>Contact Us</button>
+        <button onClick={() => setActivePage('academic')} style={{ padding: '1rem', border: 'none', background: activePage === 'academic' ? '#eee' : 'transparent', fontWeight: activePage === 'academic' ? 'bold' : 'normal' }}>Academic Program</button>
         <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
       </div>
 
@@ -488,6 +647,12 @@ export default function ContentManagement() {
         <ContactUsForm
           content={contactUsContent[activeLocale]}
           setContent={(newContent) => setContactUsContent({ ...contactUsContent, [activeLocale]: newContent })}
+        />
+      )}
+      {activePage === 'academic' && academicProgramContent && (
+        <AcademicProgramForm
+          content={academicProgramContent[activeLocale]}
+          setContent={(newContent) => setAcademicProgramContent({ ...academicProgramContent, [activeLocale]: newContent })}
         />
       )}
       {activePage === 'media' && (
