@@ -254,7 +254,7 @@ function ProgramDetailSection({ program, locale }: { program: Program; locale: s
               e.currentTarget.style.transform = 'rotate(-3deg) scale(1)';
             }}>
               <Image
-                src={`https://firebasestorage.googleapis.com/v0/b/future-step-nursery.appspot.com/o/media%2F${program.image}?alt=media`}
+                src={program.image}
                 alt={program.title}
                 width={450}
                 height={450}
