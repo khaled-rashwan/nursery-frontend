@@ -6,7 +6,6 @@ import { fetchCareersPageContent } from '../../../app/fetchContent';
 import { LocaleSpecificCareersContent } from '../../../app/types';
 
 export default function CareersPage({ params }: { params: Promise<{ locale: string }> }) {
-  const [locale, setLocale] = useState<string>('en-US');
   const [content, setContent] = useState<LocaleSpecificCareersContent | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -14,7 +13,6 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
     const loadContent = async () => {
       setLoading(true);
       const { locale: resolvedLocale } = await params;
-      setLocale(resolvedLocale);
       const fetchedContent = await fetchCareersPageContent(resolvedLocale);
       setContent(fetchedContent);
       setLoading(false);

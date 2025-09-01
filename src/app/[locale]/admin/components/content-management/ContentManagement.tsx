@@ -721,8 +721,9 @@ function CareersForm({ content, setContent }: { content: LocaleSpecificCareersCo
 
       {isModalOpen && (
         <MediaLibraryModal
+          isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onSelectMedia={handleImageSelect}
+          onSelect={handleImageSelect}
         />
       )}
     </div>
