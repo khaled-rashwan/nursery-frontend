@@ -157,3 +157,20 @@ export interface FirestoreAcademicProgramPageContent {
   'en-US': LocaleSpecificAcademicProgramContent;
   'ar-SA': LocaleSpecificAcademicProgramContent;
 }
+
+// Types for the "Careers" page content
+export interface CareersSection {
+  title: string;
+  body: string;
+  image?: string;
+}
+
+export interface LocaleSpecificCareersContent {
+  section1: CareersSection;
+  section2: CareersSection;
+}
+
+export interface FirestoreCareersPageContent {
+  'en-US': LocaleSpecificCareersContent;
+  'ar-SA': LocaleSpecificCareersContent;
+}
