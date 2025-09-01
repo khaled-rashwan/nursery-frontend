@@ -3,7 +3,8 @@ const https = require('https');
 const endpoints = [
   'getHomePageContent',
   'getAboutUsPageContent',
-  'getContactUsPageContent'
+  'getContactUsPageContent',
+  'getCareersPageContent'
 ];
 
 const projectId = process.env.PROJECT_ID || 'future-step-nursery';

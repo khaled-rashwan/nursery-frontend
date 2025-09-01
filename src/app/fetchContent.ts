@@ -11,7 +11,9 @@ import {
   FirestoreContactUsPageContent,
   LocaleSpecificContactUsContent,
   FirestoreAcademicProgramPageContent,
-  LocaleSpecificAcademicProgramContent
+  LocaleSpecificAcademicProgramContent,
+  FirestoreCareersPageContent,
+  LocaleSpecificCareersContent
 } from './types';
 
 // Initialize Firebase Functions
@@ -22,6 +24,7 @@ const getHomePageContentCallable = httpsCallable(functions, 'getHomePageContent'
 const getAboutUsPageContentCallable = httpsCallable(functions, 'getAboutUsPageContent');
 const getContactUsPageContentCallable = httpsCallable(functions, 'getContactUsPageContent');
 const getAcademicProgramPageContentCallable = httpsCallable(functions, 'getAcademicProgramPageContent');
+const getCareersPageContentCallable = httpsCallable(functions, 'getCareersPageContent');
 
 /**
  * Fetches the homepage content from the 'getHomePageContent' Cloud Function.
@@ -162,6 +165,43 @@ export async function fetchAllHomePageContent(): Promise<FirestoreHomePageConten
     return result.data as FirestoreHomePageContent;
   } catch (error) {
     console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllHomePageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the "Careers" page content from the 'getCareersPageContent' Cloud Function.
+ *
+ * @param locale The desired locale ('en-US' or 'ar-SA').
+ * @returns A promise that resolves to the locale-specific content, or null if an error occurs.
+ */
+export async function fetchCareersPageContent(locale: string): Promise<LocaleSpecificCareersContent | null> {
+  noStore();
+  try {
+    const result = await getCareersPageContentCallable();
+    const fullContent = result.data as FirestoreCareersPageContent;
+    if (locale === 'en-US' || locale === 'ar-SA') {
+      return fullContent[locale];
+    }
+    return fullContent['en-US'];
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchCareersPageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the entire "Careers" page content object (both locales) from the 'getCareersPageContent' Cloud Function.
+ *
+ * @returns A promise that resolves to the full content object, or null if an error occurs.
+ */
+export async function fetchAllCareersPageContent(): Promise<FirestoreCareersPageContent | null> {
+  noStore();
+  try {
+    const result = await getCareersPageContentCallable();
+    return result.data as FirestoreCareersPageContent;
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllCareersPageContent:', error);
     return null;
   }
 }

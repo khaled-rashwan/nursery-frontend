@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent } from '../../../../fetchContent';
+import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
@@ -14,7 +14,9 @@ import {
   Faq,
   FirestoreAcademicProgramPageContent,
   LocaleSpecificAcademicProgramContent,
-  Program
+  Program,
+  FirestoreCareersPageContent,
+  LocaleSpecificCareersContent
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
 import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
@@ -520,6 +522,214 @@ function AcademicProgramForm({ content, setContent }: { content: LocaleSpecificA
   );
 }
 
+function CareersForm({ content, setContent }: { content: LocaleSpecificCareersContent, setContent: (content: LocaleSpecificCareersContent) => void }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleChange = (field: keyof LocaleSpecificCareersContent, value: string | string[]) => {
+    setContent({
+      ...content,
+      [field]: value
+    });
+  };
+
+  const handlePointChange = (index: number, value: string) => {
+    const newPoints = [...content.section2_points];
+    newPoints[index] = value;
+    setContent({
+      ...content,
+      section2_points: newPoints
+    });
+  };
+
+  const addPoint = () => {
+    setContent({
+      ...content,
+      section2_points: [...content.section2_points, '']
+    });
+  };
+
+  const removePoint = (index: number) => {
+    const newPoints = content.section2_points.filter((_, i) => i !== index);
+    setContent({
+      ...content,
+      section2_points: newPoints
+    });
+  };
+
+  const handlePositionChange = (index: number, value: string) => {
+    const newPositions = [...content.section3_positions];
+    newPositions[index] = value;
+    setContent({
+      ...content,
+      section3_positions: newPositions
+    });
+  };
+
+  const addPosition = () => {
+    setContent({
+      ...content,
+      section3_positions: [...content.section3_positions, '']
+    });
+  };
+
+  const removePosition = (index: number) => {
+    const newPositions = content.section3_positions.filter((_, i) => i !== index);
+    setContent({
+      ...content,
+      section3_positions: newPositions
+    });
+  };
+
+  const handleImageSelect = (mediaItem: MediaItem) => {
+    setContent({
+      ...content,
+      section2_image: mediaItem.url
+    });
+    setIsModalOpen(false);
+  };
+
+  return (
+    <div>
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Hero Section</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Page Title</label>
+            <input style={formStyles.input} type="text" value={content.title} onChange={(e) => handleChange('title', e.target.value)} />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Section 1: Be Part of Our Family</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.section1_title} onChange={(e) => handleChange('section1_title', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Paragraph 1</label>
+            <textarea style={formStyles.textarea} value={content.section1_p1} onChange={(e) => handleChange('section1_p1', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Paragraph 2</label>
+            <textarea style={formStyles.textarea} value={content.section1_p2} onChange={(e) => handleChange('section1_p2', e.target.value)} />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Section 2: Why Work With Us</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.section2_title} onChange={(e) => handleChange('section2_title', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Image</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <Image src={content.section2_image} alt="Section 2" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+              <div>
+                <button type="button" onClick={() => setIsModalOpen(true)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+                  Choose from Library
+                </button>
+              </div>
+            </div>
+          </div>
+          {content.section2_points.map((point, index) => (
+            <div key={index} style={{ gridColumn: '1 / -1', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <label style={formStyles.label}>Point {index + 1}</label>
+              <input style={formStyles.input} type="text" value={point} onChange={(e) => handlePointChange(index, e.target.value)} />
+              <button type="button" onClick={() => removePoint(index)} style={{padding: '0.5rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Remove</button>
+            </div>
+          ))}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <button type="button" onClick={addPoint} style={{padding: '0.8rem 1.5rem', background: 'var(--primary-green)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer'}}>Add Point</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Section 3: Open Positions</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.section3_title} onChange={(e) => handleChange('section3_title', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Text</label>
+            <textarea style={formStyles.textarea} value={content.section3_p1} onChange={(e) => handleChange('section3_p1', e.target.value)} />
+          </div>
+          {content.section3_positions.map((position, index) => (
+            <div key={index} style={{ gridColumn: '1 / -1', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <label style={formStyles.label}>Position {index + 1}</label>
+              <input style={formStyles.input} type="text" value={position} onChange={(e) => handlePositionChange(index, e.target.value)} />
+              <button type="button" onClick={() => removePosition(index)} style={{padding: '0.5rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Remove</button>
+            </div>
+          ))}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <button type="button" onClick={addPosition} style={{padding: '0.8rem 1.5rem', background: 'var(--primary-green)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer'}}>Add Position</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Section 4: Submit CV & Contact Form</legend>
+        <div style={formStyles.grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Section Title</label>
+            <input style={formStyles.input} type="text" value={content.section4_title} onChange={(e) => handleChange('section4_title', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Email Instruction</label>
+            <textarea style={formStyles.textarea} value={content.section4_p1} onChange={(e) => handleChange('section4_p1', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={formStyles.label}>Form Instruction</label>
+            <textarea style={formStyles.textarea} value={content.section4_p2} onChange={(e) => handleChange('section4_p2', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Full Name Label</label>
+            <input style={formStyles.input} type="text" value={content.form_fullName} onChange={(e) => handleChange('form_fullName', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Phone Number Label</label>
+            <input style={formStyles.input} type="text" value={content.form_phoneNumber} onChange={(e) => handleChange('form_phoneNumber', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Email Address Label</label>
+            <input style={formStyles.input} type="text" value={content.form_emailAddress} onChange={(e) => handleChange('form_emailAddress', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Job Title Label</label>
+            <input style={formStyles.input} type="text" value={content.form_jobTitle} onChange={(e) => handleChange('form_jobTitle', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Attach Resume Label</label>
+            <input style={formStyles.input} type="text" value={content.form_attachResume} onChange={(e) => handleChange('form_attachResume', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Your Message Label</label>
+            <input style={formStyles.input} type="text" value={content.form_yourMessage} onChange={(e) => handleChange('form_yourMessage', e.target.value)} />
+          </div>
+          <div>
+            <label style={formStyles.label}>Submit Button Text</label>
+            <input style={formStyles.input} type="text" value={content.form_submitButton} onChange={(e) => handleChange('form_submitButton', e.target.value)} />
+          </div>
+        </div>
+      </fieldset>
+
+      {isModalOpen && (
+        <MediaLibraryModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSelect={handleImageSelect}
+        />
+      )}
+    </div>
+  );
+}
+
 
 export default function ContentManagement() {
   const { user } = useAuth();
@@ -527,7 +737,8 @@ export default function ContentManagement() {
   const [aboutUsContent, setAboutUsContent] = useState<FirestoreAboutUsPageContent | null>(null);
   const [contactUsContent, setContactUsContent] = useState<FirestoreContactUsPageContent | null>(null);
   const [academicProgramContent, setAcademicProgramContent] = useState<FirestoreAcademicProgramPageContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'media'>('home');
+  const [careersContent, setCareersContent] = useState<FirestoreCareersPageContent | null>(null);
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -536,16 +747,18 @@ export default function ContentManagement() {
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
-      const [homeContent, aboutContent, contactContent, academicContent] = await Promise.all([
+      const [homeContent, aboutContent, contactContent, academicContent, careersContent] = await Promise.all([
         fetchAllHomePageContent(),
         fetchAllAboutUsPageContent(),
         fetchAllContactUsPageContent(),
-        fetchAllAcademicProgramPageContent()
+        fetchAllAcademicProgramPageContent(),
+        fetchAllCareersPageContent()
       ]);
       if (homeContent) setHomePageContent(homeContent);
       if (aboutContent) setAboutUsContent(aboutContent);
       if (contactContent) setContactUsContent(contactContent);
       if (academicContent) setAcademicProgramContent(academicContent);
+      if (careersContent) setCareersContent(careersContent);
       setLoading(false);
     };
     loadContent();
@@ -576,6 +789,9 @@ export default function ContentManagement() {
       } else if (activePage === 'academic') {
         functionName = 'saveAcademicProgramPageContent';
         contentToSave = academicProgramContent;
+      } else if (activePage === 'careers') {
+        functionName = 'saveCareersPageContent';
+        contentToSave = careersContent;
       }
 
       if (!contentToSave) {
@@ -619,6 +835,7 @@ export default function ContentManagement() {
         <button onClick={() => setActivePage('about')} style={{ padding: '1rem', border: 'none', background: activePage === 'about' ? '#eee' : 'transparent', fontWeight: activePage === 'about' ? 'bold' : 'normal' }}>About Us</button>
         <button onClick={() => setActivePage('contact')} style={{ padding: '1rem', border: 'none', background: activePage === 'contact' ? '#eee' : 'transparent', fontWeight: activePage === 'contact' ? 'bold' : 'normal' }}>Contact Us</button>
         <button onClick={() => setActivePage('academic')} style={{ padding: '1rem', border: 'none', background: activePage === 'academic' ? '#eee' : 'transparent', fontWeight: activePage === 'academic' ? 'bold' : 'normal' }}>Academic Program</button>
+        <button onClick={() => setActivePage('careers')} style={{ padding: '1rem', border: 'none', background: activePage === 'careers' ? '#eee' : 'transparent', fontWeight: activePage === 'careers' ? 'bold' : 'normal' }}>Careers</button>
         <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
       </div>
 
@@ -653,6 +870,12 @@ export default function ContentManagement() {
         <AcademicProgramForm
           content={academicProgramContent[activeLocale]}
           setContent={(newContent) => setAcademicProgramContent({ ...academicProgramContent, [activeLocale]: newContent })}
+        />
+      )}
+      {activePage === 'careers' && careersContent && (
+        <CareersForm
+          content={careersContent[activeLocale]}
+          setContent={(newContent) => setCareersContent({ ...careersContent, [activeLocale]: newContent })}
         />
       )}
       {activePage === 'media' && (

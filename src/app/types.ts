@@ -157,3 +157,32 @@ export interface FirestoreAcademicProgramPageContent {
   'en-US': LocaleSpecificAcademicProgramContent;
   'ar-SA': LocaleSpecificAcademicProgramContent;
 }
+
+// Types for the "Careers" page content
+export interface LocaleSpecificCareersContent {
+  title: string;
+  section1_title: string;
+  section1_p1: string;
+  section1_p2: string;
+  section2_title: string;
+  section2_points: string[];
+  section2_image: string;
+  section3_title: string;
+  section3_p1: string;
+  section3_positions: string[];
+  section4_title: string;
+  section4_p1: string;
+  section4_p2: string;
+  form_fullName: string;
+  form_phoneNumber: string;
+  form_emailAddress: string;
+  form_jobTitle: string;
+  form_attachResume: string;
+  form_yourMessage: string;
+  form_submitButton: string;
+}
+
+export interface FirestoreCareersPageContent {
+  'en-US': LocaleSpecificCareersContent;
+  'ar-SA': LocaleSpecificCareersContent;
+}
