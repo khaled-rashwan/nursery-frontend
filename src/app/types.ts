@@ -114,3 +114,46 @@ export interface FirestoreContactUsPageContent {
   'en-US': LocaleSpecificContactUsContent;
   'ar-SA': LocaleSpecificContactUsContent;
 }
+
+// Types for the "Academic Program" page content
+export interface CoreValue {
+  icon: string;
+  title: string;
+}
+
+export interface EducationalPhilosophy {
+  title:string;
+  framework: string;
+  frameworkDescription: string;
+  philosophy: string;
+  coreValues: CoreValue[];
+}
+
+export interface Program {
+  id: string;
+  title: string;
+  ageRange: string;
+  icon: string;
+  image: string;
+  overview: string;
+  experiencesTitle: string;
+  experiences: string[];
+}
+
+export interface Cta {
+  title: string;
+  subtitle: string;
+  enrollButton: string;
+  contactButton: string;
+}
+
+export interface LocaleSpecificAcademicProgramContent {
+  educationalPhilosophy: EducationalPhilosophy;
+  programs: Program[];
+  cta: Cta;
+}
+
+export interface FirestoreAcademicProgramPageContent {
+  'en-US': LocaleSpecificAcademicProgramContent;
+  'ar-SA': LocaleSpecificAcademicProgramContent;
+}
