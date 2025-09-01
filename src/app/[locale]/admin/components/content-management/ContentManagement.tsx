@@ -734,6 +734,7 @@ function CareersForm({ content, setContent }: { content: LocaleSpecificCareersCo
 
 function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmissionsContent, setContent: (content: LocaleSpecificAdmissionsContent) => void }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeImageField, setActiveImageField] = useState<'boy' | 'girl' | null>(null);
 
   const handleChange = (field: keyof LocaleSpecificAdmissionsContent, value: string) => {
     setContent({
@@ -812,15 +813,23 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
     });
   };
 
-  const handleImageSelect = (mediaItem: MediaItem, imageField: 'boy' | 'girl') => {
-    setContent({
-      ...content,
-      images: {
-        ...content.images,
-        [imageField]: mediaItem.url
-      }
-    });
-    setIsModalOpen(false);
+  const handleImageSelect = (mediaItem: MediaItem) => {
+    if (activeImageField) {
+      setContent({
+        ...content,
+        images: {
+          ...content.images,
+          [activeImageField]: mediaItem.url
+        }
+      });
+      setIsModalOpen(false);
+      setActiveImageField(null);
+    }
+  };
+
+  const openMediaLibrary = (imageField: 'boy' | 'girl') => {
+    setActiveImageField(imageField);
+    setIsModalOpen(true);
   };
 
   return (
@@ -828,7 +837,7 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
       <MediaLibraryModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSelect={(media) => handleImageSelect(media, 'boy')} // Default to boy, this will be overridden when modal opens
+        onSelect={handleImageSelect}
       />
 
       {/* Hero Section */}
@@ -946,7 +955,7 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
             <label style={formStyles.label}>Boy Image</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
               <Image src={content.images.boy.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} alt="Boy" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
-              <button type="button" onClick={() => setIsModalOpen(true)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+              <button type="button" onClick={() => openMediaLibrary('boy')} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
                 Choose Boy Image
               </button>
             </div>
@@ -955,7 +964,7 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
             <label style={formStyles.label}>Girl Image</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <Image src={content.images.girl.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} alt="Girl" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
-              <button type="button" onClick={() => setIsModalOpen(true)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
+              <button type="button" onClick={() => openMediaLibrary('girl')} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
                 Choose Girl Image
               </button>
             </div>
