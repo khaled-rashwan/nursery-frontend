@@ -379,7 +379,7 @@ function AcademicProgramForm({ content, setContent }: { content: LocaleSpecificA
   const handleImageSelect = (media: MediaItem) => {
     if (activeProgramIndex !== null) {
       const newPrograms = [...content.programs];
-      newPrograms[activeProgramIndex].image = media.filename;
+      newPrograms[activeProgramIndex].image = media.url;
       setContent({ ...content, programs: newPrograms });
     }
   };
@@ -473,7 +473,7 @@ function AcademicProgramForm({ content, setContent }: { content: LocaleSpecificA
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={formStyles.label}>Image</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <Image src={`https://firebasestorage.googleapis.com/v0/b/future-step-nursery.appspot.com/o/media%2F${program.image}?alt=media`} alt={program.title} width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+                <Image src={program.image} alt={program.title} width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
                 <div>
                   <button type="button" onClick={() => openMediaLibrary(index)} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
                     Choose from Library
