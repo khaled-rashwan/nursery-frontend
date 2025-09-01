@@ -3,7 +3,7 @@ import {NextIntlClientProvider, hasLocale} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import {notFound} from 'next/navigation';
 import {routing} from '@/i18n/routing';
-import { Geist, Geist_Mono } from "next/font/google";
+// import { Geist, Geist_Mono } from "next/font/google";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import FirebaseLogoutButton from "../../components/FirebaseLogoutButton";
 import LoginNavButton from "../../components/LoginNavButton";
@@ -12,15 +12,16 @@ import Image from 'next/image';
 import PortalNavButton from '../../components/PortalNavButton';
 import '../globals.css';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// Temporarily use system fonts to avoid Google Fonts network issue
+// const geistSans = Geist({
+//   variable: "--font-geist-sans",
+//   subsets: ["latin"],
+// });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });
 
 function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
   return (
@@ -211,7 +212,7 @@ export default async function LocaleLayout({
   
   return (
     <html lang={locale} dir={isRTL ? 'rtl' : 'ltr'}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="antialiased">
         <Header locale={locale} isRTL={isRTL} />
         
         <main className="main-content">
