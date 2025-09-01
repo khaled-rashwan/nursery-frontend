@@ -186,3 +186,76 @@ export interface FirestoreCareersPageContent {
   'en-US': LocaleSpecificCareersContent;
   'ar-SA': LocaleSpecificCareersContent;
 }
+
+// Types for the "Admissions" page content
+export interface KeyDateItem {
+  title: string;
+  image: string;
+}
+
+export interface KeyDates {
+  title: string;
+  items: KeyDateItem[];
+}
+
+export interface EnrollmentStep {
+  title: string;
+  description: string;
+}
+
+export interface EnrollmentProcess {
+  title: string;
+  steps: EnrollmentStep[];
+}
+
+export interface RequiredDocuments {
+  title: string;
+  documents: string[];
+}
+
+export interface TuitionFees {
+  title: string;
+  description: string;
+}
+
+export interface AdmissionFormFields {
+  parentName: string;
+  email: string;
+  phone: string;
+  bestTime: string;
+  whatsapp: string;
+  preferredLang: string;
+  relationship: string;
+  message: string;
+}
+
+export interface AdmissionForm {
+  title: string;
+  subtitle1: string;
+  subtitle2: string;
+  fields: AdmissionFormFields;
+  submit: string;
+}
+
+export interface AdmissionImages {
+  boy: string;
+  girl: string;
+}
+
+export interface LocaleSpecificAdmissionsContent {
+  title: string;
+  subtitle: string;
+  welcome: string;
+  lookForward: string;
+  keyDates: KeyDates;
+  enrollmentProcess: EnrollmentProcess;
+  requiredDocuments: RequiredDocuments;
+  tuitionFees: TuitionFees;
+  images: AdmissionImages;
+  admissionForm: AdmissionForm;
+}
+
+export interface FirestoreAdmissionsPageContent {
+  'en-US': LocaleSpecificAdmissionsContent;
+  'ar-SA': LocaleSpecificAdmissionsContent;
+}

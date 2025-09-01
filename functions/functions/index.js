@@ -111,6 +111,8 @@ exports.getAcademicProgramPageContent = contentManagement.getAcademicProgramPage
 exports.saveAcademicProgramPageContent = contentManagement.saveAcademicProgramPageContent;
 exports.getCareersPageContent = contentManagement.getCareersPageContent;
 exports.saveCareersPageContent = contentManagement.saveCareersPageContent;
+exports.getAdmissionsPageContent = contentManagement.getAdmissionsPageContent;
+exports.saveAdmissionsPageContent = contentManagement.saveAdmissionsPageContent;
 
 // Export Media Library API
 const mediaApi = require('./src/media/index');

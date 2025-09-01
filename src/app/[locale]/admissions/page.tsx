@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
-import { useLocale } from 'next-intl';
+import { fetchAdmissionsPageContent } from '../../fetchContent';
+import { LocaleSpecificAdmissionsContent } from '../../types';
 
-export default function AdmissionsPage() {
-  const t = useTranslations('AdmissionsPage');
-  const locale = useLocale();
+export default function AdmissionsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const [locale, setLocale] = useState<string>('en-US');
+  const [content, setContent] = useState<LocaleSpecificAdmissionsContent | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('enrollment');
   const [formData, setFormData] = useState({
     parentName: '',
@@ -21,6 +22,18 @@ export default function AdmissionsPage() {
   });
   const [submissionStatus, setSubmissionStatus] = useState<{ success: boolean; message: string; } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const loadContent = async () => {
+      setLoading(true);
+      const { locale: resolvedLocale } = await params;
+      setLocale(resolvedLocale);
+      const fetchedContent = await fetchAdmissionsPageContent(resolvedLocale);
+      setContent(fetchedContent);
+      setLoading(false);
+    };
+    loadContent();
+  }, [params]);
 
   const isRTL = locale === 'ar-SA';
 
@@ -67,35 +80,42 @@ export default function AdmissionsPage() {
     }
   };
 
-  const docList = [
-    t('docList.0'),
-    t('docList.1'),
-    t('docList.2'),
-    t('docList.3'),
-    t('docList.4'),
-    t('docList.5'),
-    t('docList.6'),
-  ];
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
+
+  if (!content) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem' }}>
+        <h1>Content Not Available</h1>
+        <p>We&apos;re sorry, the content for this page could not be loaded.</p>
+      </div>
+    );
+  }
 
   const tabContent = {
     enrollment: (
       <div style={{ textAlign: isRTL ? 'right' : 'left', lineHeight: '1.8' }}>
-        <p><strong>{t('expressInterest')}</strong> {t('expressInterestText')}</p>
-        <p><strong>{t('visitNursery')}</strong> {t('visitNurseryText')}</p>
-        <p><strong>{t('submitApplication')}</strong> {t('submitApplicationText')}</p>
-        <p>{t('submitRequiredDocs')}</p>
-        <p><strong>{t('childSession')}</strong> {t('childSessionText')}</p>
-        <p>{t('parentInterview')}</p>
-        <p>{t('admissionDecision')}</p>
+        {content.enrollmentProcess.steps.map((step, index) => (
+          <p key={index}>
+            <strong>{step.title}</strong> {step.description}
+          </p>
+        ))}
       </div>
     ),
     documents: (
       <ul style={{ listStyle: 'disc', paddingInlineStart: isRTL ? '40px' : '20px', textAlign: isRTL ? 'right' : 'left' }}>
-        {docList.map((doc, index) => <li key={index} style={{ marginBottom: '10px' }}>{doc}</li>)}
+        {content.requiredDocuments.documents.map((doc, index) => (
+          <li key={index} style={{ marginBottom: '10px' }}>{doc}</li>
+        ))}
       </ul>
     ),
     fees: (
-      <p style={{ textAlign: isRTL ? 'right' : 'left' }}>{t('feesText')}</p>
+      <p style={{ textAlign: isRTL ? 'right' : 'left' }}>{content.tuitionFees.description}</p>
     )
   };
 
@@ -117,16 +137,16 @@ export default function AdmissionsPage() {
         boxShadow: 'var(--shadow)',
       }}>
         <h1 style={{ fontSize: '3.5rem', color: 'var(--primary-purple)', marginBottom: '1rem' }}>
-          {t('title')}
+          {content.title}
         </h1>
         <h2 style={{ fontSize: '2rem', color: 'var(--primary-pink)', marginBottom: '1.5rem' }}>
-          {t('subtitle')}
+          {content.subtitle}
         </h2>
         <p style={{ fontSize: '1.2rem', color: 'var(--primary-blue)', maxWidth: '800px', margin: '0 auto 1.5rem auto' }}>
-          {t('welcome')}
+          {content.welcome}
         </p>
         <p style={{ fontSize: '1.2rem', color: 'var(--primary-blue)', maxWidth: '800px', margin: '0 auto', fontWeight: 'bold' }}>
-          {t('lookForward')}
+          {content.lookForward}
         </p>
       </section>
 
@@ -141,7 +161,7 @@ export default function AdmissionsPage() {
         textAlign: 'center'
       }}>
         <h3 style={{ fontSize: '2.5rem', color: 'var(--primary-purple)', marginBottom: '3rem' }}>
-          {t('keyDates')}
+          {content.keyDates.title}
         </h3>
         <div style={{
           display: 'grid',
@@ -149,18 +169,17 @@ export default function AdmissionsPage() {
           gap: '2rem',
           alignItems: 'center'
         }}>
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Image src="/admissions/house.png" alt="Admissions Open" width={120} height={120} />
-            <p style={{ marginTop: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>{t('openNow')}</p>
-          </div>
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Image src="/admissions/calender.png" alt="Application Deadline" width={120} height={120} />
-            <p style={{ marginTop: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>{t('deadline')}</p>
-          </div>
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Image src="/admissions/chairs.png" alt="Limited Seats" width={120} height={120} />
-            <p style={{ marginTop: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>{t('seatsLimited')}</p>
-          </div>
+          {content.keyDates.items.map((item, index) => (
+            <div key={index} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Image 
+                src={item.image.replace('gs://future-step-nursery.firebasestorage.app', '')} 
+                alt={item.title} 
+                width={120} 
+                height={120} 
+              />
+              <p style={{ marginTop: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>{item.title}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -181,17 +200,29 @@ export default function AdmissionsPage() {
           order: isRTL ? 1 : 0
         }}>
           <div style={{ display: 'flex', borderBottom: '2px solid #eee', marginBottom: '1.5rem' }}>
-            <button onClick={() => setActiveTab('enrollment')} style={{...tabButtonStyle, ...(activeTab === 'enrollment' ? activeTabStyle : {})}}>{t('enrollmentProcess')}</button>
-            <button onClick={() => setActiveTab('documents')} style={{...tabButtonStyle, ...(activeTab === 'documents' ? activeTabStyle : {})}}>{t('requiredDocuments')}</button>
-            <button onClick={() => setActiveTab('fees')} style={{...tabButtonStyle, ...(activeTab === 'fees' ? activeTabStyle : {})}}>{t('tuitionFees')}</button>
+            <button onClick={() => setActiveTab('enrollment')} style={{...tabButtonStyle, ...(activeTab === 'enrollment' ? activeTabStyle : {})}}>{content.enrollmentProcess.title}</button>
+            <button onClick={() => setActiveTab('documents')} style={{...tabButtonStyle, ...(activeTab === 'documents' ? activeTabStyle : {})}}>{content.requiredDocuments.title}</button>
+            <button onClick={() => setActiveTab('fees')} style={{...tabButtonStyle, ...(activeTab === 'fees' ? activeTabStyle : {})}}>{content.tuitionFees.title}</button>
           </div>
           <div>
             {tabContent[activeTab as keyof typeof tabContent]}
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gap: '1rem' }}>
-          <Image src="/admissions/girl.jpg" alt="Happy student" width={300} height={225} style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} />
-          <Image src="/admissions/boy.jpg" alt="Happy student" width={300} height={225} style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} />
+          <Image 
+            src={content.images.girl.replace('gs://future-step-nursery.firebasestorage.app', '')} 
+            alt="Happy student" 
+            width={300} 
+            height={225} 
+            style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} 
+          />
+          <Image 
+            src={content.images.boy.replace('gs://future-step-nursery.firebasestorage.app', '')} 
+            alt="Happy student" 
+            width={300} 
+            height={225} 
+            style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto' }} 
+          />
         </div>
       </section>
 
@@ -206,36 +237,36 @@ export default function AdmissionsPage() {
         border: '4px solid var(--primary-yellow)',
       }}>
         <h3 style={{ textAlign: 'center', fontSize: '2.5rem', color: 'var(--primary-orange)', marginBottom: '0.5rem' }}>
-          {t('formTitle')}
+          {content.admissionForm.title}
         </h3>
         <p style={{ textAlign: 'center', fontSize: '1.2rem', color: '#555', marginBottom: '2rem' }}>
-          {t('formDeadline')}
+          {content.admissionForm.subtitle1}
         </p>
         <h4 style={{ textAlign: 'center', fontSize: '1.5rem', color: 'var(--primary-purple)', marginBottom: '2rem' }}>
-          {t('formSubtitle')}
+          {content.admissionForm.subtitle2}
         </h4>
         <form style={{ display: 'grid', gap: '1.5rem' }} onSubmit={handleSubmit}>
-          <label htmlFor="parentName">{t('parentName')}</label>
+          <label htmlFor="parentName">{content.admissionForm.fields.parentName}</label>
           <input type="text" id="parentName" name="parentName" value={formData.parentName} onChange={handleChange} style={inputStyle} required />
-          <label htmlFor="email">{t('email')}</label>
+          <label htmlFor="email">{content.admissionForm.fields.email}</label>
           <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} style={inputStyle} required />
-          <label htmlFor="phone">{t('phone')}</label>
+          <label htmlFor="phone">{content.admissionForm.fields.phone}</label>
           <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} style={inputStyle} required />
-          <label htmlFor="bestTime">{t('bestTime')}</label>
+          <label htmlFor="bestTime">{content.admissionForm.fields.bestTime}</label>
           <input type="text" id="bestTime" name="bestTime" value={formData.bestTime} onChange={handleChange} style={inputStyle} />
-          <label htmlFor="whatsapp">{t('whatsapp')}</label>
+          <label htmlFor="whatsapp">{content.admissionForm.fields.whatsapp}</label>
           <select id="whatsapp" name="whatsapp" value={formData.whatsapp} onChange={handleChange} style={inputStyle}>
             <option value="yes">Yes</option>
             <option value="no">No</option>
           </select>
-          <label htmlFor="preferredLang">{t('preferredLang')}</label>
+          <label htmlFor="preferredLang">{content.admissionForm.fields.preferredLang}</label>
           <select id="preferredLang" name="preferredLang" value={formData.preferredLang} onChange={handleChange} style={inputStyle}>
             <option value="arabic">Arabic</option>
             <option value="english">English</option>
           </select>
-          <label htmlFor="relationship">{t('relationship')}</label>
+          <label htmlFor="relationship">{content.admissionForm.fields.relationship}</label>
           <input type="text" id="relationship" name="relationship" value={formData.relationship} onChange={handleChange} style={inputStyle} required />
-          <label htmlFor="message">{t('message')}</label>
+          <label htmlFor="message">{content.admissionForm.fields.message}</label>
           <textarea id="message" name="message" rows={5} value={formData.message} onChange={handleChange} style={inputStyle}></textarea>
           {/* Recaptcha placeholder */}
           <div style={{
@@ -276,7 +307,7 @@ export default function AdmissionsPage() {
           onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-purple)'}}
           onMouseLeave={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-pink)'}}
           >
-            {isLoading ? 'Submitting...' : t('submit')}
+            {isLoading ? 'Submitting...' : content.admissionForm.submit}
           </button>
         </form>
       </section>
