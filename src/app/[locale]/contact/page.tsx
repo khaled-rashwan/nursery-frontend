@@ -1,14 +1,231 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { fetchContactUsPageContent } from '../../fetchContent';
 import { LocaleSpecificContactUsContent } from '../../types';
+
+// Hardcoded contact us content (removed from content management as per requirements)
+const contactUsContent = {
+  "en-US": {
+    title: "Contact Us",
+    section1_title: "Contact Information",
+    phone: "920016074",
+    address: "You can visit us in Al Khobar – Eastern Province, Saudi Arabia",
+    workingHours: "Working Hours: Sunday to Thursday – 7:30 AM to 2:00 PM",
+    email: "info@futurestep.edu.sa",
+    section2_title: "Contact Us",
+    section2_subtitle: "Have a question?",
+    section2_text: "Feel free to contact us.",
+    form_fullName: "Full Name",
+    form_phoneNumber: "Phone Number",
+    form_yourMessage: "Your Message",
+    form_submitButton: "Submit",
+    section3_title: "Frequently Asked Questions",
+    faqs: [
+      {
+        q: "What ages are accepted at the nursery?",
+        a: "We accept children aged 3 to 5 years in KG1 and KG2 programs.",
+      },
+      {
+        q: "Do you offer a bilingual program?",
+        a: "Yes, we provide a bilingual Arabic-English curriculum focused on early language development.",
+      },
+      {
+        q: "What curriculum do you follow?",
+        a: "We follow the EYFS (Early Years Foundation Stage) British framework adapted to local culture.",
+      },
+      {
+        q: "Is transportation available?",
+        a: "Yes, we offer safe school transport within select zones in Al Khobar.",
+      },
+      {
+        q: "How can I schedule a school tour?",
+        a: "You can schedule a personal tour by contacting us or submitting a request through our website.",
+      },
+      {
+        q: "What if my child is transferring from another nursery?",
+        a: "We require a report from the previous nursery and offer full support for a smooth academic and emotional transition.",
+      },
+      {
+        q: "Are all activities included in the tuition?",
+        a: "Yes, all educational and recreational activities are included, except for special external field trips.",
+      },
+      {
+        q: "Do you have a refund policy?",
+        a: "Yes, a clear policy is available and will be shared during the application process.",
+      },
+    ],
+  },
+  "ar-SA": {
+    title: "اتصل بنا",
+    section1_title: "معلومات الاتصال",
+    phone: "920016074",
+    address: "يمكنكم زيارتنا في الخبر - المنطقة الشرقية، المملكة العربية السعودية",
+    workingHours: "ساعات العمل: من الأحد إلى الخميس - من 7:30 صباحًا حتى 2:00 ظهرًا",
+    email: "info@futurestep.edu.sa",
+    section2_title: "اتصل بنا",
+    section2_subtitle: "هل لديك سؤال؟",
+    section2_text: "لا تتردد في الاتصال بنا.",
+    form_fullName: "الاسم الكامل",
+    form_phoneNumber: "رقم الهاتف",
+    form_yourMessage: "رسالتك",
+    form_submitButton: "إرسال",
+    section3_title: "الأسئلة الشائعة",
+    faqs: [
+      {
+        q: "ما هي الأعمار المقبولة في الحضانة؟",
+        a: "نقبل الأطفال من سن 3 إلى 5 سنوات في برامج KG1 و KG2.",
+      },
+      {
+        q: "هل تقدمون برنامجًا ثنائي اللغة؟",
+        a: "نعم، نحن نقدم منهجًا ثنائي اللغة (عربي-إنجليزي) يركز على تطوير اللغة في مرحلة مبكرة.",
+      },
+      {
+        q: "ما هو المنهج الذي تتبعونه؟",
+        a: "نحن نتبع إطار EYFS (المرحلة التأسيسية للسنوات المبكرة) البريطاني المتكيف مع الثقافة المحلية.",
+      },
+      {
+        q: "هل تتوفر وسائل نقل؟",
+        a: "نعم، نحن نوفر وسائل نقل مدرسية آمنة داخل مناطق محددة في الخبر.",
+      },
+      {
+        q: "كيف يمكنني حجز جولة في المدرسة؟",
+        a: "يمكنك حجز جولة شخصية عن طريق الاتصال بنا أو تقديم طلب عبر موقعنا الإلكتروني.",
+      },
+      {
+        q: "ماذا لو كان طفلي ينتقل من حضانة أخرى؟",
+        a: "نطلب تقريرًا من الحضانة السابقة ونقدم الدعم الكامل لانتقال أكاديمي وعاطفي سلس.",
+      },
+      {
+        q: "هل جميع الأنشطة مشمولة في الرسوم الدراسية؟",
+        a: "نعم، جميع الأنشطة التعليمية والترفيهية مشمولة، باستثناء الرحلات الميدانية الخارجية الخاصة.",
+      },
+      {
+        q: "هل لديكم سياسة استرداد؟",
+        a: "نعم، تتوفر سياسة واضحة وسيتم مشاركتها أثناء عملية التقديم.",
+      },
+    ],
+  },
+};
 
 export default function ContactUsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
   const [content, setContent] = useState<LocaleSpecificContactUsContent | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    message: ''
+  });
+  const [formStatus, setFormStatus] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+  }>({ type: null, message: '' });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const loadContent = async () => {
+      const { locale: resolvedLocale } = await params;
+      setLocale(resolvedLocale);
+      // Use hardcoded content instead of fetching from database
+      setContent(contactUsContent[resolvedLocale as keyof typeof contactUsContent] || contactUsContent['en-US']);
+      setLoading(false);
+    };
+    loadContent();
+  }, [params]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.fullName || !formData.phoneNumber || !formData.message) {
+      setFormStatus({
+        type: 'error',
+        message: locale === 'ar-SA' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill in all required fields'
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    setFormStatus({ type: null, message: '' });
+
+    try {
+      const response = await fetch(`https://us-central1-future-step-nursery.cloudfunctions.net/submitContactForm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        setFormStatus({
+          type: 'success',
+          message: locale === 'ar-SA' 
+            ? 'تم إرسال رسالتك بنجاح. سنتواصل معك قريباً!'
+            : 'Your message has been sent successfully. We will contact you soon!'
+        });
+        setFormData({ fullName: '', phoneNumber: '', message: '' });
+      } else {
+        throw new Error('Failed to submit form');
+      }
+    } catch (error) {
+      setFormStatus({
+        type: 'error',
+        message: locale === 'ar-SA' 
+          ? 'حدث خطأ أثناء إرسال الرسالة. يرجى المحاولة مرة أخرى.'
+          : 'An error occurred while sending your message. Please try again.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const formInputStyle = {
+    width: '100%',
+    padding: '12px',
+    marginBottom: '1rem',
+    borderRadius: 'var(--border-radius)',
+    border: '2px solid var(--light-blue)',
+    background: '#fff',
+    fontSize: '1rem',
+    transition: 'border-color 0.3s, box-shadow 0.3s',
+  };
+
+  const formLabelStyle = {
+    display: 'block',
+    marginBottom: '0.5rem',
+    fontWeight: 'bold',
+    color: 'var(--primary-purple)',
+  };
+
+  const toggleFaq = (index: number) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
+
+  if (!content) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem' }}>
+        <h1>Content Not Available</h1>
+        <p>We&apos;re sorry, the content for this page could not be loaded.</p>
+      </div>
+    );
+  }
 
   useEffect(() => {
     const loadContent = async () => {
@@ -151,44 +368,87 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
         <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'center', marginBottom: '2rem' }}>
           {content.section2_text}
         </p>
-        <form>
+        <form onSubmit={handleSubmit}>
+          {formStatus.type && (
+            <div style={{
+              padding: '1rem',
+              marginBottom: '1rem',
+              borderRadius: 'var(--border-radius)',
+              background: formStatus.type === 'success' ? '#d4edda' : '#f8d7da',
+              border: `1px solid ${formStatus.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+              color: formStatus.type === 'success' ? '#155724' : '#721c24'
+            }}>
+              {formStatus.message}
+            </div>
+          )}
           <div>
             <label htmlFor="fullName" style={formLabelStyle}>{content.form_fullName}</label>
-            <input type="text" id="fullName" name="fullName" style={formInputStyle} />
+            <input 
+              type="text" 
+              id="fullName" 
+              name="fullName" 
+              value={formData.fullName}
+              onChange={handleInputChange}
+              style={formInputStyle}
+              required
+              disabled={submitting}
+            />
           </div>
           <div>
             <label htmlFor="phoneNumber" style={formLabelStyle}>{content.form_phoneNumber}</label>
-            <input type="text" id="phoneNumber" name="phoneNumber" style={formInputStyle} />
+            <input 
+              type="text" 
+              id="phoneNumber" 
+              name="phoneNumber" 
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              style={formInputStyle}
+              required
+              disabled={submitting}
+            />
           </div>
           <div>
             <label htmlFor="message" style={formLabelStyle}>{content.form_yourMessage}</label>
-            <textarea id="message" name="message" style={{...formInputStyle, minHeight: '150px'}}></textarea>
+            <textarea 
+              id="message" 
+              name="message" 
+              value={formData.message}
+              onChange={handleInputChange}
+              style={{...formInputStyle, minHeight: '150px'}}
+              required
+              disabled={submitting}
+            ></textarea>
           </div>
-          {/* recaptcha placeholder */}
-          <div style={{margin: '1rem 0', background: '#eee', padding: '1rem', borderRadius: 'var(--border-radius)', textAlign: 'center'}}>recaptcha placeholder</div>
-          <button type="submit" style={{
-            display: 'block',
-            width: '100%',
-            padding: '1rem',
-            background: 'var(--primary-green)',
-            color: 'white',
-            border: 'none',
-            borderRadius: 'var(--border-radius)',
-            fontSize: '1.2rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'background 0.3s, transform 0.3s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--primary-blue-dark)';
-            e.currentTarget.style.transform = 'scale(1.02)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--primary-green)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+          <button 
+            type="submit" 
+            disabled={submitting}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '1rem',
+              background: submitting ? '#ccc' : 'var(--primary-green)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--border-radius)',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              cursor: submitting ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s, transform 0.3s',
+            }}
+            onMouseEnter={(e) => {
+              if (!submitting) {
+                e.currentTarget.style.background = 'var(--primary-blue-dark)';
+                e.currentTarget.style.transform = 'scale(1.02)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!submitting) {
+                e.currentTarget.style.background = 'var(--primary-green)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }
+            }}
           >
-            {content.form_submitButton}
+            {submitting ? (locale === 'ar-SA' ? 'جاري الإرسال...' : 'Submitting...') : content.form_submitButton}
           </button>
         </form>
       </section>

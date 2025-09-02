@@ -99,14 +99,17 @@ const { submitAdmission, manageAdmissions } = require('./src/admissions/admissio
 exports.submitAdmission = submitAdmission;
 exports.manageAdmissions = manageAdmissions;
 
+// Export Contact Form Functions
+const { submitContactForm, manageContactSubmissions } = require('./src/contact/contactCrud');
+exports.submitContactForm = submitContactForm;
+exports.manageContactSubmissions = manageContactSubmissions;
+
 // Export Content Management Functions
 const contentManagement = require('./src/content/contentManagement');
 exports.getHomePageContent = contentManagement.getHomePageContent;
 exports.saveHomePageContent = contentManagement.saveHomePageContent;
 exports.getAboutUsPageContent = contentManagement.getAboutUsPageContent;
 exports.saveAboutUsPageContent = contentManagement.saveAboutUsPageContent;
-exports.getContactUsPageContent = contentManagement.getContactUsPageContent;
-exports.saveContactUsPageContent = contentManagement.saveContactUsPageContent;
 exports.getAcademicProgramPageContent = contentManagement.getAcademicProgramPageContent;
 exports.saveAcademicProgramPageContent = contentManagement.saveAcademicProgramPageContent;
 exports.getCareersPageContent = contentManagement.getCareersPageContent;
