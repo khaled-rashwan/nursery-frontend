@@ -172,7 +172,7 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
           {content.keyDates.items.map((item, index) => (
             <div key={index} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <Image 
-                src={item.image.replace('gs://future-step-nursery.firebasestorage.app', '')} 
+                src={item.image} 
                 alt={item.title} 
                 width={120} 
                 height={120} 
@@ -210,14 +210,14 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
         </div>
         <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gap: '1rem', maxWidth: isRTL ? '300px' : '300px' }}>
           <Image 
-            src={content.images.girl.replace('gs://future-step-nursery.firebasestorage.app', '')} 
+            src={content.images.girl} 
             alt="Happy student" 
             width={300} 
             height={225} 
             style={{ borderRadius: 'var(--border-radius)', objectFit: 'cover', width: '100%', height: 'auto', maxWidth: '300px' }} 
           />
           <Image 
-            src={content.images.boy.replace('gs://future-step-nursery.firebasestorage.app', '')} 
+            src={content.images.boy} 
             alt="Happy student" 
             width={300} 
             height={225} 

@@ -9,12 +9,14 @@ const storage = getStorage(app);
  * @param file The image file to upload.
  * @param path The path in Firebase Storage where the file should be saved (e.g., 'images/hero').
  * @param onProgress A callback function to track the upload progress.
+ * @param customFileName Optional custom filename. If not provided, uses the original file name.
  * @returns A promise that resolves with the public download URL of the uploaded file.
  */
 export const uploadImage = (
   file: File,
   path: string,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number) => void,
+  customFileName?: string
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -22,7 +24,8 @@ export const uploadImage = (
       return;
     }
 
-    const storageRef = ref(storage, `${path}/${file.name}`);
+    const fileName = customFileName || file.name;
+    const storageRef = ref(storage, `${path}/${fileName}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     uploadTask.on(
