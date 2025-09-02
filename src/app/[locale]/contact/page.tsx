@@ -76,7 +76,6 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
         setSubmitMessage(locale === 'ar-SA' ? 'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.' : 'Your message has been submitted successfully! We will contact you soon.');
         setFormData({ fullName: '', phoneNumber: '', message: '' });
       } else {
-        const errorData = await response.json();
         setSubmitMessage(locale === 'ar-SA' ? 'حدث خطأ في إرسال الرسالة. يرجى المحاولة مرة أخرى.' : 'An error occurred while submitting your message. Please try again.');
       }
     } catch (error) {
