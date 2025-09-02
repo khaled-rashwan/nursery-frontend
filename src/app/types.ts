@@ -286,3 +286,20 @@ export interface FirestoreGalleryPageContent {
   'en-US': LocaleSpecificGalleryContent;
   'ar-SA': LocaleSpecificGalleryContent;
 }
+
+// Types for the "Footer" content
+export interface FooterSection {
+  icon: string;
+  title: string;
+  content: string;
+}
+
+export interface LocaleSpecificFooterContent {
+  sections: FooterSection[];
+  copyright: string;
+}
+
+export interface FirestoreFooterContent {
+  'en-US': LocaleSpecificFooterContent;
+  'ar-SA': LocaleSpecificFooterContent;
+}

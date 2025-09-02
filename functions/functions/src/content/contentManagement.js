@@ -543,3 +543,80 @@ exports.saveGalleryPageContent = functions.https.onRequest(async (req, res) => {
         }
     }
 });
+
+/**
+ * @name getFooterContent
+ * @description Fetches the content for the "Footer".
+ */
+exports.getFooterContent = functions.https.onRequest(async (req, res) => {
+    setCorsHeaders(res);
+    if (handleCorsOptions(req, res)) {
+        return;
+    }
+
+    try {
+        const db = admin.firestore();
+        const docRef = db.collection('websiteContent').doc('footer');
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            res.status(404).send({ error: 'Footer content not found.' });
+            return;
+        }
+        res.status(200).json({ data: doc.data() });
+    } catch (error) {
+        console.error('Error fetching Footer content:', error);
+        res.status(500).send({ error: 'Internal server error.' });
+    }
+});
+
+/**
+ * @name saveFooterContent
+ * @description Updates the content for the "Footer".
+ */
+exports.saveFooterContent = functions.https.onRequest(async (req, res) => {
+    setCorsHeaders(res);
+    if (handleCorsOptions(req, res)) {
+        return;
+    }
+
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+        res.status(401).send({ error: 'Unauthorized. No token provided.' });
+        return;
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const userRole = decodedToken.role;
+
+        if (userRole !== 'superadmin' && userRole !== 'admin' && userRole !== 'content-manager') {
+            res.status(403).send({ error: 'Permission denied.' });
+            return;
+        }
+
+        const content = req.body;
+        if (!content || typeof content !== 'object') {
+            res.status(400).send({ error: 'Invalid request body.' });
+            return;
+        }
+
+        console.log(`User ${decodedToken.uid} is authorized to save Footer content.`);
+        const db = admin.firestore();
+        const docRef = db.collection('websiteContent').doc('footer');
+
+        console.log('Attempting to save the following content to footer:', JSON.stringify(content, null, 2));
+        await docRef.set(content, { merge: true });
+        console.log('Firestore set operation complete for footer.');
+
+        res.status(200).send({ success: true, message: 'Footer content updated successfully.' });
+
+    } catch (error) {
+        console.error('Error updating Footer content:', error);
+        if (error.code === 'auth/id-token-expired') {
+            res.status(401).send({ error: 'Token expired. Please log in again.' });
+        } else {
+            res.status(500).send({ error: 'Internal server error.' });
+        }
+    }
+});
