@@ -13,6 +13,7 @@ import { ClassManagement } from '../class-management/ClassManagement';
 import { TeacherManagement } from '../teacher-management/TeacherManagement';
 import AdmissionsManagement from '../admissions-management/AdmissionsManagement';
 import ContactSubmissionsManagement from '../contact-management/ContactSubmissionsManagement';
+import CareerSubmissionsManagement from '../career-management/CareerSubmissionsManagement';
 import ContentManagement from '../content-management/ContentManagement';
 import { AcademicYearProvider, AcademicYearSelector } from '../../../../../components/academic-year';
 import { hasPermission, UserRole } from '../../../../../utils/rolePermissions';
@@ -58,6 +59,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         { id: 'content', permission: 'manage_content' },
         { id: 'admissions', permission: 'manage_classes' },
         { id: 'contact', permission: 'manage_classes' },
+        { id: 'careers', permission: 'manage_classes' },
         { id: 'users', permission: 'manage_users' },
         { id: 'students', permission: 'view_students' },
         { id: 'enrollments', permission: 'manage_classes' },
@@ -262,6 +264,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             { id: 'content', label: locale === 'ar-SA' ? 'إدارة المحتوى' : 'Content Management', icon: '📝', permission: 'manage_content' },
             { id: 'admissions', label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', icon: '📝', permission: 'manage_classes' },
             { id: 'contact', label: locale === 'ar-SA' ? 'رسائل الاتصال' : 'Contact Submissions', icon: '📨', permission: 'manage_classes' },
+            { id: 'careers', label: locale === 'ar-SA' ? 'طلبات التوظيف' : 'Career Applications', icon: '💼', permission: 'manage_classes' },
             { id: 'users', label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', icon: '👥', permission: 'manage_users' },
             { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓', permission: 'view_students' },
             { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚', permission: 'manage_classes' },
@@ -381,11 +384,15 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <ContactSubmissionsManagement locale={locale} />
       )}
 
+      {activeTab === 'careers' && (
+        <CareerSubmissionsManagement locale={locale} />
+      )}
+
       {activeTab === 'content' && (
         <ContentManagement />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && activeTab !== 'contact' && activeTab !== 'content' && (
+      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && activeTab !== 'contact' && activeTab !== 'careers' && activeTab !== 'content' && (
         <div style={{
           background: 'white',
           padding: '3rem',

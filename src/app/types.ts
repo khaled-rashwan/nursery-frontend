@@ -303,3 +303,23 @@ export interface FirestoreFooterContent {
   'en-US': LocaleSpecificFooterContent;
   'ar-SA': LocaleSpecificFooterContent;
 }
+
+// Types for Career Submissions
+export interface CareerSubmission {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  emailAddress: string;
+  jobTitle: string;
+  message: string;
+  resumeUrl?: string | null;
+  status: 'new' | 'reviewed' | 'interviewed' | 'hired' | 'rejected' | 'archived';
+  createdAt: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+  updatedAt: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+}

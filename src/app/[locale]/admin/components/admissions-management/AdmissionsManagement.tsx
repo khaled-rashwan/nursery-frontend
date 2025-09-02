@@ -160,10 +160,10 @@ export default function AdmissionsManagement({ locale }: AdmissionsManagementPro
 
       {showDeleteConfirm && (
         <DeleteConfirmModal
-          userName={admissions.find(a => a.id === showDeleteConfirm)?.parentName || ''}
-          locale={locale}
+          isOpen={!!showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(null)}
           onConfirm={() => handleDelete(showDeleteConfirm)}
-          onCancel={() => setShowDeleteConfirm(null)}
+          itemName={`the admission for ${admissions.find(a => a.id === showDeleteConfirm)?.parentName}`}
         />
       )}
 
