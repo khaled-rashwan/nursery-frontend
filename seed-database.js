@@ -24,37 +24,37 @@ async function seedDatabase() {
   try {
     console.log('Starting to seed homepage content...');
     
-    // The data is structured with locales as top-level keys.
-    // We will set the entire object to the 'homePage' document.
-    await db.collection('websiteContent').doc('homePage').set(homePageContent);
+    // Use merge: true to preserve existing content, including uploaded images
+    // This prevents overwriting of user-uploaded images and dynamic content
+    await db.collection('websiteContent').doc('homePage').set(homePageContent, { merge: true });
     console.log('✅ Success! The homepage content has been seeded to Firestore.');
 
     console.log('Starting to seed about us page content...');
-    await db.collection('websiteContent').doc('aboutUsPage').set(aboutUsPageContent);
+    await db.collection('websiteContent').doc('aboutUsPage').set(aboutUsPageContent, { merge: true });
     console.log('✅ Success! The about us page content has been seeded to Firestore.');
 
     console.log('Starting to seed contact us page content...');
-    await db.collection('websiteContent').doc('contactUsPage').set(contactUsPageContent);
+    await db.collection('websiteContent').doc('contactUsPage').set(contactUsPageContent, { merge: true });
     console.log('✅ Success! The contact us page content has been seeded to Firestore.');
 
     console.log('Starting to seed academic program page content...');
-    await db.collection('websiteContent').doc('academicProgramPage').set(academicProgramPageContent);
+    await db.collection('websiteContent').doc('academicProgramPage').set(academicProgramPageContent, { merge: true });
     console.log('✅ Success! The academic program page content has been seeded to Firestore.');
 
     console.log('Starting to seed careers page content...');
-    await db.collection('websiteContent').doc('careersPage').set(careersPageContent);
+    await db.collection('websiteContent').doc('careersPage').set(careersPageContent, { merge: true });
     console.log('✅ Success! The careers page content has been seeded to Firestore.');
 
     console.log('Starting to seed admissions page content...');
-    await db.collection('websiteContent').doc('admissionsPage').set(admissionsPageContent);
+    await db.collection('websiteContent').doc('admissionsPage').set(admissionsPageContent, { merge: true });
     console.log('✅ Success! The admissions page content has been seeded to Firestore.');
 
     console.log('Starting to seed gallery page content...');
-    await db.collection('websiteContent').doc('galleryPage').set(galleryPageContent);
+    await db.collection('websiteContent').doc('galleryPage').set(galleryPageContent, { merge: true });
     console.log('✅ Success! The gallery page content has been seeded to Firestore.');
 
     console.log('Starting to seed footer content...');
-    await db.collection('websiteContent').doc('footer').set(footerContent);
+    await db.collection('websiteContent').doc('footer').set(footerContent, { merge: true });
     console.log('✅ Success! The footer content has been seeded to Firestore.');
 
     console.log("Navigate to Firestore > websiteContent collection to see the data.");
