@@ -115,6 +115,8 @@ exports.getAdmissionsPageContent = contentManagement.getAdmissionsPageContent;
 exports.saveAdmissionsPageContent = contentManagement.saveAdmissionsPageContent;
 exports.getGalleryPageContent = contentManagement.getGalleryPageContent;
 exports.saveGalleryPageContent = contentManagement.saveGalleryPageContent;
+exports.getFooterContent = contentManagement.getFooterContent;
+exports.saveFooterContent = contentManagement.saveFooterContent;
 
 // Export Media Library API
 const mediaApi = require('./src/media/index');

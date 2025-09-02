@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent, fetchAllAdmissionsPageContent, fetchAllGalleryPageContent } from '../../../../fetchContent';
+import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent, fetchAllAdmissionsPageContent, fetchAllGalleryPageContent, fetchAllFooterContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
@@ -21,7 +21,9 @@ import {
   LocaleSpecificAdmissionsContent,
   FirestoreGalleryPageContent,
   LocaleSpecificGalleryContent,
-  GalleryImage
+  GalleryImage,
+  FirestoreFooterContent,
+  LocaleSpecificFooterContent
 } from '../../../../types';
 import { useAuth } from '../../../../../hooks/useAuth';
 import MediaLibraryModal, { MediaItem } from '../media-library/MediaLibrary';
@@ -1285,6 +1287,113 @@ function GalleryForm({ content, setContent }: { content: LocaleSpecificGalleryCo
   );
 }
 
+function FooterForm({ content, setContent }: { content: LocaleSpecificFooterContent, setContent: (content: LocaleSpecificFooterContent) => void }) {
+  const handleSectionChange = (index: number, field: 'icon' | 'title' | 'content', value: string) => {
+    const updatedSections = [...content.sections];
+    updatedSections[index] = {
+      ...updatedSections[index],
+      [field]: value,
+    };
+    setContent({
+      ...content,
+      sections: updatedSections,
+    });
+  };
+
+  const handleCopyrightChange = (value: string) => {
+    setContent({
+      ...content,
+      copyright: value,
+    });
+  };
+
+  const addSection = () => {
+    setContent({
+      ...content,
+      sections: [...content.sections, { icon: '📍', title: '', content: '' }],
+    });
+  };
+
+  const removeSection = (index: number) => {
+    const updatedSections = content.sections.filter((_, i) => i !== index);
+    setContent({
+      ...content,
+      sections: updatedSections,
+    });
+  };
+
+  return (
+    <div style={formStyles.container}>
+      {/* Footer Sections */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Footer Sections</legend>
+        {content.sections.map((section, index) => (
+          <div key={index} style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #ddd', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h4>Section {index + 1}</h4>
+              <button 
+                type="button" 
+                onClick={() => removeSection(index)}
+                style={{ padding: '0.5rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+            <div style={formStyles.grid}>
+              <div>
+                <label style={formStyles.label}>Icon</label>
+                <input 
+                  style={formStyles.input}
+                  type="text" 
+                  value={section.icon} 
+                  onChange={(e) => handleSectionChange(index, 'icon', e.target.value)} 
+                />
+              </div>
+              <div>
+                <label style={formStyles.label}>Title</label>
+                <input 
+                  style={formStyles.input}
+                  type="text" 
+                  value={section.title} 
+                  onChange={(e) => handleSectionChange(index, 'title', e.target.value)} 
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={formStyles.label}>Content</label>
+                <textarea 
+                  style={formStyles.textarea}
+                  value={section.content} 
+                  onChange={(e) => handleSectionChange(index, 'content', e.target.value)} 
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+        <button 
+          type="button" 
+          onClick={addSection}
+          style={{ padding: '0.8rem 1.5rem', background: 'var(--primary-purple)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+        >
+          Add Section
+        </button>
+      </fieldset>
+
+      {/* Copyright */}
+      <fieldset style={formStyles.fieldset}>
+        <legend style={formStyles.legend}>Copyright</legend>
+        <div>
+          <label style={formStyles.label}>Copyright Text</label>
+          <textarea 
+            style={formStyles.textarea}
+            value={content.copyright} 
+            onChange={(e) => handleCopyrightChange(e.target.value)} 
+          />
+        </div>
+      </fieldset>
+    </div>
+  );
+}
+
 
 export default function ContentManagement() {
   const { user } = useAuth();
@@ -1295,7 +1404,8 @@ export default function ContentManagement() {
   const [careersContent, setCareersContent] = useState<FirestoreCareersPageContent | null>(null);
   const [admissionsContent, setAdmissionsContent] = useState<FirestoreAdmissionsPageContent | null>(null);
   const [galleryContent, setGalleryContent] = useState<FirestoreGalleryPageContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'admissions' | 'gallery' | 'media'>('home');
+  const [footerContent, setFooterContent] = useState<FirestoreFooterContent | null>(null);
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'admissions' | 'gallery' | 'footer' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1304,14 +1414,15 @@ export default function ContentManagement() {
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
-      const [homeContent, aboutContent, contactContent, academicContent, careersContent, admissionsContent, galleryContentData] = await Promise.all([
+      const [homeContent, aboutContent, contactContent, academicContent, careersContent, admissionsContent, galleryContentData, footerContentData] = await Promise.all([
         fetchAllHomePageContent(),
         fetchAllAboutUsPageContent(),
         fetchAllContactUsPageContent(),
         fetchAllAcademicProgramPageContent(),
         fetchAllCareersPageContent(),
         fetchAllAdmissionsPageContent(),
-        fetchAllGalleryPageContent()
+        fetchAllGalleryPageContent(),
+        fetchAllFooterContent()
       ]);
       if (homeContent) setHomePageContent(homeContent);
       if (aboutContent) setAboutUsContent(aboutContent);
@@ -1320,6 +1431,7 @@ export default function ContentManagement() {
       if (careersContent) setCareersContent(careersContent);
       if (admissionsContent) setAdmissionsContent(admissionsContent);
       if (galleryContentData) setGalleryContent(galleryContentData);
+      if (footerContentData) setFooterContent(footerContentData);
       setLoading(false);
     };
     loadContent();
@@ -1359,6 +1471,9 @@ export default function ContentManagement() {
       } else if (activePage === 'gallery') {
         functionName = 'saveGalleryPageContent';
         contentToSave = galleryContent;
+      } else if (activePage === 'footer') {
+        functionName = 'saveFooterContent';
+        contentToSave = footerContent;
       }
 
       if (!contentToSave) {
@@ -1405,6 +1520,7 @@ export default function ContentManagement() {
         <button onClick={() => setActivePage('careers')} style={{ padding: '1rem', border: 'none', background: activePage === 'careers' ? '#eee' : 'transparent', fontWeight: activePage === 'careers' ? 'bold' : 'normal' }}>Careers</button>
         <button onClick={() => setActivePage('admissions')} style={{ padding: '1rem', border: 'none', background: activePage === 'admissions' ? '#eee' : 'transparent', fontWeight: activePage === 'admissions' ? 'bold' : 'normal' }}>Admissions</button>
         <button onClick={() => setActivePage('gallery')} style={{ padding: '1rem', border: 'none', background: activePage === 'gallery' ? '#eee' : 'transparent', fontWeight: activePage === 'gallery' ? 'bold' : 'normal' }}>Gallery</button>
+        <button onClick={() => setActivePage('footer')} style={{ padding: '1rem', border: 'none', background: activePage === 'footer' ? '#eee' : 'transparent', fontWeight: activePage === 'footer' ? 'bold' : 'normal' }}>Footer</button>
         <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
       </div>
 
@@ -1457,6 +1573,12 @@ export default function ContentManagement() {
         <GalleryForm
           content={galleryContent[activeLocale]}
           setContent={(newContent) => setGalleryContent({ ...galleryContent, [activeLocale]: newContent })}
+        />
+      )}
+      {activePage === 'footer' && footerContent && (
+        <FooterForm
+          content={footerContent[activeLocale]}
+          setContent={(newContent) => setFooterContent({ ...footerContent, [activeLocale]: newContent })}
         />
       )}
       {activePage === 'media' && (
