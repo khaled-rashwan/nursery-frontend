@@ -9,6 +9,13 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
   const [content, setContent] = useState<LocaleSpecificContactUsContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    message: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -43,6 +50,68 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
   };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setSubmitMessage(null);
+
+    try {
+      const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitContactForm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setSubmitMessage(locale === 'ar-SA' ? 'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.' : 'Your message has been submitted successfully! We will contact you soon.');
+        setFormData({ fullName: '', phoneNumber: '', message: '' });
+      } else {
+        const errorData = await response.json();
+        setSubmitMessage(locale === 'ar-SA' ? 'حدث خطأ في إرسال الرسالة. يرجى المحاولة مرة أخرى.' : 'An error occurred while submitting your message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      setSubmitMessage(locale === 'ar-SA' ? 'حدث خطأ في إرسال الرسالة. يرجى المحاولة مرة أخرى.' : 'An error occurred while submitting your message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Hardcoded form text content
+  const getFormContent = (locale: string) => {
+    if (locale === 'ar-SA') {
+      return {
+        section2_title: "اتصل بنا",
+        section2_subtitle: "هل لديك سؤال؟",
+        section2_text: "لا تتردد في الاتصال بنا.",
+        form_fullName: "الاسم الكامل",
+        form_phoneNumber: "رقم الهاتف",
+        form_yourMessage: "رسالتك",
+        form_submitButton: "إرسال"
+      };
+    }
+    return {
+      section2_title: "Contact Us",
+      section2_subtitle: "Have a question?",
+      section2_text: "Feel free to contact us.",
+      form_fullName: "Full Name",
+      form_phoneNumber: "Phone Number",
+      form_yourMessage: "Your Message",
+      form_submitButton: "Submit"
+    };
+  };
+
+  const formContent = getFormContent(locale);
 
   if (loading) {
     return (
@@ -140,55 +209,99 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
           fontWeight: 'bold',
           textAlign: 'center'
         }}>
-          {content.section2_title}
+          {formContent.section2_title}
         </h2>
         <h3 style={{
           fontSize: '1.5rem',
           color: 'var(--primary-orange)',
           marginBottom: '1rem',
           textAlign: 'center'
-        }}>{content.section2_subtitle}</h3>
+        }}>{formContent.section2_subtitle}</h3>
         <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'center', marginBottom: '2rem' }}>
-          {content.section2_text}
+          {formContent.section2_text}
         </p>
-        <form>
+        <form onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="fullName" style={formLabelStyle}>{content.form_fullName}</label>
-            <input type="text" id="fullName" name="fullName" style={formInputStyle} />
+            <label htmlFor="fullName" style={formLabelStyle}>{formContent.form_fullName}</label>
+            <input 
+              type="text" 
+              id="fullName" 
+              name="fullName" 
+              value={formData.fullName}
+              onChange={handleFormChange}
+              style={formInputStyle} 
+              required
+            />
           </div>
           <div>
-            <label htmlFor="phoneNumber" style={formLabelStyle}>{content.form_phoneNumber}</label>
-            <input type="text" id="phoneNumber" name="phoneNumber" style={formInputStyle} />
+            <label htmlFor="phoneNumber" style={formLabelStyle}>{formContent.form_phoneNumber}</label>
+            <input 
+              type="text" 
+              id="phoneNumber" 
+              name="phoneNumber" 
+              value={formData.phoneNumber}
+              onChange={handleFormChange}
+              style={formInputStyle} 
+              required
+            />
           </div>
           <div>
-            <label htmlFor="message" style={formLabelStyle}>{content.form_yourMessage}</label>
-            <textarea id="message" name="message" style={{...formInputStyle, minHeight: '150px'}}></textarea>
+            <label htmlFor="message" style={formLabelStyle}>{formContent.form_yourMessage}</label>
+            <textarea 
+              id="message" 
+              name="message" 
+              value={formData.message}
+              onChange={handleFormChange}
+              style={{...formInputStyle, minHeight: '150px'}}
+              required
+            ></textarea>
           </div>
-          {/* recaptcha placeholder */}
-          <div style={{margin: '1rem 0', background: '#eee', padding: '1rem', borderRadius: 'var(--border-radius)', textAlign: 'center'}}>recaptcha placeholder</div>
-          <button type="submit" style={{
-            display: 'block',
-            width: '100%',
-            padding: '1rem',
-            background: 'var(--primary-green)',
-            color: 'white',
-            border: 'none',
-            borderRadius: 'var(--border-radius)',
-            fontSize: '1.2rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'background 0.3s, transform 0.3s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--primary-blue-dark)';
-            e.currentTarget.style.transform = 'scale(1.02)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--primary-green)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+          {submitMessage && (
+            <div style={{
+              margin: '1rem 0', 
+              padding: '1rem', 
+              borderRadius: 'var(--border-radius)', 
+              textAlign: 'center',
+              background: submitMessage.includes('success') || submitMessage.includes('بنجاح') ? '#d4edda' : '#f8d7da',
+              color: submitMessage.includes('success') || submitMessage.includes('بنجاح') ? '#155724' : '#721c24',
+              border: submitMessage.includes('success') || submitMessage.includes('بنجاح') ? '1px solid #c3e6cb' : '1px solid #f5c6cb'
+            }}>
+              {submitMessage}
+            </div>
+          )}
+          <button 
+            type="submit" 
+            disabled={submitting}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '1rem',
+              background: submitting ? '#ccc' : 'var(--primary-green)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--border-radius)',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              cursor: submitting ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s, transform 0.3s',
+            }}
+            onMouseEnter={(e) => {
+              if (!submitting) {
+                e.currentTarget.style.background = 'var(--primary-blue-dark)';
+                e.currentTarget.style.transform = 'scale(1.02)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!submitting) {
+                e.currentTarget.style.background = 'var(--primary-green)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }
+            }}
           >
-            {content.form_submitButton}
+            {submitting 
+              ? (locale === 'ar-SA' ? 'جاري الإرسال...' : 'Submitting...') 
+              : formContent.form_submitButton
+            }
           </button>
         </form>
       </section>
