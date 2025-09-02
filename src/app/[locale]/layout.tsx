@@ -11,6 +11,7 @@ import LoginNavButton from "../../components/LoginNavButton";
 import Link from 'next/link';
 import Image from 'next/image';
 import PortalNavButton from '../../components/PortalNavButton';
+import { fetchFooterContent } from '../fetchContent';
 import '../globals.css';
 
 // Temporarily commented out Google Fonts
@@ -162,33 +163,51 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
   );
 }
 
-function Footer({locale}: {locale: string}) {
+async function Footer({locale}: {locale: string}) {
+  const footerContent = await fetchFooterContent(locale);
+  
+  // Fallback to hardcoded content if fetch fails
+  const fallbackContent = {
+    sections: [
+      {
+        icon: "📍",
+        title: locale === 'ar-SA' ? 'العنوان' : 'Address',
+        content: locale === 'ar-SA' ? 'مدينة الخبر – المنطقة الشرقية' : 'Al Khobar – Eastern Province'
+      },
+      {
+        icon: "📞", 
+        title: locale === 'ar-SA' ? 'هاتف، واتساب' : 'Phone & WhatsApp',
+        content: '920016074'
+      },
+      {
+        icon: "✉️",
+        title: locale === 'ar-SA' ? 'البريد الإلكتروني' : 'Email', 
+        content: 'info@futurestep.edu.sa'
+      },
+      {
+        icon: "🕐",
+        title: locale === 'ar-SA' ? 'ساعات العمل' : 'Hours',
+        content: locale === 'ar-SA' ? 'الأحد - الخميس: 7:30 ص - 2:00 م' : 'Sunday to Thursday: 7:30 AM to 2:00 PM'
+      }
+    ],
+    copyright: locale === 'ar-SA' ? '© 2025 روضة المستقبل. جميع الحقوق محفوظة. تم الإنشاء بواسطة Njaz.org' : '© 2025 Future Step Kindergarten. All rights reserved. Created by Njaz.org'
+  };
+
+  const content = footerContent || fallbackContent;
+
   return (
     <footer className="kindergarten-footer">
       <div className="footer-content">
-        <div className="footer-section">
-          <h3>📍 {locale === 'ar-SA' ? 'العنوان' : 'Address'}</h3>
-          <p>{locale === 'ar-SA' ? 'مدينة الخبر – المنطقة الشرقية' : 'Al Khobar – Eastern Province'}</p>
-        </div>
-        
-        <div className="footer-section">
-          <h3>📞 {locale === 'ar-SA' ? 'هاتف، واتساب' : 'Phone & WhatsApp'}</h3>
-          <p>{locale === 'ar-SA' ? '920016074' : '920016074'}</p>
-        </div>
-        
-        <div className="footer-section">
-          <h3>✉️ {locale === 'ar-SA' ? 'البريد الإلكتروني' : 'Email'}</h3>
-          <p>info@futurestep.edu.sa</p>
-        </div>
-        
-        <div className="footer-section">
-          <h3>🕐 {locale === 'ar-SA' ? 'ساعات العمل' : 'Hours'}</h3>
-          <p>{locale === 'ar-SA' ? 'الأحد - الخميس: 7:30 ص - 2:00 م' : 'Sunday to Thursday: 7:30 AM to 2:00 PM'}</p>
-        </div>
+        {content.sections.map((section, index) => (
+          <div key={index} className="footer-section">
+            <h3>{section.icon} {section.title}</h3>
+            <p>{section.content}</p>
+          </div>
+        ))}
       </div>
       
       <div className="footer-bottom">
-        <p>{locale === 'ar-SA' ? '© 2025 روضة المستقبل. جميع الحقوق محفوظة.' : '© 2025 Future Step Kindergarten. All rights reserved.'}</p>
+        <p>{content.copyright}</p>
       </div>
     </footer>
   );

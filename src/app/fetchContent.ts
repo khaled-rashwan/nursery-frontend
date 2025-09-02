@@ -17,7 +17,9 @@ import {
   FirestoreAdmissionsPageContent,
   LocaleSpecificAdmissionsContent,
   FirestoreGalleryPageContent,
-  LocaleSpecificGalleryContent
+  LocaleSpecificGalleryContent,
+  FirestoreFooterContent,
+  LocaleSpecificFooterContent
 } from './types';
 
 // Initialize Firebase Functions
@@ -31,6 +33,7 @@ const getAcademicProgramPageContentCallable = httpsCallable(functions, 'getAcade
 const getCareersPageContentCallable = httpsCallable(functions, 'getCareersPageContent');
 const getAdmissionsPageContentCallable = httpsCallable(functions, 'getAdmissionsPageContent');
 const getGalleryPageContentCallable = httpsCallable(functions, 'getGalleryPageContent');
+const getFooterContentCallable = httpsCallable(functions, 'getFooterContent');
 
 /**
  * Fetches the homepage content from the 'getHomePageContent' Cloud Function.
@@ -282,6 +285,41 @@ export async function fetchAllGalleryPageContent(): Promise<FirestoreGalleryPage
     return result.data as FirestoreGalleryPageContent;
   } catch (error) {
     console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllGalleryPageContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the footer content from the 'getFooterContent' Cloud Function.
+ *
+ * @param locale The desired locale ('en-US' or 'ar-SA').
+ * @returns A promise that resolves to the locale-specific content, or null if an error occurs.
+ */
+export async function fetchFooterContent(locale: string): Promise<LocaleSpecificFooterContent | null> {
+  noStore();
+  try {
+    const result = await getFooterContentCallable();
+    const fullContent = result.data as FirestoreFooterContent;
+    if (locale === 'en-US' || locale === 'ar-SA') {
+      return fullContent[locale];
+    }
+    return fullContent['en-US'];
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchFooterContent:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches all footer content from the 'getFooterContent' Cloud Function.
+ */
+export async function fetchAllFooterContent(): Promise<FirestoreFooterContent | null> {
+  noStore();
+  try {
+    const result = await getFooterContentCallable();
+    return result.data as FirestoreFooterContent;
+  } catch (error) {
+    console.error('[FIREBASE_FUNCTIONS_ERROR] in fetchAllFooterContent:', error);
     return null;
   }
 }

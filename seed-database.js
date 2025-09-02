@@ -7,6 +7,7 @@ const { academicProgramPageContent } = require('./academicProgramPageContent.js'
 const { careersPageContent } = require('./careersPageContent.js');
 const { admissionsPageContent } = require('./admissionsPageContent.js');
 const { galleryPageContent } = require('./galleryPageContent.js');
+const { footerContent } = require('./footerContent.js');
 
 // IMPORTANT: Make sure the path to your service account key is correct.
 // You should have this file in the root of your project.
@@ -51,6 +52,10 @@ async function seedDatabase() {
     console.log('Starting to seed gallery page content...');
     await db.collection('websiteContent').doc('galleryPage').set(galleryPageContent);
     console.log('✅ Success! The gallery page content has been seeded to Firestore.');
+
+    console.log('Starting to seed footer content...');
+    await db.collection('websiteContent').doc('footer').set(footerContent);
+    console.log('✅ Success! The footer content has been seeded to Firestore.');
 
     console.log("Navigate to Firestore > websiteContent collection to see the data.");
   } catch (error) {
