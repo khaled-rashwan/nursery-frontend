@@ -695,33 +695,84 @@ function CareersForm({ content, setContent }: { content: LocaleSpecificCareersCo
             <label style={formStyles.label}>Form Instruction</label>
             <textarea style={formStyles.textarea} value={content.section4_p2} onChange={(e) => handleChange('section4_p2', e.target.value)} />
           </div>
+          
+          {/* Note about hardcoded form fields */}
+          <div style={{ gridColumn: '1 / -1', padding: '1rem', background: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '4px' }}>
+            <p style={{ margin: 0, color: '#6c757d', fontSize: '0.9rem' }}>
+              <strong>Note:</strong> Form field labels below are hardcoded for consistency and cannot be edited via CMS. 
+              Only job position options can be managed above.
+            </p>
+          </div>
+          
           <div>
-            <label style={formStyles.label}>Full Name Label</label>
-            <input style={formStyles.input} type="text" value={content.form_fullName} onChange={(e) => handleChange('form_fullName', e.target.value)} />
+            <label style={formStyles.label}>Full Name Label (Read-only)</label>
+            <input 
+              style={{...formStyles.input, background: '#f8f9fa', cursor: 'not-allowed'}} 
+              type="text" 
+              value={content.form_fullName} 
+              readOnly 
+              title="This field is hardcoded and cannot be edited"
+            />
           </div>
           <div>
-            <label style={formStyles.label}>Phone Number Label</label>
-            <input style={formStyles.input} type="text" value={content.form_phoneNumber} onChange={(e) => handleChange('form_phoneNumber', e.target.value)} />
+            <label style={formStyles.label}>Phone Number Label (Read-only)</label>
+            <input 
+              style={{...formStyles.input, background: '#f8f9fa', cursor: 'not-allowed'}} 
+              type="text" 
+              value={content.form_phoneNumber} 
+              readOnly 
+              title="This field is hardcoded and cannot be edited"
+            />
           </div>
           <div>
-            <label style={formStyles.label}>Email Address Label</label>
-            <input style={formStyles.input} type="text" value={content.form_emailAddress} onChange={(e) => handleChange('form_emailAddress', e.target.value)} />
+            <label style={formStyles.label}>Email Address Label (Read-only)</label>
+            <input 
+              style={{...formStyles.input, background: '#f8f9fa', cursor: 'not-allowed'}} 
+              type="text" 
+              value={content.form_emailAddress} 
+              readOnly 
+              title="This field is hardcoded and cannot be edited"
+            />
           </div>
           <div>
-            <label style={formStyles.label}>Job Title Label</label>
-            <input style={formStyles.input} type="text" value={content.form_jobTitle} onChange={(e) => handleChange('form_jobTitle', e.target.value)} />
+            <label style={formStyles.label}>Job Title Label (Read-only)</label>
+            <input 
+              style={{...formStyles.input, background: '#f8f9fa', cursor: 'not-allowed'}} 
+              type="text" 
+              value={content.form_jobTitle} 
+              readOnly 
+              title="This field is hardcoded and cannot be edited"
+            />
           </div>
           <div>
-            <label style={formStyles.label}>Attach Resume Label</label>
-            <input style={formStyles.input} type="text" value={content.form_attachResume} onChange={(e) => handleChange('form_attachResume', e.target.value)} />
+            <label style={formStyles.label}>Attach Resume Label (Read-only)</label>
+            <input 
+              style={{...formStyles.input, background: '#f8f9fa', cursor: 'not-allowed'}} 
+              type="text" 
+              value={content.form_attachResume} 
+              readOnly 
+              title="This field is hardcoded and cannot be edited"
+            />
           </div>
           <div>
-            <label style={formStyles.label}>Your Message Label</label>
-            <input style={formStyles.input} type="text" value={content.form_yourMessage} onChange={(e) => handleChange('form_yourMessage', e.target.value)} />
+            <label style={formStyles.label}>Your Message Label (Read-only)</label>
+            <input 
+              style={{...formStyles.input, background: '#f8f9fa', cursor: 'not-allowed'}} 
+              type="text" 
+              value={content.form_yourMessage} 
+              readOnly 
+              title="This field is hardcoded and cannot be edited"
+            />
           </div>
           <div>
-            <label style={formStyles.label}>Submit Button Text</label>
-            <input style={formStyles.input} type="text" value={content.form_submitButton} onChange={(e) => handleChange('form_submitButton', e.target.value)} />
+            <label style={formStyles.label}>Submit Button Text (Read-only)</label>
+            <input 
+              style={{...formStyles.input, background: '#f8f9fa', cursor: 'not-allowed'}} 
+              type="text" 
+              value={content.form_submitButton} 
+              readOnly 
+              title="This field is hardcoded and cannot be edited"
+            />
           </div>
         </div>
       </fieldset>

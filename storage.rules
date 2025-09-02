@@ -21,5 +21,13 @@ service firebase.storage {
     match /media/{allPaths=**} {
       allow write: if request.auth != null && request.auth.token.role in ['admin', 'superadmin', 'content-manager'];
     }
+
+    // Allow anonymous users to upload resumes to the 'resumes' folder for career applications.
+    // Only allow file creation for anonymous users, admin/superadmin can manage (read/write/delete).
+    match /resumes/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.token.role in ['admin', 'superadmin'];
+      allow create: if true; // Allow anonymous users to upload resumes
+      allow update, delete: if request.auth != null && request.auth.token.role in ['admin', 'superadmin'];
+    }
   }
 }
