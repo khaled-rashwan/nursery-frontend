@@ -104,6 +104,11 @@ const { submitContactForm, manageContactSubmissions } = require('./src/contact/c
 exports.submitContactForm = submitContactForm;
 exports.manageContactSubmissions = manageContactSubmissions;
 
+// Export Career Submissions Functions
+const { submitCareerForm, manageCareerSubmissions } = require('./src/careers/careerCrud');
+exports.submitCareerForm = submitCareerForm;
+exports.manageCareerSubmissions = manageCareerSubmissions;
+
 // Export Content Management Functions
 const contentManagement = require('./src/content/contentManagement');
 exports.getHomePageContent = contentManagement.getHomePageContent;

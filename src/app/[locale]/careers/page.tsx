@@ -4,10 +4,23 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { fetchCareersPageContent } from '../../../app/fetchContent';
 import { LocaleSpecificCareersContent } from '../../../app/types';
+import { submitCareerForm, CareerFormData } from '../../../services/careerService';
+import { uploadResume } from '../../../services/storageService';
 
 export default function CareersPage({ params }: { params: Promise<{ locale: string }> }) {
   const [content, setContent] = useState<LocaleSpecificCareersContent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState<CareerFormData>({
+    fullName: '',
+    phoneNumber: '',
+    emailAddress: '',
+    jobTitle: '',
+    message: '',
+  });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -19,6 +32,85 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
     };
     loadContent();
   }, [params]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setResumeFile(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content) return;
+
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+    setUploadProgress(0);
+
+    try {
+      let resumeUrl: string | undefined;
+      
+      // Upload resume if provided
+      if (resumeFile) {
+        try {
+          resumeUrl = await uploadResume(resumeFile, (progress) => {
+            setUploadProgress(progress);
+          });
+        } catch (uploadError) {
+          console.error('Resume upload error:', uploadError);
+          setSubmitMessage({ 
+            type: 'error', 
+            text: `Resume upload failed: ${uploadError}` 
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Submit form
+      const submissionData: CareerFormData = {
+        ...formData,
+        resumeUrl,
+      };
+
+      await submitCareerForm(submissionData);
+      
+      setSubmitMessage({ 
+        type: 'success', 
+        text: 'Your application has been submitted successfully! We will contact you soon.' 
+      });
+      
+      // Reset form
+      setFormData({
+        fullName: '',
+        phoneNumber: '',
+        emailAddress: '',
+        jobTitle: '',
+        message: '',
+      });
+      setResumeFile(null);
+      setUploadProgress(0);
+      
+      // Reset file input
+      const fileInput = document.getElementById('resume') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+    } catch (error) {
+      console.error('Form submission error:', error);
+      setSubmitMessage({ 
+        type: 'error', 
+        text: `Submission failed: ${error}` 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -218,22 +310,69 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
         <p style={{ fontSize: '1.2rem', color: '#555', lineHeight: '1.8', textAlign: 'center', marginBottom: '2rem' }}>
           {content.section4_p2}
         </p>
-        <form>
+        
+        {submitMessage && (
+          <div style={{
+            padding: '1rem',
+            borderRadius: 'var(--border-radius)',
+            marginBottom: '2rem',
+            background: submitMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+            color: submitMessage.type === 'success' ? '#155724' : '#721c24',
+            border: `1px solid ${submitMessage.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+            textAlign: 'center'
+          }}>
+            {submitMessage.text}
+          </div>
+        )}
+        
+        <form onSubmit={handleSubmit}>
           <div>
             <label htmlFor="fullName" style={formLabelStyle}>{content.form_fullName}</label>
-            <input type="text" id="fullName" name="fullName" style={formInputStyle} />
+            <input 
+              type="text" 
+              id="fullName" 
+              name="fullName" 
+              value={formData.fullName}
+              onChange={handleInputChange}
+              required
+              style={formInputStyle} 
+            />
           </div>
           <div>
             <label htmlFor="phoneNumber" style={formLabelStyle}>{content.form_phoneNumber}</label>
-            <input type="text" id="phoneNumber" name="phoneNumber" style={formInputStyle} />
+            <input 
+              type="text" 
+              id="phoneNumber" 
+              name="phoneNumber" 
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              required
+              style={formInputStyle} 
+            />
           </div>
           <div>
             <label htmlFor="emailAddress" style={formLabelStyle}>{content.form_emailAddress}</label>
-            <input type="email" id="emailAddress" name="emailAddress" style={formInputStyle} />
+            <input 
+              type="email" 
+              id="emailAddress" 
+              name="emailAddress" 
+              value={formData.emailAddress}
+              onChange={handleInputChange}
+              required
+              style={formInputStyle} 
+            />
           </div>
           <div>
             <label htmlFor="jobTitle" style={formLabelStyle}>{content.form_jobTitle}</label>
-            <select id="jobTitle" name="jobTitle" style={formInputStyle}>
+            <select 
+              id="jobTitle" 
+              name="jobTitle" 
+              value={formData.jobTitle}
+              onChange={handleInputChange}
+              required
+              style={formInputStyle}
+            >
+              <option value="">Select a position</option>
               {content.section3_positions.map((position, index) => (
                 <option key={index} value={position}>{position}</option>
               ))}
@@ -241,35 +380,78 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
           </div>
           <div>
             <label htmlFor="resume" style={formLabelStyle}>{content.form_attachResume}</label>
-            <input type="file" id="resume" name="resume" style={formInputStyle} />
+            <input 
+              type="file" 
+              id="resume" 
+              name="resume" 
+              onChange={handleFileChange}
+              accept=".pdf,.doc,.docx"
+              style={formInputStyle} 
+            />
+            <small style={{ color: '#666', fontSize: '0.9rem' }}>
+              Accepted formats: PDF, DOC, DOCX (Max 5MB)
+            </small>
+            {uploadProgress > 0 && uploadProgress < 100 && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  backgroundColor: '#e9ecef',
+                  borderRadius: '4px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${uploadProgress}%`,
+                    height: '100%',
+                    backgroundColor: 'var(--primary-green)',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <small style={{ color: '#666' }}>Uploading: {Math.round(uploadProgress)}%</small>
+              </div>
+            )}
           </div>
           <div>
             <label htmlFor="message" style={formLabelStyle}>{content.form_yourMessage}</label>
-            <textarea id="message" name="message" style={{...formInputStyle, minHeight: '150px'}}></textarea>
+            <textarea 
+              id="message" 
+              name="message" 
+              value={formData.message}
+              onChange={handleInputChange}
+              required
+              style={{...formInputStyle, minHeight: '150px'}}
+            ></textarea>
           </div>
-          <button type="submit" style={{
-            display: 'block',
-            width: '100%',
-            padding: '1rem',
-            background: 'var(--primary-green)',
-            color: 'white',
-            border: 'none',
-            borderRadius: 'var(--border-radius)',
-            fontSize: '1.2rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'background 0.3s, transform 0.3s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--primary-blue-dark)';
-            e.currentTarget.style.transform = 'scale(1.02)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--primary-green)';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '1rem',
+              background: isSubmitting ? '#ccc' : 'var(--primary-green)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--border-radius)',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              transition: 'background 0.3s, transform 0.3s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.background = 'var(--primary-blue-dark)';
+                e.currentTarget.style.transform = 'scale(1.02)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.background = 'var(--primary-green)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }
+            }}
           >
-            {content.form_submitButton}
+            {isSubmitting ? 'Submitting...' : content.form_submitButton}
           </button>
         </form>
       </section>

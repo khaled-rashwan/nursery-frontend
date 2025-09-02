@@ -1076,10 +1076,10 @@ export function UserManagement({ locale }: UserManagementProps) {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <DeleteConfirmModal
-          userName={users.find(u => u.id === showDeleteConfirm)?.displayName || ''}
-          locale={locale}
+          isOpen={!!showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(null)}
           onConfirm={() => handleDeleteUser(showDeleteConfirm)}
-          onCancel={() => setShowDeleteConfirm(null)}
+          itemName={`user ${users.find(u => u.id === showDeleteConfirm)?.displayName}`}
         />
       )}
     </div>
