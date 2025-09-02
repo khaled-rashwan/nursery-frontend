@@ -2,16 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllContactUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent, fetchAllAdmissionsPageContent, fetchAllGalleryPageContent, fetchAllFooterContent } from '../../../../fetchContent';
+import { fetchAllHomePageContent, fetchAllAboutUsPageContent, fetchAllAcademicProgramPageContent, fetchAllCareersPageContent, fetchAllAdmissionsPageContent, fetchAllGalleryPageContent, fetchAllFooterContent } from '../../../../fetchContent';
 import {
   FirestoreHomePageContent,
   LocaleSpecificContent,
   FirestoreAboutUsPageContent,
   LocaleSpecificAboutUsContent,
   AboutUsSection,
-  FirestoreContactUsPageContent,
-  LocaleSpecificContactUsContent,
-  Faq,
   FirestoreAcademicProgramPageContent,
   LocaleSpecificAcademicProgramContent,
   Program,
@@ -232,73 +229,6 @@ function HomePageForm({ content, setContent }: { content: LocaleSpecificContent,
             />
           </div>
         </div>
-      </fieldset>
-    </div>
-  );
-}
-
-function ContactUsForm({ content, setContent }: { content: LocaleSpecificContactUsContent, setContent: (content: LocaleSpecificContactUsContent) => void }) {
-  const handleChange = (section: keyof LocaleSpecificContactUsContent, value: string | Faq[], index?: number) => {
-    if (typeof value === 'string') {
-      setContent({
-        ...content,
-        [section]: value,
-      });
-    } else {
-      // Handle FAQ updates
-      const newFaqs = [...content.faqs];
-      if (index !== undefined) {
-        newFaqs[index] = value[0] as Faq;
-      }
-      setContent({
-        ...content,
-        faqs: newFaqs,
-      });
-    }
-  };
-
-  const handleFaqChange = (index: number, field: 'q' | 'a', value: string) => {
-    const newFaqs = [...content.faqs];
-    newFaqs[index] = { ...newFaqs[index], [field]: value };
-    setContent({ ...content, faqs: newFaqs });
-  };
-
-  return (
-    <div>
-      <fieldset style={formStyles.fieldset}>
-        <legend style={formStyles.legend}>Contact Information</legend>
-        <div style={formStyles.grid}>
-          <input style={formStyles.input} type="text" value={content.title} onChange={(e) => handleChange('title', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.section1_title} onChange={(e) => handleChange('section1_title', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.phone} onChange={(e) => handleChange('phone', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.address} onChange={(e) => handleChange('address', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.workingHours} onChange={(e) => handleChange('workingHours', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.email} onChange={(e) => handleChange('email', e.target.value)} />
-        </div>
-      </fieldset>
-
-      <fieldset style={formStyles.fieldset}>
-        <legend style={formStyles.legend}>Contact Form</legend>
-        <div style={formStyles.grid}>
-          <input style={formStyles.input} type="text" value={content.section2_title} onChange={(e) => handleChange('section2_title', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.section2_subtitle} onChange={(e) => handleChange('section2_subtitle', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.section2_text} onChange={(e) => handleChange('section2_text', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.form_fullName} onChange={(e) => handleChange('form_fullName', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.form_phoneNumber} onChange={(e) => handleChange('form_phoneNumber', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.form_yourMessage} onChange={(e) => handleChange('form_yourMessage', e.target.value)} />
-          <input style={formStyles.input} type="text" value={content.form_submitButton} onChange={(e) => handleChange('form_submitButton', e.target.value)} />
-        </div>
-      </fieldset>
-
-      <fieldset style={formStyles.fieldset}>
-        <legend style={formStyles.legend}>FAQs</legend>
-        <input style={formStyles.input} type="text" value={content.section3_title} onChange={(e) => handleChange('section3_title', e.target.value)} />
-        {content.faqs.map((faq, index) => (
-          <div key={index} style={{ ...formStyles.grid, borderTop: '1px solid #ccc', paddingTop: '1rem', marginTop: '1rem' }}>
-            <textarea style={formStyles.textarea} value={faq.q} onChange={(e) => handleFaqChange(index, 'q', e.target.value)} placeholder="Question" />
-            <textarea style={formStyles.textarea} value={faq.a} onChange={(e) => handleFaqChange(index, 'a', e.target.value)} placeholder="Answer" />
-          </div>
-        ))}
       </fieldset>
     </div>
   );
@@ -1399,13 +1329,12 @@ export default function ContentManagement() {
   const { user } = useAuth();
   const [homePageContent, setHomePageContent] = useState<FirestoreHomePageContent | null>(null);
   const [aboutUsContent, setAboutUsContent] = useState<FirestoreAboutUsPageContent | null>(null);
-  const [contactUsContent, setContactUsContent] = useState<FirestoreContactUsPageContent | null>(null);
   const [academicProgramContent, setAcademicProgramContent] = useState<FirestoreAcademicProgramPageContent | null>(null);
   const [careersContent, setCareersContent] = useState<FirestoreCareersPageContent | null>(null);
   const [admissionsContent, setAdmissionsContent] = useState<FirestoreAdmissionsPageContent | null>(null);
   const [galleryContent, setGalleryContent] = useState<FirestoreGalleryPageContent | null>(null);
   const [footerContent, setFooterContent] = useState<FirestoreFooterContent | null>(null);
-  const [activePage, setActivePage] = useState<'home' | 'about' | 'contact' | 'academic' | 'careers' | 'admissions' | 'gallery' | 'footer' | 'media'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'about' | 'academic' | 'careers' | 'admissions' | 'gallery' | 'footer' | 'media'>('home');
   const [activeLocale, setActiveLocale] = useState<'en-US' | 'ar-SA'>('en-US');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1414,10 +1343,9 @@ export default function ContentManagement() {
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
-      const [homeContent, aboutContent, contactContent, academicContent, careersContent, admissionsContent, galleryContentData, footerContentData] = await Promise.all([
+      const [homeContent, aboutContent, academicContent, careersContent, admissionsContent, galleryContentData, footerContentData] = await Promise.all([
         fetchAllHomePageContent(),
         fetchAllAboutUsPageContent(),
-        fetchAllContactUsPageContent(),
         fetchAllAcademicProgramPageContent(),
         fetchAllCareersPageContent(),
         fetchAllAdmissionsPageContent(),
@@ -1426,7 +1354,6 @@ export default function ContentManagement() {
       ]);
       if (homeContent) setHomePageContent(homeContent);
       if (aboutContent) setAboutUsContent(aboutContent);
-      if (contactContent) setContactUsContent(contactContent);
       if (academicContent) setAcademicProgramContent(academicContent);
       if (careersContent) setCareersContent(careersContent);
       if (admissionsContent) setAdmissionsContent(admissionsContent);
@@ -1456,9 +1383,6 @@ export default function ContentManagement() {
       } else if (activePage === 'about') {
         functionName = 'saveAboutUsPageContent';
         contentToSave = aboutUsContent;
-      } else if (activePage === 'contact') {
-        functionName = 'saveContactUsPageContent';
-        contentToSave = contactUsContent;
       } else if (activePage === 'academic') {
         functionName = 'saveAcademicProgramPageContent';
         contentToSave = academicProgramContent;
@@ -1515,7 +1439,6 @@ export default function ContentManagement() {
       <div style={{ marginBottom: '1rem', borderBottom: '2px solid #ccc' }}>
         <button onClick={() => setActivePage('home')} style={{ padding: '1rem', border: 'none', background: activePage === 'home' ? '#eee' : 'transparent', fontWeight: activePage === 'home' ? 'bold' : 'normal' }}>Homepage</button>
         <button onClick={() => setActivePage('about')} style={{ padding: '1rem', border: 'none', background: activePage === 'about' ? '#eee' : 'transparent', fontWeight: activePage === 'about' ? 'bold' : 'normal' }}>About Us</button>
-        <button onClick={() => setActivePage('contact')} style={{ padding: '1rem', border: 'none', background: activePage === 'contact' ? '#eee' : 'transparent', fontWeight: activePage === 'contact' ? 'bold' : 'normal' }}>Contact Us</button>
         <button onClick={() => setActivePage('academic')} style={{ padding: '1rem', border: 'none', background: activePage === 'academic' ? '#eee' : 'transparent', fontWeight: activePage === 'academic' ? 'bold' : 'normal' }}>Academic Program</button>
         <button onClick={() => setActivePage('careers')} style={{ padding: '1rem', border: 'none', background: activePage === 'careers' ? '#eee' : 'transparent', fontWeight: activePage === 'careers' ? 'bold' : 'normal' }}>Careers</button>
         <button onClick={() => setActivePage('admissions')} style={{ padding: '1rem', border: 'none', background: activePage === 'admissions' ? '#eee' : 'transparent', fontWeight: activePage === 'admissions' ? 'bold' : 'normal' }}>Admissions</button>
@@ -1543,12 +1466,6 @@ export default function ContentManagement() {
         <AboutUsForm
           content={aboutUsContent[activeLocale]}
           setContent={(newContent) => setAboutUsContent({ ...aboutUsContent, [activeLocale]: newContent })}
-        />
-      )}
-      {activePage === 'contact' && contactUsContent && (
-        <ContactUsForm
-          content={contactUsContent[activeLocale]}
-          setContent={(newContent) => setContactUsContent({ ...contactUsContent, [activeLocale]: newContent })}
         />
       )}
       {activePage === 'academic' && academicProgramContent && (

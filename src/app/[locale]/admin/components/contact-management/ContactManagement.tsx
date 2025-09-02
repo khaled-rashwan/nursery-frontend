@@ -306,11 +306,10 @@ export default function ContactManagement({ locale }: ContactManagementProps) {
 
       {showDeleteConfirm && (
         <DeleteConfirmModal
-          isOpen={true}
-          onClose={() => setShowDeleteConfirm(null)}
+          userName={contacts.find(c => c.id === showDeleteConfirm)?.fullName || ''}
+          locale={locale}
           onConfirm={() => handleDelete(showDeleteConfirm)}
-          title={locale === 'ar-SA' ? 'تأكيد الحذف' : 'Confirm Delete'}
-          message={locale === 'ar-SA' ? 'هل أنت متأكد من أنك تريد حذف هذه الرسالة؟' : 'Are you sure you want to delete this contact submission?'}
+          onCancel={() => setShowDeleteConfirm(null)}
         />
       )}
     </div>
