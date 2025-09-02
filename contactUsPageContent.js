@@ -7,13 +7,7 @@ const contactUsPageContent = {
     address: "You can visit us in Al Khobar – Eastern Province, Saudi Arabia",
     workingHours: "Working Hours: Sunday to Thursday – 7:30 AM to 2:00 PM",
     email: "info@futurestep.edu.sa",
-    section2_title: "Contact Us",
-    section2_subtitle: "Have a question?",
-    section2_text: "Feel free to contact us.",
-    form_fullName: "Full Name",
-    form_phoneNumber: "Phone Number",
-    form_yourMessage: "Your Message",
-    form_submitButton: "Submit",
+    // Contact form fields removed - form is now hardcoded
     section3_title: "Frequently Asked Questions",
     faqs: [
       {
@@ -57,13 +51,7 @@ const contactUsPageContent = {
     address: "يمكنكم زيارتنا في الخبر - المنطقة الشرقية، المملكة العربية السعودية",
     workingHours: "ساعات العمل: من الأحد إلى الخميس - من 7:30 صباحًا حتى 2:00 ظهرًا",
     email: "info@futurestep.edu.sa",
-    section2_title: "اتصل بنا",
-    section2_subtitle: "هل لديك سؤال؟",
-    section2_text: "لا تتردد في الاتصال بنا.",
-    form_fullName: "الاسم الكامل",
-    form_phoneNumber: "رقم الهاتف",
-    form_yourMessage: "رسالتك",
-    form_submitButton: "إرسال",
+    // Contact form fields removed - form is now hardcoded
     section3_title: "الأسئلة الشائعة",
     faqs: [
       {
