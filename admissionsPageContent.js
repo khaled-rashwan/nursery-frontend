@@ -11,15 +11,15 @@ const admissionsPageContent = {
       items: [
         {
           title: "Admissions Open Now",
-          image: "gs://future-step-nursery.firebasestorage.app/media/house.png"
+          image: "https://firebasestorage.googleapis.com/v0/b/future-step-nursery.firebasestorage.app/o/media%2Fhouse.png?alt=media"
         },
         {
           title: "Application Deadline: October 25, 2025",
-          image: "gs://future-step-nursery.firebasestorage.app/media/calender.png"
+          image: "https://firebasestorage.googleapis.com/v0/b/future-step-nursery.firebasestorage.app/o/media%2Fcalender.png?alt=media"
         },
         {
           title: "Limited seats available – early application is highly encouraged",
-          image: "gs://future-step-nursery.firebasestorage.app/media/chairs.png"
+          image: "https://firebasestorage.googleapis.com/v0/b/future-step-nursery.firebasestorage.app/o/media%2Fchairs.png?alt=media"
         }
       ]
     },
@@ -77,8 +77,8 @@ const admissionsPageContent = {
     },
 
     images: {
-      boy: "gs://future-step-nursery.firebasestorage.app/media/boy.jpg",
-      girl: "gs://future-step-nursery.firebasestorage.app/media/girl.jpg"
+      boy: "https://firebasestorage.googleapis.com/v0/b/future-step-nursery.firebasestorage.app/o/media%2Fboy.jpg?alt=media",
+      girl: "https://firebasestorage.googleapis.com/v0/b/future-step-nursery.firebasestorage.app/o/media%2Fgirl.jpg?alt=media"
     },
 
     admissionForm: {
@@ -175,8 +175,8 @@ const admissionsPageContent = {
     },
 
     images: {
-      boy: "gs://future-step-nursery.firebasestorage.app/media/boy.jpg",
-      girl: "gs://future-step-nursery.firebasestorage.app/media/girl.jpg"
+      boy: "https://firebasestorage.googleapis.com/v0/b/future-step-nursery.firebasestorage.app/o/media%2Fboy.jpg?alt=media",
+      girl: "https://firebasestorage.googleapis.com/v0/b/future-step-nursery.firebasestorage.app/o/media%2Fgirl.jpg?alt=media"
     },
 
     admissionForm: {
