@@ -309,7 +309,7 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <DeleteConfirmModal
-          isOpen={true}
+          isOpen={!!showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(null)}
           onConfirm={() => handleDelete(showDeleteConfirm)}
           itemName="career application"

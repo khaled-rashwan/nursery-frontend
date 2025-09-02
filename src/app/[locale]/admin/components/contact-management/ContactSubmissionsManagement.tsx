@@ -221,10 +221,10 @@ export default function ContactSubmissionsManagement({ locale }: ContactSubmissi
 
       {showDeleteConfirm && (
         <DeleteConfirmModal
-          userName={contactSubmissions.find(c => c.id === showDeleteConfirm)?.fullName || ''}
-          locale={locale}
+          isOpen={!!showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(null)}
           onConfirm={() => handleDelete(showDeleteConfirm)}
-          onCancel={() => setShowDeleteConfirm(null)}
+          itemName={`the contact submission from ${contactSubmissions.find(c => c.id === showDeleteConfirm)?.fullName}`}
         />
       )}
 

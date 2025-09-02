@@ -1,18 +1,22 @@
 import React from 'react';
 
 interface DeleteConfirmModalProps {
-  userName: string;
-  locale: string;
+  isOpen: boolean;
+  onClose: () => void;
   onConfirm: () => void;
-  onCancel: () => void;
+  itemName: string;
 }
 
 export function DeleteConfirmModal({ 
-  userName, 
-  locale, 
+  isOpen,
+  onClose,
   onConfirm, 
-  onCancel 
+  itemName
 }: DeleteConfirmModalProps) {
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <div style={{
       position: 'fixed',
@@ -58,7 +62,7 @@ export function DeleteConfirmModal({
           marginBottom: '1rem',
           fontWeight: 'bold'
         }}>
-          {locale === 'ar-SA' ? 'تأكيد الحذف' : 'Confirm Delete'}
+          Confirm Delete
         </h2>
         
         <p style={{
@@ -67,10 +71,7 @@ export function DeleteConfirmModal({
           marginBottom: '2rem',
           lineHeight: '1.6'
         }}>
-          {locale === 'ar-SA' 
-            ? `هل أنت متأكد من أنك تريد حذف المستخدم "${userName}"؟ لا يمكن التراجع عن هذا الإجراء.`
-            : `Are you sure you want to delete user "${userName}"? This action cannot be undone.`
-          }
+          Are you sure you want to delete this {itemName}? This action cannot be undone.
         </p>
         
         <div style={{
@@ -80,7 +81,7 @@ export function DeleteConfirmModal({
           flexWrap: 'wrap'
         }}>
           <button
-            onClick={onCancel}
+            onClick={onClose}
             style={{
               padding: '1rem 2rem',
               background: '#95a5a6',
@@ -102,7 +103,7 @@ export function DeleteConfirmModal({
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            {locale === 'ar-SA' ? 'إلغاء' : 'Cancel'}
+            Cancel
           </button>
           
           <button
@@ -129,7 +130,7 @@ export function DeleteConfirmModal({
               e.currentTarget.style.boxShadow = '0 5px 15px rgba(231, 76, 60, 0.3)';
             }}
           >
-            🗑️ {locale === 'ar-SA' ? 'حذف' : 'Delete'}
+            🗑️ Delete
           </button>
         </div>
       </div>
