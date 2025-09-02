@@ -910,7 +910,7 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
                 <label style={formStyles.label}>Image</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <Image 
-                    src={item.image.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} 
+                    src={item.image || '/placeholder.jpg'} 
                     alt={item.title} 
                     width={150} 
                     height={150} 
@@ -1004,7 +1004,7 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={formStyles.label}>Boy Image</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-              <Image src={content.images.boy.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} alt="Boy" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+              <Image src={content.images.boy || '/placeholder.jpg'} alt="Boy" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
               <button type="button" onClick={() => openMediaLibrary('boy')} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
                 Choose Boy Image
               </button>
@@ -1013,7 +1013,7 @@ function AdmissionsForm({ content, setContent }: { content: LocaleSpecificAdmiss
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={formStyles.label}>Girl Image</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Image src={content.images.girl.replace('gs://future-step-nursery.firebasestorage.app', '') || '/placeholder.jpg'} alt="Girl" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
+              <Image src={content.images.girl || '/placeholder.jpg'} alt="Girl" width={150} height={150} style={{ objectFit: 'cover', borderRadius: '8px', border: '1px solid #ccc' }} />
               <button type="button" onClick={() => openMediaLibrary('girl')} style={{padding: '0.8rem 1.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'var(--primary-purple)', color: 'white'}}>
                 Choose Girl Image
               </button>
