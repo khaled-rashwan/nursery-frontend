@@ -248,52 +248,170 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs - Card Design */}
       <div style={{
         background: 'white',
-        padding: '1rem',
-        borderRadius: '15px',
-        boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-        marginBottom: '2rem',
-        border: '3px solid #34495e'
+        padding: '2rem',
+        borderRadius: '20px',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.1)',
+        marginBottom: '2rem'
       }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1.5rem',
+          maxWidth: '1400px',
+          margin: '0 auto'
+        }}>
           {[
-            { id: 'content', label: locale === 'ar-SA' ? 'إدارة المحتوى' : 'Content Management', icon: '📝', permission: 'manage_content' },
-            { id: 'admissions', label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', icon: '📝', permission: 'manage_classes' },
-            { id: 'contact', label: locale === 'ar-SA' ? 'رسائل الاتصال' : 'Contact Submissions', icon: '📨', permission: 'manage_classes' },
-            { id: 'careers', label: locale === 'ar-SA' ? 'طلبات التوظيف' : 'Career Applications', icon: '💼', permission: 'manage_classes' },
-            { id: 'payments', label: locale === 'ar-SA' ? 'تتبع المدفوعات' : 'Payment Tracker', icon: '💳', permission: 'manage_classes' },
-            { id: 'users', label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', icon: '👥', permission: 'manage_users' },
-            { id: 'students', label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', icon: '👨‍🎓', permission: 'view_students' },
-            { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚', permission: 'manage_classes' },
-            { id: 'classes', label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', icon: '🏫', permission: 'manage_classes' },
-            { id: 'teachers', label: locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management', icon: '👩‍🏫', permission: 'manage_users' },
+            { 
+              id: 'content', 
+              label: locale === 'ar-SA' ? 'إدارة المحتوى' : 'Content Management', 
+              description: locale === 'ar-SA' ? 'إدارة صفحات ومحتوى الموقع.' : 'Manage website pages and content.',
+              icon: '📄', 
+              permission: 'manage_content',
+              color: '#6366f1'
+            },
+            { 
+              id: 'admissions', 
+              label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', 
+              description: locale === 'ar-SA' ? 'عرض وإدارة طلبات قبول الطلاب.' : 'View and manage student admissions.',
+              icon: '🎓', 
+              permission: 'manage_classes',
+              color: '#14b8a6'
+            },
+            { 
+              id: 'contact', 
+              label: locale === 'ar-SA' ? 'رسائل الاتصال' : 'Contact Submissions', 
+              description: locale === 'ar-SA' ? 'قراءة والرد على الرسائل.' : 'Read and reply to messages.',
+              icon: '💬', 
+              permission: 'manage_classes',
+              color: '#3b82f6'
+            },
+            { 
+              id: 'careers', 
+              label: locale === 'ar-SA' ? 'طلبات التوظيف' : 'Career Applications', 
+              description: locale === 'ar-SA' ? 'مراجعة طلبات التوظيف.' : 'Review job applications.',
+              icon: '💼', 
+              permission: 'manage_classes',
+              color: '#f59e0b'
+            },
+            { 
+              id: 'payments', 
+              label: locale === 'ar-SA' ? 'تتبع المدفوعات' : 'Payment Tracker', 
+              description: locale === 'ar-SA' ? 'تتبع الرسوم والمدفوعات.' : 'Track fees and payments.',
+              icon: '💳', 
+              permission: 'manage_classes',
+              color: '#2563eb'
+            },
+            { 
+              id: 'users', 
+              label: locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management', 
+              description: locale === 'ar-SA' ? 'إدارة حسابات الموظفين والأولياء.' : 'Manage staff and parent accounts.',
+              icon: '👥', 
+              permission: 'manage_users',
+              color: '#8b5cf6'
+            },
+            { 
+              id: 'students', 
+              label: locale === 'ar-SA' ? 'إدارة الطلاب' : 'Student Management', 
+              description: locale === 'ar-SA' ? 'إدارة ملفات الطلاب.' : 'Manage student profiles.',
+              icon: '👨‍🎓', 
+              permission: 'view_students',
+              color: '#10b981'
+            },
+            { 
+              id: 'enrollments', 
+              label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', 
+              description: locale === 'ar-SA' ? 'التعامل مع تسجيلات الطلاب.' : 'Handle student enrollments.',
+              icon: '📚', 
+              permission: 'manage_classes',
+              color: '#ef4444'
+            },
+            { 
+              id: 'classes', 
+              label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', 
+              description: locale === 'ar-SA' ? 'تنظيم الفصول والأقسام.' : 'Organize classes and sections.',
+              icon: '🏫', 
+              permission: 'manage_classes',
+              color: '#f97316'
+            },
+            { 
+              id: 'teachers', 
+              label: locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management', 
+              description: locale === 'ar-SA' ? 'إدارة ملفات المعلمين.' : 'Manage teacher profiles.',
+              icon: '👩‍🏫', 
+              permission: 'manage_users',
+              color: '#22c55e'
+            },
           ]
           .filter(tab => hasPermission(userClaims?.role as UserRole, tab.permission))
           .map(tab => (
-            <button
+            <div
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '1rem 1.5rem',
                 background: activeTab === tab.id 
-                  ? 'linear-gradient(135deg, #3498db, #2c3e50)' 
-                  : 'transparent',
-                color: activeTab === tab.id ? 'white' : '#2c3e50',
-                border: activeTab === tab.id ? 'none' : '2px solid #bdc3c7',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                fontWeight: 'bold',
+                  ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)` 
+                  : 'white',
+                color: activeTab === tab.id ? 'white' : '#374151',
+                border: activeTab === tab.id ? 'none' : `2px solid ${tab.color}20`,
+                borderRadius: '16px',
+                padding: '1.5rem',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
+                boxShadow: activeTab === tab.id 
+                  ? `0 8px 25px ${tab.color}40` 
+                  : '0 2px 8px rgba(0,0,0,0.1)',
+                transform: activeTab === tab.id ? 'translateY(-2px)' : 'translateY(0)',
+                minHeight: '140px',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                  e.currentTarget.style.boxShadow = `0 5px 15px ${tab.color}30`;
+                  e.currentTarget.style.borderColor = `${tab.color}40`;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.borderColor = `${tab.color}20`;
+                }
               }}
             >
-              {tab.icon} {tab.label}
-            </button>
+              <div>
+                <div style={{
+                  fontSize: '2rem',
+                  marginBottom: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span>{tab.icon}</span>
+                </div>
+                <h3 style={{
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  margin: '0 0 0.5rem 0',
+                  lineHeight: '1.3'
+                }}>
+                  {tab.label}
+                </h3>
+              </div>
+              <p style={{
+                fontSize: '0.9rem',
+                margin: 0,
+                opacity: activeTab === tab.id ? 0.9 : 0.7,
+                lineHeight: '1.4'
+              }}>
+                {tab.description}
+              </p>
+            </div>
           ))}
         </div>
       </div>
