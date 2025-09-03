@@ -266,7 +266,6 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚', permission: 'manage_classes' },
             { id: 'classes', label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', icon: '🏫', permission: 'manage_classes' },
             { id: 'teachers', label: locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management', icon: '👩‍🏫', permission: 'manage_users' },
-            { id: 'settings', label: locale === 'ar-SA' ? 'الإعدادات' : 'Settings', icon: '⚙️', permission: 'system_settings' }
           ]
           .filter(tab => hasPermission(userClaims?.role as UserRole, tab.permission))
           .map(tab => (
