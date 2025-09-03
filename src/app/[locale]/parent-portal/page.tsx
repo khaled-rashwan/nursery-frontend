@@ -8,7 +8,7 @@ import { UserRole, getRoleName } from '../../../utils/rolePermissions';
 import { 
   logSecurityEvent 
 } from '../../../utils/parentPortalSecurity';
-import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, fetchHomeworkByClass, fetchStudentEnrollment, fetchHomeworkSubmission, ChildEnriched, StudentAttendanceHistoryResponse, HomeworkItem, HomeworkSubmission, fetchAnnouncements, Announcement } from './services/api';
+import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, fetchHomeworkByClass, fetchStudentEnrollment, fetchHomeworkSubmission, ChildEnriched, StudentAttendanceHistoryResponse, HomeworkItem, HomeworkSubmission, fetchAnnouncements, Announcement, fetchReportCards, ReportCard } from './services/api';
 import HomeworkSubmissionForm from './components/HomeworkSubmissionForm';
 // Academic Year context & selector
 import { AcademicYearProvider, useAcademicYear } from '../../../contexts/AcademicYearContext';
@@ -861,6 +861,9 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [announcementsError, setAnnouncementsError] = useState<string | null>(null);
+  const [reportCards, setReportCards] = useState<ReportCard[]>([]);
+  const [loadingReportCards, setLoadingReportCards] = useState(false);
+  const [reportCardsError, setReportCardsError] = useState<string | null>(null);
 
 
   // Reset dashboard state when academic year changes
@@ -1028,6 +1031,38 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     return () => { cancelled = true; };
   }, [user, selectedChildId, children, selectedAcademicYear]);
 
+  // Fetch report cards for selected child and academic year
+  useEffect(() => {
+    let cancelled = false;
+    async function loadReportCards() {
+      if (!user || !selectedChildId || !selectedAcademicYear) return;
+
+      setLoadingReportCards(true);
+      setReportCardsError(null);
+      try {
+        const token = await user.getIdToken();
+        const fetchedReportCards = await fetchReportCards(token, selectedChildId, selectedAcademicYear);
+        if (!cancelled) {
+          setReportCards(fetchedReportCards);
+        }
+      } catch (e: unknown) {
+        if (!cancelled) {
+          console.error('Failed to load report cards', e);
+          if (e instanceof Error) {
+            setReportCardsError(e.message || 'Failed to load report cards');
+          } else {
+            setReportCardsError('An unknown error occurred while fetching report cards.');
+          }
+        }
+      } finally {
+        if (!cancelled) setLoadingReportCards(false);
+      }
+    }
+
+    loadReportCards();
+    return () => { cancelled = true; };
+  }, [user, selectedChildId, selectedAcademicYear]);
+
 
   // Get current child data
   const currentChild = children.find(child => child.id === selectedChildId) || children[0];
@@ -1038,11 +1073,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     : [];
   const absentDaysDisplay = attendanceHistory?.stats.absentDays?.toString() || '--';
   // Use always-fetched homework for the selected child/class/year
-  const pendingHomework = currentHomework.filter(hw => {
-    const dueDate = new Date(hw.dueDate);
-    const today = new Date();
-    return dueDate >= today;
-  });
+  const pendingHomework = currentHomework.filter(hw => !homeworkSubmissions[hw.id]);
 
   const tabs = [
     { id: 'overview', icon: '📊', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview' },
@@ -1329,7 +1360,7 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   </div>
 
                   <div style={{
-                    background: 'linear-gradient(135ds, var(--light-blue), white)',
+                    background: 'linear-gradient(135deg, var(--light-blue), white)',
                     padding: '2rem',
                     borderRadius: 'var(--border-radius)',
                     textAlign: 'center',
@@ -1342,17 +1373,110 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                       color: 'var(--primary-purple)',
                       marginBottom: '0.5rem'
                     }}>
-                      {locale === 'ar-SA' ? 'إشعارات جديدة' : 'New Notifications'}
+                      {locale === 'ar-SA' ? 'الإشعارات' : 'Notifications'}
                     </h4>
                     <div style={{
                       fontSize: '2rem',
                       color: 'var(--primary-blue)',
                       fontWeight: 'bold'
                     }}>
-                      {currentHomework.length}
+                      {announcements.length}
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'reports' && (
+              <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                <h2 style={{
+                  fontSize: '2.5rem',
+                  color: 'var(--primary-purple)',
+                  textAlign: 'center',
+                  marginBottom: '2rem'
+                }}>
+                  📋 {locale === 'ar-SA' ? 'التقارير' : 'Report Cards'}
+                </h2>
+
+                {loadingReportCards && (
+                  <div style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+                    <p style={{ fontSize: '1.2rem', color: 'var(--primary-purple)' }}>
+                      {locale === 'ar-SA' ? 'جاري تحميل التقارير...' : 'Loading report cards...'}
+                    </p>
+                  </div>
+                )}
+
+                {reportCardsError && (
+                  <div style={{
+                    background: 'var(--light-red)',
+                    padding: '1.5rem',
+                    borderRadius: 'var(--border-radius)',
+                    marginBottom: '2rem',
+                    border: '3px solid var(--primary-red)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
+                    <p style={{ fontSize: '1.1rem', color: 'var(--primary-red)', margin: 0 }}>
+                      {reportCardsError}
+                    </p>
+                  </div>
+                )}
+
+                {!loadingReportCards && !reportCardsError && reportCards.length === 0 && (
+                  <div style={{
+                    background: 'var(--light-green)',
+                    padding: '2rem',
+                    borderRadius: 'var(--border-radius)',
+                    border: '3px solid var(--primary-green)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
+                    <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-green)', marginBottom: '1rem' }}>
+                      {locale === 'ar-SA' ? 'لا توجد تقارير حالياً' : 'No Report Cards Currently'}
+                    </h3>
+                    <p style={{ fontSize: '1.1rem', color: '#666' }}>
+                      {locale === 'ar-SA'
+                        ? 'لا توجد تقارير متاحة لطفلك في العام الدراسي المحدد.'
+                        : 'There are no report cards available for your child for the selected academic year.'
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {!loadingReportCards && !reportCardsError && reportCards.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {reportCards.map((report: ReportCard) => (
+                      <div key={report.id} style={{
+                        background: 'white',
+                        padding: '2rem',
+                        borderRadius: 'var(--border-radius)',
+                        boxShadow: 'var(--shadow)',
+                        border: '4px solid var(--primary-blue)'
+                      }}>
+                        <h3 style={{
+                          fontSize: '1.5rem',
+                          color: 'var(--primary-purple)',
+                          marginBottom: '1rem'
+                        }}>
+                          {report.period}
+                        </h3>
+                        <p><strong>Overall Performance:</strong> {report.overallPerformance}</p>
+                        <p><strong>Comments:</strong> {report.comments}</p>
+                        <div>
+                          <strong>Grades:</strong>
+                          <ul>
+                            {Object.entries(report.grades).map(([subject, grade]) => (
+                              <li key={subject}>
+                                {subject}: {grade.grade} - {grade.comment}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1512,20 +1636,43 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                 {!loadingHomework && !homeworkError && currentHomework.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {currentHomework.map((hw: HomeworkItem) => {
+                      const submission = homeworkSubmissions[hw.id] || null;
                       const dueDate = new Date(hw.dueDate);
                       const today = new Date();
-                      const isPending = dueDate >= today;
-                      const isOverdue = dueDate < today;
+                      today.setHours(0, 0, 0, 0); // Normalize today to the start of the day
+                      const isSubmitted = !!submission;
+                      const isOverdue = !isSubmitted && dueDate < today;
+                      const isPending = !isSubmitted && dueDate >= today;
                       const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                      const submission = homeworkSubmissions[hw.id] || null;
+
                       const loadingSub = loadingSubmissions[hw.id];
+
+                      // Determine border color and status text
+                      let statusColor = 'var(--primary-green)';
+                      let statusText = locale === 'ar-SA' ? 'مكتمل' : 'Completed';
+                      let statusIcon = '✅';
+
+                      if (isSubmitted) {
+                        statusColor = 'var(--primary-green)';
+                        statusText = locale === 'ar-SA' ? 'تم التسليم' : 'Submitted';
+                        statusIcon = '✔️';
+                      } else if (isOverdue) {
+                        statusColor = 'var(--primary-red)';
+                        statusText = locale === 'ar-SA' ? 'متأخر' : 'Overdue';
+                        statusIcon = '🚨';
+                      } else if (isPending) {
+                        statusColor = 'var(--primary-orange)';
+                        statusText = locale === 'ar-SA' ? 'معلق' : 'Pending';
+                        statusIcon = '⏰';
+                      }
+
                       return (
                         <div key={hw.id} style={{
                           background: 'white',
                           padding: '2rem',
                           borderRadius: 'var(--border-radius)',
                           boxShadow: 'var(--shadow)',
-                          border: `4px solid ${isOverdue ? 'var(--primary-red)' : isPending ? 'var(--primary-orange)' : 'var(--primary-green)'}`
+                          border: `4px solid ${statusColor}`
                         }}>
                           <div style={{
                             display: 'flex',
@@ -1575,23 +1722,20 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                             </div>
                             <div style={{
                               padding: '1rem',
-                              background: isOverdue ? 'var(--light-red)' : isPending ? 'var(--light-orange)' : 'var(--light-green)',
+                              background: `var(--light-${statusColor.split('-')[1]})`,
                               borderRadius: 'var(--border-radius)',
                               textAlign: 'center',
                               minWidth: '120px'
                             }}>
                               <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-                                {isOverdue ? '🚨' : isPending ? '⏰' : '✅'}
+                                {statusIcon}
                               </div>
                               <div style={{
                                 fontSize: '1rem',
                                 fontWeight: 'bold',
-                                color: isOverdue ? 'var(--primary-red)' : isPending ? 'var(--primary-orange)' : 'var(--primary-green)'
+                                color: statusColor
                               }}>
-                                {locale === 'ar-SA' 
-                                  ? (isOverdue ? 'متأخر' : isPending ? 'معلق' : 'منتهي')
-                                  : (isOverdue ? 'Overdue' : isPending ? 'Pending' : 'Past Due')
-                                }
+                                {statusText}
                               </div>
                             </div>
                           </div>
