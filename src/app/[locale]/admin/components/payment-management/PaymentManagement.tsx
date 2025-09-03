@@ -242,6 +242,55 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
     fetchPaymentSummaries();
   }, [fetchPaymentSummaries]);
 
+  // Handle targeted student from student management
+  useEffect(() => {
+    const targetStudentId = sessionStorage.getItem('targetStudentId');
+    const hasPaymentRecord = sessionStorage.getItem('hasPaymentRecord') === 'true';
+    
+    if (targetStudentId && parentSummaries.length > 0) {
+      // Find the parent who has this student
+      for (const parentSummary of parentSummaries) {
+        const targetStudent = parentSummary.children.find(child => child.studentId === targetStudentId);
+        if (targetStudent) {
+          // Expand the parent section
+          setExpandedParents(prev => new Set([...prev, parentSummary.parentInfo.uid]));
+          
+          if (hasPaymentRecord) {
+            // If payment record exists, just expand the parent (the payment card is already visible)
+            // Clear the session storage
+            sessionStorage.removeItem('targetStudentId');
+            sessionStorage.removeItem('hasPaymentRecord');
+          } else {
+            // If no payment record, open create form with student ID pre-filled
+            setCreateForm(prev => ({ ...prev, studentId: targetStudentId }));
+            setShowCreateForm(true);
+            
+            // Clear the session storage
+            sessionStorage.removeItem('targetStudentId');
+            sessionStorage.removeItem('hasPaymentRecord');
+          }
+          break;
+        }
+      }
+      
+      // If no existing payment record found and no parent match, still open create form
+      if (!hasPaymentRecord) {
+        const parentFound = parentSummaries.some(parentSummary => 
+          parentSummary.children.some(child => child.studentId === targetStudentId)
+        );
+        
+        if (!parentFound) {
+          setCreateForm(prev => ({ ...prev, studentId: targetStudentId }));
+          setShowCreateForm(true);
+          
+          // Clear the session storage
+          sessionStorage.removeItem('targetStudentId');
+          sessionStorage.removeItem('hasPaymentRecord');
+        }
+      }
+    }
+  }, [parentSummaries]);
+
   const toggleParentExpansion = (parentUID: string) => {
     const newExpanded = new Set(expandedParents);
     if (newExpanded.has(parentUID)) {

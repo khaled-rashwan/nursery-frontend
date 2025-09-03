@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
+import { useAcademicYear } from '../../../../../components/academic-year';
 import { StudentRegistration } from './StudentRegistration';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 
@@ -26,6 +27,11 @@ interface Student {
   updatedBy?: string;
 }
 
+interface PaymentInfo {
+  remainingBalance: number;
+  hasPaymentRecord: boolean;
+}
+
 interface StudentFormData {
   fullName: string;
   dateOfBirth: string;
@@ -41,8 +47,8 @@ export function StudentManagement({ locale }: StudentManagementProps) {
   const [activeSubTab, setActiveSubTab] = useState('list');
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [paymentInfo, setPaymentInfo] = useState<Map<string, PaymentInfo>>(new Map());
   const [searchTerm, setSearchTerm] = useState('');
-  const [genderFilter, setGenderFilter] = useState<string>('all');
   const [parentFilter, setParentFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -63,6 +69,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
   } | null>(null);
   
   const { user } = useAuth();
+  const { selectedAcademicYear } = useAcademicYear();
 
   // Enhanced fetch students with filtering and pagination
   const fetchStudents = useCallback(async (resetPage = false) => {
@@ -89,9 +96,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
         params.append('search', searchTerm);
       }
 
-      if (genderFilter !== 'all') {
-        params.append('gender', genderFilter);
-      }
+
 
       if (parentFilter !== 'all') {
         params.append('parentUID', parentFilter);
@@ -139,7 +144,83 @@ export function StudentManagement({ locale }: StudentManagementProps) {
     } finally {
       setLoading(false);
     }
-  }, [user, searchTerm, genderFilter, parentFilter, sortBy, sortOrder, studentsPerPage, currentPage, nextPageInfo]);
+  }, [user, searchTerm, parentFilter, sortBy, sortOrder, studentsPerPage, currentPage, nextPageInfo]);
+
+  // Fetch payment data for students
+  const fetchPaymentData = useCallback(async (studentList: Student[]) => {
+    if (!user || !selectedAcademicYear || studentList.length === 0) return;
+
+    try {
+      const token = await user.getIdToken();
+      const paymentMap = new Map<string, PaymentInfo>();
+
+      // Fetch payment data for each student
+      for (const student of studentList) {
+        try {
+          const url = new URL('https://us-central1-future-step-nursery.cloudfunctions.net/managePayments/getPayments');
+          url.searchParams.append('studentId', student.id);
+          url.searchParams.append('academicYear', selectedAcademicYear);
+
+          const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.payments && data.payments.length > 0) {
+              const payment = data.payments[0]; // Get the first payment record
+              paymentMap.set(student.id, {
+                remainingBalance: payment.remainingBalance,
+                hasPaymentRecord: true
+              });
+            } else {
+              paymentMap.set(student.id, {
+                remainingBalance: 0,
+                hasPaymentRecord: false
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching payment for student ${student.id}:`, error);
+          paymentMap.set(student.id, {
+            remainingBalance: 0,
+            hasPaymentRecord: false
+          });
+        }
+      }
+
+      setPaymentInfo(paymentMap);
+    } catch (error) {
+      console.error('Error fetching payment data:', error);
+    }
+  }, [user, selectedAcademicYear]);
+
+  // Update payment data when students change
+  useEffect(() => {
+    if (students.length > 0) {
+      fetchPaymentData(students);
+    }
+  }, [students, fetchPaymentData]);
+
+  // Handle payment column click
+  const handlePaymentClick = (student: Student, payment: PaymentInfo | undefined) => {
+    // Store the target student ID for the payment tracker
+    sessionStorage.setItem('targetStudentId', student.id);
+    sessionStorage.setItem('hasPaymentRecord', payment?.hasPaymentRecord ? 'true' : 'false');
+    
+    // Navigate to payments tab in the admin dashboard
+    const event = new CustomEvent('navigateToPayments', {
+      detail: {
+        studentId: student.id,
+        hasPaymentRecord: payment?.hasPaymentRecord || false
+      }
+    });
+    window.dispatchEvent(event);
+  };
 
   // Create student
   const handleCreateStudent = async (studentData: StudentFormData) => {
@@ -308,11 +389,6 @@ export function StudentManagement({ locale }: StudentManagementProps) {
       );
     }
 
-    // Apply gender filter
-    if (genderFilter !== 'all') {
-      filtered = filtered.filter(student => student.gender === genderFilter);
-    }
-
     // Apply parent filter
     if (parentFilter !== 'all') {
       filtered = filtered.filter(student => student.parentUID === parentFilter);
@@ -347,7 +423,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
 
     setFilteredStudents(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [students, searchTerm, genderFilter, parentFilter, sortBy, sortOrder]);
+  }, [students, searchTerm, parentFilter, sortBy, sortOrder]);
 
   // Paginated students
   const indexOfLastStudent = currentPage * studentsPerPage;
@@ -374,7 +450,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
     if (activeSubTab === 'list') {
       fetchStudents(true);
     }
-  }, [activeSubTab, fetchStudents, searchTerm, genderFilter, parentFilter, sortBy, sortOrder]);
+  }, [activeSubTab, fetchStudents, searchTerm, parentFilter, sortBy, sortOrder]);
 
   return (
     <div>
@@ -528,33 +604,6 @@ export function StudentManagement({ locale }: StudentManagementProps) {
               />
             </div>
 
-            {/* Gender Filter */}
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: 'bold',
-                color: '#2c3e50'
-              }}>
-                ⚧ {locale === 'ar-SA' ? 'الجنس' : 'Gender'}
-              </label>
-              <select
-                value={genderFilter}
-                onChange={(e) => setGenderFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '2px solid #bdc3c7',
-                  borderRadius: '6px',
-                  fontSize: '1rem'
-                }}
-              >
-                <option value="all">{locale === 'ar-SA' ? 'جميع الطلاب' : 'All Students'}</option>
-                <option value="Male">{locale === 'ar-SA' ? 'ذكر' : 'Male'}</option>
-                <option value="Female">{locale === 'ar-SA' ? 'أنثى' : 'Female'}</option>
-              </select>
-            </div>
-
             {/* Parent Filter */}
             <div>
               <label style={{
@@ -662,13 +711,13 @@ export function StudentManagement({ locale }: StudentManagementProps) {
             }}>
               <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👨‍🎓</div>
               <h3 style={{ color: '#2c3e50', marginBottom: '0.5rem' }}>
-                {searchTerm || genderFilter !== 'all' || parentFilter !== 'all'
+                {searchTerm || parentFilter !== 'all'
                   ? (locale === 'ar-SA' ? 'لا توجد نتائج' : 'No results found')
                   : (locale === 'ar-SA' ? 'لا توجد طلاب مسجلين' : 'No students registered')
                 }
               </h3>
               <p style={{ color: '#95a5a6' }}>
-                {searchTerm || genderFilter !== 'all' || parentFilter !== 'all'
+                {searchTerm || parentFilter !== 'all'
                   ? (locale === 'ar-SA' ? 'حاول تغيير معايير البحث' : 'Try adjusting your search criteria')
                   : (locale === 'ar-SA' ? 'قم بتسجيل طلاب جدد' : 'Register new students to get started')
                 }
@@ -685,13 +734,12 @@ export function StudentManagement({ locale }: StudentManagementProps) {
                         {locale === 'ar-SA' ? 'اسم الطالب' : 'Student Name'}
                         {sortBy === 'fullName' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
                       </th>
-                      <th style={{...tableHeaderStyle, cursor: 'pointer'}} onClick={() => handleSort('gender')}>
-                        {locale === 'ar-SA' ? 'الجنس' : 'Gender'}
-                        {sortBy === 'gender' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
-                      </th>
                       <th style={{...tableHeaderStyle, cursor: 'pointer'}} onClick={() => handleSort('dateOfBirth')}>
                         {locale === 'ar-SA' ? 'تاريخ الميلاد' : 'Birth Date'}
                         {sortBy === 'dateOfBirth' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
+                      </th>
+                      <th style={tableHeaderStyle}>
+                        {locale === 'ar-SA' ? 'الرسوم المتبقية' : 'Remaining Payment'}
                       </th>
                       <th style={{...tableHeaderStyle, cursor: 'pointer'}} onClick={() => handleSort('parentInfo.displayName')}>
                         {locale === 'ar-SA' ? 'ولي الأمر' : 'Parent'}
@@ -727,22 +775,65 @@ export function StudentManagement({ locale }: StudentManagementProps) {
                           </div>
                         </td>
                         <td style={tableCellStyle}>
-                          <span style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            fontSize: '0.85rem',
-                            fontWeight: 'bold',
-                            background: student.gender === 'Male' ? '#e3f2fd' : '#fce4ec',
-                            color: student.gender === 'Male' ? '#1976d2' : '#c2185b'
-                          }}>
-                            {student.gender === 'Male' 
-                              ? (locale === 'ar-SA' ? 'ذكر' : 'Male')
-                              : (locale === 'ar-SA' ? 'أنثى' : 'Female')
-                            }
-                          </span>
-                        </td>
-                        <td style={tableCellStyle}>
                           {new Date(student.dateOfBirth).toLocaleDateString()}
+                        </td>
+                        <td style={{...tableCellStyle, cursor: 'pointer'}} onClick={() => handlePaymentClick(student, paymentInfo.get(student.id))}>
+                          {(() => {
+                            const payment = paymentInfo.get(student.id);
+                            if (!payment) {
+                              return (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.5rem',
+                                  color: '#7f8c8d',
+                                  fontSize: '0.9rem'
+                                }}>
+                                  ⏳ {locale === 'ar-SA' ? 'جاري التحميل...' : 'Loading...'}
+                                </div>
+                              );
+                            }
+                            
+                            if (!payment.hasPaymentRecord) {
+                              return (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.5rem',
+                                  color: '#e67e22',
+                                  fontWeight: 'bold'
+                                }}>
+                                  ➕ {locale === 'ar-SA' ? 'إنشاء سجل دفع' : 'Create Payment Record'}
+                                </div>
+                              );
+                            }
+                            
+                            if (payment.remainingBalance === 0) {
+                              return (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.5rem',
+                                  color: '#27ae60',
+                                  fontWeight: 'bold'
+                                }}>
+                                  ✅ {locale === 'ar-SA' ? 'مدفوع بالكامل' : 'Fully Paid'}
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem',
+                                color: '#e74c3c',
+                                fontWeight: 'bold'
+                              }}>
+                                💰 {payment.remainingBalance} {locale === 'ar-SA' ? 'ج.م' : 'EGP'}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td style={tableCellStyle}>
                           <div>
