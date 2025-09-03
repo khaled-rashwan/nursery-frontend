@@ -410,9 +410,6 @@ export function ClassManagement({ locale }: ClassManagementProps) {
                   {locale === 'ar-SA' ? 'العام الدراسي' : 'Academic Year'}
                 </th>
                 <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #e9ecef' }}>
-                  {locale === 'ar-SA' ? 'المعلم' : 'Teacher'}
-                </th>
-                <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #e9ecef' }}>
                   {locale === 'ar-SA' ? 'السعة' : 'Capacity'}
                 </th>
                 <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #e9ecef' }}>
@@ -433,21 +430,6 @@ export function ClassManagement({ locale }: ClassManagementProps) {
                   </td>
                   <td style={{ padding: '1rem' }}>{classItem.level}</td>
                   <td style={{ padding: '1rem' }}>{classItem.academicYear}</td>
-                  <td style={{ padding: '1rem' }}>
-                    {/* Teacher assignments are managed through teachers.classes[] field */}
-                    <div style={{ color: '#666', fontStyle: 'italic' }}>
-                      <em>{locale === 'ar-SA' ? 'يُدار تعيين المعلمين من خلال مجموعة المعلمين' : 'Teacher assignments managed through teachers collection'}</em>
-                    </div>
-                    {/* 
-                    CURRENT ARCHITECTURE: Teacher assignments are stored in teachers.classes[] array
-                    Format: { classId: string, className: string, subjects: string[] }
-                    
-                    To see assigned teachers:
-                    1. Query teachers collection 
-                    2. Filter teachers where classes array contains this classId
-                    3. Display teacher info with their assigned subjects
-                    */}
-                  </td>
                   <td style={{ padding: '1rem' }}>{classItem.capacity}</td>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>

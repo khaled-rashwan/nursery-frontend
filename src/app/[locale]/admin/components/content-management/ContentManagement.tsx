@@ -1572,7 +1572,18 @@ export default function ContentManagement() {
         <button onClick={() => setActivePage('admissions')} style={{ padding: '1rem', border: 'none', background: activePage === 'admissions' ? '#eee' : 'transparent', fontWeight: activePage === 'admissions' ? 'bold' : 'normal' }}>Admissions</button>
         <button onClick={() => setActivePage('gallery')} style={{ padding: '1rem', border: 'none', background: activePage === 'gallery' ? '#eee' : 'transparent', fontWeight: activePage === 'gallery' ? 'bold' : 'normal' }}>Gallery</button>
         <button onClick={() => setActivePage('footer')} style={{ padding: '1rem', border: 'none', background: activePage === 'footer' ? '#eee' : 'transparent', fontWeight: activePage === 'footer' ? 'bold' : 'normal' }}>Footer</button>
-        <button onClick={() => setActivePage('media')} style={{ padding: '1rem', border: 'none', background: activePage === 'media' ? '#eee' : 'transparent', fontWeight: activePage === 'media' ? 'bold' : 'normal' }}>Media Library</button>
+        <button
+          onClick={() => setActivePage('media')}
+          style={{
+            padding: '1rem',
+            border: '1px solid #000',
+            borderColor: 'blue',
+            background: activePage === 'media' ? '#eee' : 'transparent',
+            fontWeight: activePage === 'media' ? 'bold' : 'normal',
+           }}
+        >
+          Media Library
+        </button>
       </div>
 
       {/* Locale Tabs (hide for media library) */}
