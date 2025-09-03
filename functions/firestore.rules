@@ -82,6 +82,13 @@ service cloud.firestore {
       allow read: if hasRole('parent'); // Parents can view their fees
     }
 
+    // Payments collection (New Payment Tracker)
+    match /payments/{paymentId} {
+      allow read, write: if hasAnyRole(['admin', 'superadmin']);
+      // Parents can read payment records for their own children only
+      allow read: if hasRole('parent') && request.auth.uid == resource.data.parentUID;
+    }
+
     // Notifications
     match /notifications/{notificationId} {
       allow read, write: if hasAnyRole(['admin', 'superadmin']);

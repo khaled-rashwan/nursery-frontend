@@ -319,3 +319,50 @@ export async function fetchReportCards(token: string, studentId: string, academi
   const data = await res.json();
   return data.reportCards || [];
 }
+
+// Payment Types
+export interface PaymentRecord {
+  id: string;
+  amount: number;
+  date: { seconds: number; nanoseconds: number } | Date; // Firestore timestamp
+  method: string;
+  notes: string;
+  recordedBy: string;
+  recordedAt: { seconds: number; nanoseconds: number } | Date;
+}
+
+export interface PaymentData {
+  id: string;
+  studentId: string;
+  parentUID: string;
+  academicYear: string;
+  totalFees: number;
+  paidAmount: number;
+  remainingBalance: number;
+  paymentRecords: PaymentRecord[];
+  studentInfo?: {
+    name: string;
+    nameEn: string;
+  };
+  createdAt: { seconds: number; nanoseconds: number } | Date;
+  updatedAt: { seconds: number; nanoseconds: number } | Date;
+  createdBy: string;
+}
+
+export async function fetchPayments(token: string, studentId?: string, academicYear?: string): Promise<PaymentData[]> {
+  const url = new URL(`${CF_BASE}/managePayments/getPayments`);
+  if (studentId) url.searchParams.set('studentId', studentId);
+  if (academicYear) url.searchParams.set('academicYear', academicYear);
+
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to fetch payments (${res.status}) ${text}`);
+  }
+
+  const data = await res.json();
+  return data.payments || [];
+}
