@@ -6,6 +6,15 @@ const { setCorsHeaders, handleCorsOptions } = require('../utils/cors');
 const app = express();
 const db = admin.firestore();
 
+// Global CORS middleware
+app.use((req, res, next) => {
+  setCorsHeaders(res);
+  if (handleCorsOptions(req, res)) {
+    return;
+  }
+  next();
+});
+
 // Helper function to verify admin role
 const verifyAdminRole = async (req, res) => {
   try {
@@ -90,9 +99,6 @@ const validatePaymentData = (data) => {
 
 // Create or update payment record
 app.post('/createPayment', async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) return;
-  
   try {
     const authResult = await verifyAdminRole(req, res);
     if (!authResult.success) {
@@ -153,9 +159,6 @@ app.post('/createPayment', async (req, res) => {
 
 // Get payment records
 app.get('/getPayments', async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) return;
-  
   try {
     const { studentId, academicYear, parentUID } = req.query;
     
@@ -224,9 +227,6 @@ app.get('/getPayments', async (req, res) => {
 
 // Update payment record
 app.put('/updatePayment/:paymentId', async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) return;
-  
   try {
     const authResult = await verifyAdminRole(req, res);
     if (!authResult.success) {
@@ -295,9 +295,6 @@ app.put('/updatePayment/:paymentId', async (req, res) => {
 
 // Add payment record
 app.post('/addPaymentRecord/:paymentId', async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) return;
-  
   try {
     const authResult = await verifyAdminRole(req, res);
     if (!authResult.success) {
@@ -356,9 +353,6 @@ app.post('/addPaymentRecord/:paymentId', async (req, res) => {
 
 // Delete payment record
 app.delete('/deletePayment/:paymentId', async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) return;
-  
   try {
     const authResult = await verifyAdminRole(req, res);
     if (!authResult.success) {
@@ -386,9 +380,6 @@ app.delete('/deletePayment/:paymentId', async (req, res) => {
 
 // Get payment summary by parent
 app.get('/getPaymentSummaryByParent', async (req, res) => {
-  setCorsHeaders(res);
-  if (handleCorsOptions(req, res)) return;
-  
   try {
     const authResult = await verifyAdminRole(req, res);
     if (!authResult.success) {
