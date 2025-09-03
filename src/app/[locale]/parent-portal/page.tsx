@@ -8,7 +8,7 @@ import { UserRole, getRoleName } from '../../../utils/rolePermissions';
 import { 
   logSecurityEvent 
 } from '../../../utils/parentPortalSecurity';
-import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, fetchHomeworkByClass, fetchStudentEnrollment, fetchHomeworkSubmission, ChildEnriched, StudentAttendanceHistoryResponse, HomeworkItem, HomeworkSubmission, fetchAnnouncements, Announcement, fetchReportCards, ReportCard } from './services/api';
+import { fetchChildren as fetchChildrenService, fetchStudentAttendanceHistory, fetchHomeworkByClass, fetchStudentEnrollment, fetchHomeworkSubmission, ChildEnriched, StudentAttendanceHistoryResponse, HomeworkItem, HomeworkSubmission, fetchAnnouncements, Announcement, fetchReportCards, ReportCard, fetchPayments, PaymentData } from './services/api';
 import HomeworkSubmissionForm from './components/HomeworkSubmissionForm';
 // Academic Year context & selector
 import { AcademicYearProvider, useAcademicYear } from '../../../contexts/AcademicYearContext';
@@ -864,6 +864,9 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
   const [loadingReportCards, setLoadingReportCards] = useState(false);
   const [reportCardsError, setReportCardsError] = useState<string | null>(null);
+  const [payments, setPayments] = useState<PaymentData[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
 
   // Reset dashboard state when academic year changes
@@ -876,6 +879,8 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     setSelectedMonth(new Date().toISOString().slice(0,7));
     setHomeworkError(null);
     setAttendanceError(null);
+    setPayments([]);
+    setPaymentsError(null);
   }, [selectedAcademicYear]);
 
   // Fetch children from backend (Step 1 integration)
@@ -1060,6 +1065,38 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
     }
 
     loadReportCards();
+    return () => { cancelled = true; };
+  }, [user, selectedChildId, selectedAcademicYear]);
+
+  // Fetch payment data for selected child and academic year
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPayments() {
+      if (!user || !selectedChildId || !selectedAcademicYear) return;
+
+      setLoadingPayments(true);
+      setPaymentsError(null);
+      try {
+        const token = await user.getIdToken();
+        const fetchedPayments = await fetchPayments(token, selectedChildId, selectedAcademicYear);
+        if (!cancelled) {
+          setPayments(fetchedPayments);
+        }
+      } catch (e: unknown) {
+        if (!cancelled) {
+          console.error('Failed to load payments', e);
+          if (e instanceof Error) {
+            setPaymentsError(e.message || 'Failed to load payments');
+          } else {
+            setPaymentsError('An unknown error occurred while fetching payments.');
+          }
+        }
+      } finally {
+        if (!cancelled) setLoadingPayments(false);
+      }
+    }
+
+    loadPayments();
     return () => { cancelled = true; };
   }, [user, selectedChildId, selectedAcademicYear]);
 
@@ -1355,7 +1392,12 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                       color: 'var(--primary-orange)',
                       fontWeight: 'bold'
                     }}>
-                      {locale === 'ar-SA' ? `${currentChild.fees?.remaining || 0} ريال` : `$${currentChild.fees?.remaining || 0}`}
+                      {(() => {
+                        // Get current child's payment data for selected academic year
+                        const currentPayment = payments.find(p => p.studentId === selectedChildId && p.academicYear === selectedAcademicYear);
+                        const remainingBalance = currentPayment ? currentPayment.remainingBalance : 0;
+                        return locale === 'ar-SA' ? `${remainingBalance} ريال` : `$${remainingBalance}`;
+                      })()}
                     </div>
                   </div>
 
@@ -1831,107 +1873,238 @@ function Dashboard({ onLogout, locale }: { onLogout: () => void; locale: string 
                   💳 {locale === 'ar-SA' ? 'تتبع الرسوم والدفع' : 'Fee Tracking & Payment'}
                 </h2>
 
-                <div style={{
-                  background: 'white',
-                  padding: '2rem',
-                  borderRadius: 'var(--border-radius)',
-                  boxShadow: 'var(--shadow)',
-                  border: '4px solid var(--primary-blue)',
-                  marginBottom: '2rem'
-                }}>
-                  <h3 style={{
-                    fontSize: '1.8rem',
-                    color: 'var(--primary-purple)',
+                {/* Loading State */}
+                {loadingPayments && (
+                  <div style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className="loading-spinner" style={{ marginBottom: '1rem' }}></div>
+                    <p style={{ fontSize: '1.2rem', color: 'var(--primary-purple)' }}>
+                      {locale === 'ar-SA' ? 'جاري تحميل بيانات الرسوم...' : 'Loading payment data...'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Error Display */}
+                {paymentsError && (
+                  <div style={{
+                    background: 'var(--light-red)',
+                    padding: '1.5rem',
+                    borderRadius: 'var(--border-radius)',
                     marginBottom: '2rem',
+                    border: '3px solid var(--primary-red)',
                     textAlign: 'center'
                   }}>
-                    💰 {locale === 'ar-SA' ? 'ملخص الرسوم' : 'Fee Summary'}
-                  </h3>
-
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '1.5rem',
-                    marginBottom: '2rem'
-                  }}>
-                    <div style={{
-                      background: 'var(--light-blue)',
-                      padding: '1.5rem',
-                      borderRadius: 'var(--border-radius)',
-                      textAlign: 'center',
-                      border: '3px solid var(--primary-blue)'
-                    }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💰</div>
-                      <div style={{ fontSize: '1.1rem', color: '#666' }}>
-                        {locale === 'ar-SA' ? 'إجمالي الرسوم' : 'Total Fees'}
-                      </div>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 'bold',
-                        color: 'var(--primary-blue)'
-                      }}>
-                        {locale === 'ar-SA' ? `${currentChild.fees?.total || 0} ريال` : `$${currentChild.fees?.total || 0}`}
-                      </div>
-                    </div>
-
-                    <div style={{
-                      background: 'var(--light-green)',
-                      padding: '1.5rem',
-                      borderRadius: 'var(--border-radius)',
-                      textAlign: 'center',
-                      border: '3px solid var(--primary-green)'
-                    }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-                      <div style={{ fontSize: '1.1rem', color: '#666' }}>
-                        {locale === 'ar-SA' ? 'المبلغ المدفوع' : 'Amount Paid'}
-                      </div>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 'bold',
-                        color: 'var(--primary-green)'
-                      }}>
-                        {locale === 'ar-SA' ? `${currentChild.fees?.paid || 0} ريال` : `$${currentChild.fees?.paid || 0}`}
-                      </div>
-                    </div>
-
-                    <div style={{
-                      background: 'var(--light-orange)',
-                      padding: '1.5rem',
-                      borderRadius: 'var(--border-radius)',
-                      textAlign: 'center',
-                      border: '3px solid var(--primary-orange)'
-                    }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏰</div>
-                      <div style={{ fontSize: '1.1rem', color: '#666' }}>
-                        {locale === 'ar-SA' ? 'المبلغ المتبقي' : 'Remaining Balance'}
-                      </div>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: 'bold',
-                        color: 'var(--primary-orange)'
-                      }}>
-                        {locale === 'ar-SA' ? `${currentChild.fees?.remaining || 0} ريال` : `$${currentChild.fees?.remaining || 0}`}
-                      </div>
-                    </div>
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
+                    <p style={{ fontSize: '1.1rem', color: 'var(--primary-red)', margin: 0 }}>
+                      {paymentsError}
+                    </p>
                   </div>
+                )}
 
-                  <div style={{ textAlign: 'center' }}>
-                    <button style={{
-                      padding: '1.2rem 2rem',
-                      background: 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 'var(--border-radius)',
-                      fontSize: '1.2rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s var(--bounce)',
-                      boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
-                    }}>
-                      💳 {locale === 'ar-SA' ? 'دفع الآن' : 'Pay Now'}
-                    </button>
+                {/* Payment Data */}
+                {!loadingPayments && !paymentsError && (
+                  <div>
+                    {payments.length === 0 ? (
+                      <div style={{
+                        background: 'var(--light-yellow)',
+                        padding: '2rem',
+                        borderRadius: 'var(--border-radius)',
+                        border: '3px solid var(--primary-yellow)',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
+                        <h3 style={{ fontSize: '1.5rem', color: 'var(--primary-orange)', marginBottom: '1rem' }}>
+                          {locale === 'ar-SA' ? 'لا توجد بيانات رسوم' : 'No Fee Data Available'}
+                        </h3>
+                        <p style={{ fontSize: '1.1rem', color: '#666' }}>
+                          {locale === 'ar-SA' 
+                            ? 'لم يتم إعداد بيانات الرسوم لهذا الطالب بعد. يرجى التواصل مع الإدارة.'
+                            : 'Fee data has not been set up for this student yet. Please contact administration.'
+                          }
+                        </p>
+                      </div>
+                    ) : (
+                      payments.map((payment) => (
+                        <div key={payment.id} style={{
+                          background: 'white',
+                          padding: '2rem',
+                          borderRadius: 'var(--border-radius)',
+                          boxShadow: 'var(--shadow)',
+                          border: '4px solid var(--primary-blue)',
+                          marginBottom: '2rem'
+                        }}>
+                          <h3 style={{
+                            fontSize: '1.8rem',
+                            color: 'var(--primary-purple)',
+                            marginBottom: '2rem',
+                            textAlign: 'center'
+                          }}>
+                            💰 {locale === 'ar-SA' ? 'ملخص الرسوم' : 'Fee Summary'}
+                          </h3>
+
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                            gap: '1.5rem',
+                            marginBottom: '2rem'
+                          }}>
+                            <div style={{
+                              background: 'var(--light-blue)',
+                              padding: '1.5rem',
+                              borderRadius: 'var(--border-radius)',
+                              textAlign: 'center',
+                              border: '3px solid var(--primary-blue)'
+                            }}>
+                              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💰</div>
+                              <div style={{ fontSize: '1.1rem', color: '#666' }}>
+                                {locale === 'ar-SA' ? 'إجمالي الرسوم' : 'Total Fees'}
+                              </div>
+                              <div style={{
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold',
+                                color: 'var(--primary-blue)'
+                              }}>
+                                {locale === 'ar-SA' ? `${payment.totalFees} ريال` : `$${payment.totalFees}`}
+                              </div>
+                            </div>
+
+                            <div style={{
+                              background: 'var(--light-green)',
+                              padding: '1.5rem',
+                              borderRadius: 'var(--border-radius)',
+                              textAlign: 'center',
+                              border: '3px solid var(--primary-green)'
+                            }}>
+                              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+                              <div style={{ fontSize: '1.1rem', color: '#666' }}>
+                                {locale === 'ar-SA' ? 'المبلغ المدفوع' : 'Amount Paid'}
+                              </div>
+                              <div style={{
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold',
+                                color: 'var(--primary-green)'
+                              }}>
+                                {locale === 'ar-SA' ? `${payment.paidAmount} ريال` : `$${payment.paidAmount}`}
+                              </div>
+                            </div>
+
+                            <div style={{
+                              background: payment.remainingBalance > 0 ? 'var(--light-orange)' : 'var(--light-green)',
+                              padding: '1.5rem',
+                              borderRadius: 'var(--border-radius)',
+                              textAlign: 'center',
+                              border: `3px solid ${payment.remainingBalance > 0 ? 'var(--primary-orange)' : 'var(--primary-green)'}`
+                            }}>
+                              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                                {payment.remainingBalance > 0 ? '⏰' : '✅'}
+                              </div>
+                              <div style={{ fontSize: '1.1rem', color: '#666' }}>
+                                {locale === 'ar-SA' ? 'المبلغ المتبقي' : 'Remaining Balance'}
+                              </div>
+                              <div style={{
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold',
+                                color: payment.remainingBalance > 0 ? 'var(--primary-orange)' : 'var(--primary-green)'
+                              }}>
+                                {locale === 'ar-SA' ? `${payment.remainingBalance} ريال` : `$${payment.remainingBalance}`}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Payment History */}
+                          {payment.paymentRecords && payment.paymentRecords.length > 0 && (
+                            <div style={{ marginTop: '2rem' }}>
+                              <h4 style={{
+                                fontSize: '1.3rem',
+                                color: 'var(--primary-purple)',
+                                marginBottom: '1rem'
+                              }}>
+                                📝 {locale === 'ar-SA' ? 'سجل المدفوعات' : 'Payment History'}
+                              </h4>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.5rem'
+                              }}>
+                                {payment.paymentRecords.map((record) => (
+                                  <div key={record.id} style={{
+                                    background: 'var(--light-green)',
+                                    border: '1px solid var(--primary-green)',
+                                    borderRadius: 'var(--border-radius)',
+                                    padding: '1rem',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    flexWrap: 'wrap',
+                                    gap: '0.5rem'
+                                  }}>
+                                    <div>
+                                      <span style={{
+                                        fontWeight: 'bold',
+                                        color: 'var(--primary-green)',
+                                        fontSize: '1.1rem'
+                                      }}>
+                                        {locale === 'ar-SA' ? `${record.amount} ريال` : `$${record.amount}`}
+                                      </span>
+                                      <span style={{
+                                        margin: '0 1rem',
+                                        color: '#666'
+                                      }}>
+                                        📅 {(() => {
+                                          let date: Date;
+                                          if (typeof record.date === 'object' && 'seconds' in record.date) {
+                                            date = new Date(record.date.seconds * 1000);
+                                          } else {
+                                            date = new Date(record.date);
+                                          }
+                                          return date.toLocaleDateString(locale === 'ar-SA' ? 'ar-SA' : 'en-US');
+                                        })()}
+                                      </span>
+                                      <span style={{
+                                        background: 'white',
+                                        padding: '0.2rem 0.5rem',
+                                        borderRadius: '4px',
+                                        fontSize: '0.8rem',
+                                        color: '#495057'
+                                      }}>
+                                        {record.method}
+                                      </span>
+                                    </div>
+                                    {record.notes && (
+                                      <div style={{
+                                        fontSize: '0.9rem',
+                                        color: '#6c757d',
+                                        fontStyle: 'italic'
+                                      }}>
+                                        💬 {record.notes}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                            <button style={{
+                              padding: '1.2rem 2rem',
+                              background: 'linear-gradient(135deg, var(--primary-green), var(--primary-blue))',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 'var(--border-radius)',
+                              fontSize: '1.2rem',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s var(--bounce)',
+                              boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+                            }}>
+                              💳 {locale === 'ar-SA' ? 'دفع الآن' : 'Pay Now'}
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
