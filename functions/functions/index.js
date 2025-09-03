@@ -131,3 +131,7 @@ exports.saveFooterContent = contentManagement.saveFooterContent;
 // Export Media Library API
 const mediaApi = require('./src/media/index');
 exports.mediaApi = mediaApi.mediaApi;
+
+// Export Payment Management Functions
+const { managePayments } = require('./src/payments/paymentCrud');
+exports.managePayments = managePayments;
