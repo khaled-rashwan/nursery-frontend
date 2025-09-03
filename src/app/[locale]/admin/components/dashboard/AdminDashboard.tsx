@@ -24,7 +24,7 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('content');
   const { user, getUserCustomClaims } = useAuth();
   const [userClaims, setUserClaims] = useState<UserClaims | null>(null);
   const [systemStats, setSystemStats] = useState<SystemStats>({
@@ -55,7 +55,6 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
   useEffect(() => {
     if (userClaims) {
       const availableTabs = [
-        { id: 'overview', permission: 'view_reports' },
         { id: 'content', permission: 'manage_content' },
         { id: 'admissions', permission: 'manage_classes' },
         { id: 'contact', permission: 'manage_classes' },
@@ -65,8 +64,6 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         { id: 'enrollments', permission: 'manage_classes' },
         { id: 'classes', permission: 'manage_classes' },
         { id: 'teachers', permission: 'manage_users' },
-        { id: 'reports', permission: 'view_reports' },
-        { id: 'settings', permission: 'system_settings' }
       ].filter(tab => hasPermission(userClaims.role as UserRole, tab.permission));
 
       if (availableTabs.length > 0 && !availableTabs.some(tab => tab.id === activeTab)) {
@@ -260,7 +257,6 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
       }}>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           {[
-            { id: 'overview', label: locale === 'ar-SA' ? 'نظرة عامة' : 'Overview', icon: '📊', permission: 'view_reports' },
             { id: 'content', label: locale === 'ar-SA' ? 'إدارة المحتوى' : 'Content Management', icon: '📝', permission: 'manage_content' },
             { id: 'admissions', label: locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions', icon: '📝', permission: 'manage_classes' },
             { id: 'contact', label: locale === 'ar-SA' ? 'رسائل الاتصال' : 'Contact Submissions', icon: '📨', permission: 'manage_classes' },
@@ -270,7 +266,6 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             { id: 'enrollments', label: locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management', icon: '📚', permission: 'manage_classes' },
             { id: 'classes', label: locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management', icon: '🏫', permission: 'manage_classes' },
             { id: 'teachers', label: locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management', icon: '👩‍🏫', permission: 'manage_users' },
-            { id: 'reports', label: locale === 'ar-SA' ? 'التقارير' : 'Reports', icon: '📈', permission: 'view_reports' },
             { id: 'settings', label: locale === 'ar-SA' ? 'الإعدادات' : 'Settings', icon: '⚙️', permission: 'system_settings' }
           ]
           .filter(tab => hasPermission(userClaims?.role as UserRole, tab.permission))
@@ -300,60 +295,6 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
           ))}
         </div>
       </div>
-
-      {/* Overview Tab */}
-      {activeTab === 'overview' && (
-        <div>
-          {/* Error Message */}
-          {error && (
-            <div style={{
-              background: '#fee',
-              color: '#c33',
-              padding: '1rem',
-              borderRadius: '4px',
-              marginBottom: '1rem',
-              border: '1px solid #fcc'
-            }}>
-              {error}
-            </div>
-          )}
-
-          {/* System Stats */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem',
-            marginBottom: '2rem'
-          }}>
-            <StatCard 
-              icon="👨‍🎓" 
-              title={locale === 'ar-SA' ? 'إجمالي الطلاب' : 'Total Students'} 
-              value={loading ? '...' : systemStats.totalStudents} 
-              color="#3498db" 
-            />
-            <StatCard 
-              icon="👩‍🏫" 
-              title={locale === 'ar-SA' ? 'إجمالي المعلمين' : 'Total Teachers'} 
-              value={loading ? '...' : systemStats.totalTeachers} 
-              color="#2ecc71" 
-            />
-            <StatCard 
-              icon="👨‍👩‍👧‍👦" 
-              title={locale === 'ar-SA' ? 'إجمالي أولياء الأمور' : 'Total Parents'} 
-              value={loading ? '...' : systemStats.totalParents} 
-              color="#9b59b6" 
-            />
-            <StatCard 
-              icon="🏫" 
-              title={locale === 'ar-SA' ? 'إجمالي الفصول' : 'Total Classes'} 
-              value={loading ? '...' : systemStats.totalClasses} 
-              color="#f39c12" 
-            />
-          </div>
-
-          {/* Recent Activity section removed as per request */}
-        </div>
-      )}
 
       {/* Other tabs content */}
       {activeTab === 'users' && (
@@ -392,7 +333,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
         <ContentManagement />
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && activeTab !== 'contact' && activeTab !== 'careers' && activeTab !== 'content' && (
+      {activeTab !== 'users' && activeTab !== 'students' && activeTab !== 'enrollments' && activeTab !== 'classes' && activeTab !== 'teachers' && activeTab !== 'admissions' && activeTab !== 'contact' && activeTab !== 'careers' && activeTab !== 'content' && (
         <div style={{
           background: 'white',
           padding: '3rem',

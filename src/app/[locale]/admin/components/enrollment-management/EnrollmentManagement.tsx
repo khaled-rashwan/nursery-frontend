@@ -219,7 +219,6 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
         enrollment.academicYear.toLowerCase().includes(searchLower) ||
         enrollment.class.toLowerCase().includes(searchLower) ||
         enrollment.status.toLowerCase().includes(searchLower) ||
-        enrollment.teacherInfo?.displayName?.toLowerCase().includes(searchLower) ||
         enrollment.studentInfo?.parentInfo?.email?.toLowerCase().includes(searchLower) ||
         enrollment.notes?.toLowerCase().includes(searchLower)
       );
@@ -249,9 +248,6 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
       if (sortBy === 'studentInfo') {
         aValue = a.studentInfo?.fullName || '';
         bValue = b.studentInfo?.fullName || '';
-      } else if (sortBy === 'teacherInfo') {
-        aValue = a.teacherInfo?.displayName || '';
-        bValue = b.teacherInfo?.displayName || '';
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -557,9 +553,6 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
                     {locale === 'ar-SA' ? 'الفصل' : 'Class'}
                   </th>
                   <th style={tableHeaderStyle}>
-                    {locale === 'ar-SA' ? 'المعلم' : 'Teacher'}
-                  </th>
-                  <th style={tableHeaderStyle}>
                     {locale === 'ar-SA' ? 'الحالة' : 'Status'}
                   </th>
                   <th style={tableHeaderStyle}>
@@ -606,16 +599,6 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
                       }}>
                         {enrollment.class}
                       </span>
-                    </td>
-                    <td style={tableCellStyle}>
-                      <div>
-                        <div style={{ fontWeight: '500' }}>
-                          {enrollment.teacherInfo?.displayName || 'Unknown Teacher'}
-                        </div>
-                        <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                          {enrollment.teacherInfo?.email || 'No email'}
-                        </div>
-                      </div>
                     </td>
                     <td style={tableCellStyle}>
                       <span style={{
