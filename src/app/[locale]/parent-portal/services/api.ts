@@ -281,3 +281,41 @@ export async function fetchAnnouncements(token: string, academicYear: string, cl
   const data = await res.json();
   return data || [];
 }
+
+// Report Card Types
+export interface ReportCard {
+  id: string;
+  studentId: string;
+  academicYear: string;
+  period: string;
+  grades: Record<string, { grade: string; comment: string }>;
+  overallPerformance: string;
+  comments: string;
+  createdAt: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+  updatedAt?: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+}
+
+export async function fetchReportCards(token: string, studentId: string, academicYear: string): Promise<ReportCard[]> {
+  const url = new URL(`${CF_BASE}/manageReportCards`);
+  url.searchParams.set('operation', 'list');
+  url.searchParams.set('studentId', studentId);
+  url.searchParams.set('academicYear', academicYear);
+
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to fetch report cards (${res.status}) ${text}`);
+  }
+
+  const data = await res.json();
+  return data.reportCards || [];
+}
