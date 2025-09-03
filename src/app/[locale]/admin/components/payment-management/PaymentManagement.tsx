@@ -313,6 +313,20 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
     return locale === 'ar-SA' ? `${amount} ريال` : `$${amount}`;
   };
 
+  const formatPaymentMethod = (method: string) => {
+    const methodMap: Record<string, { en: string; ar: string }> = {
+      'cash': { en: 'Cash', ar: 'نقدي' },
+      'bank_transfer': { en: 'Bank Transfer', ar: 'تحويل بنكي' },
+      'credit_card': { en: 'Credit Card', ar: 'بطاقة ائتمان' },
+      'check': { en: 'Check', ar: 'شيك' },
+      'initial_payment': { en: 'Initial Payment', ar: 'دفعة أولية' },
+      'other': { en: 'Other', ar: 'أخرى' }
+    };
+    
+    const methodInfo = methodMap[method] || { en: method, ar: method };
+    return locale === 'ar-SA' ? methodInfo.ar : methodInfo.en;
+  };
+
   const formatDate = (timestamp: { seconds: number; nanoseconds: number } | Date | string) => {
     if (!timestamp) return '--';
     let date: Date;
@@ -727,7 +741,7 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
                                     fontSize: '0.8rem',
                                     color: '#495057'
                                   }}>
-                                    {record.method}
+                                    {formatPaymentMethod(record.method)}
                                   </span>
                                 </div>
                                 {record.notes && (
