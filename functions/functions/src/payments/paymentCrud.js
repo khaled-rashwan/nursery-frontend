@@ -420,7 +420,7 @@ app.get('/getPaymentSummaryByParent', async (req, res) => {
       parentSummary[parentUID].children.push({
         ...paymentData,
         studentInfo,
-        paymentId: doc.id
+        id: doc.id
       });
     }
     

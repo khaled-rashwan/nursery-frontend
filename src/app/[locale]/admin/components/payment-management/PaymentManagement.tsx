@@ -247,39 +247,47 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
     const targetStudentId = sessionStorage.getItem('targetStudentId');
     const hasPaymentRecord = sessionStorage.getItem('hasPaymentRecord') === 'true';
     
-    if (targetStudentId && parentSummaries.length > 0) {
-      // Find the parent who has this student
-      for (const parentSummary of parentSummaries) {
-        const targetStudent = parentSummary.children.find(child => child.studentId === targetStudentId);
-        if (targetStudent) {
-          // Expand the parent section
-          setExpandedParents(prev => new Set([...prev, parentSummary.parentInfo.uid]));
-          
-          if (hasPaymentRecord) {
-            // If payment record exists, just expand the parent (the payment card is already visible)
-            // Clear the session storage
-            sessionStorage.removeItem('targetStudentId');
-            sessionStorage.removeItem('hasPaymentRecord');
-          } else {
-            // If no payment record, open create form with student ID pre-filled
-            setCreateForm(prev => ({ ...prev, studentId: targetStudentId }));
-            setShowCreateForm(true);
+    if (targetStudentId) {
+      if (parentSummaries.length > 0) {
+        // Find the parent who has this student
+        let studentFound = false;
+        for (const parentSummary of parentSummaries) {
+          const targetStudent = parentSummary.children.find(child => child.studentId === targetStudentId);
+          if (targetStudent) {
+            studentFound = true;
+            // Expand the parent section
+            setExpandedParents(prev => new Set([...prev, parentSummary.parentInfo.uid]));
             
-            // Clear the session storage
-            sessionStorage.removeItem('targetStudentId');
-            sessionStorage.removeItem('hasPaymentRecord');
+            if (hasPaymentRecord) {
+              // If payment record exists, just expand the parent (the payment card is already visible)
+              // Clear the session storage
+              sessionStorage.removeItem('targetStudentId');
+              sessionStorage.removeItem('hasPaymentRecord');
+            } else {
+              // If no payment record, open create form with student ID pre-filled
+              setCreateForm(prev => ({ ...prev, studentId: targetStudentId }));
+              setShowCreateForm(true);
+              
+              // Clear the session storage
+              sessionStorage.removeItem('targetStudentId');
+              sessionStorage.removeItem('hasPaymentRecord');
+            }
+            break;
           }
-          break;
         }
-      }
-      
-      // If no existing payment record found and no parent match, still open create form
-      if (!hasPaymentRecord) {
-        const parentFound = parentSummaries.some(parentSummary => 
-          parentSummary.children.some(child => child.studentId === targetStudentId)
-        );
         
-        if (!parentFound) {
+        // If student not found in existing payments and no payment record, open create form
+        if (!studentFound && !hasPaymentRecord) {
+          setCreateForm(prev => ({ ...prev, studentId: targetStudentId }));
+          setShowCreateForm(true);
+          
+          // Clear the session storage
+          sessionStorage.removeItem('targetStudentId');
+          sessionStorage.removeItem('hasPaymentRecord');
+        }
+      } else {
+        // No payments exist yet - if student has no payment record, open create form
+        if (!hasPaymentRecord) {
           setCreateForm(prev => ({ ...prev, studentId: targetStudentId }));
           setShowCreateForm(true);
           
