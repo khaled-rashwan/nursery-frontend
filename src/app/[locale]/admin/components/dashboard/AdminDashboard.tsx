@@ -74,6 +74,18 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
     }
   }, [userClaims, activeTab]);
 
+  // Listen for navigation events from student management
+  useEffect(() => {
+    const handleNavigateToPayments = () => {
+      setActiveTab('payments');
+    };
+
+    window.addEventListener('navigateToPayments', handleNavigateToPayments);
+    return () => {
+      window.removeEventListener('navigateToPayments', handleNavigateToPayments);
+    };
+  }, []);
+
   // Fetch system statistics
   const fetchSystemStats = useCallback(async () => {
     if (!user) return;
