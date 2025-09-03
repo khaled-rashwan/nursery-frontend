@@ -16,6 +16,7 @@ export const ROLE_PERMISSIONS = {
     'view_child_progress'
   ],
   admin: [
+    'manage_users',
     'manage_classes',
     'view_reports',
     'manage_fees',
@@ -49,7 +50,7 @@ export function canAccessAdmin(userRole: UserRole | undefined): boolean {
 
 // Check if user can manage other users  
 export function canManageUsers(userRole: UserRole | undefined): boolean {
-  return userRole === 'superadmin';
+  return userRole === 'superadmin' || userRole === 'admin';
 }
 
 // Check if user can manage classes
