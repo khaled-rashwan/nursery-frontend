@@ -120,6 +120,9 @@ app.post('/createPayment', async (req, res) => {
     }
 
     const studentData = studentDoc.data();
+    if (!studentData || !studentData.parentUID) {
+      return res.status(400).json({ error: `The selected student does not have a parent assigned. Please assign a parent to the student before creating a payment record.` });
+    }
     const remainingBalance = totalFees - paidAmount;
     
     const initialPaymentRecords = [];
@@ -340,10 +343,29 @@ app.post('/addPaymentRecord/:paymentId', async (req, res) => {
     }
 
     const existingData = paymentDoc.data();
+
+    let paymentDate;
+    // Only attempt to parse the date if it's a non-empty string
+    if (date && typeof date === 'string' && date.length > 0) {
+        try {
+            const parsed = new Date(date);
+            if (isNaN(parsed.getTime())) {
+                throw new Error("Invalid date string");
+            }
+            paymentDate = admin.firestore.Timestamp.fromDate(parsed);
+        } catch (e) {
+            // Fallback for safety, should not be reached if validation is good
+            return res.status(400).json({ error: 'Invalid date format provided.' });
+        }
+    } else {
+        // This case should be blocked by the `if (!date)` check, but handle it just in case
+        return res.status(400).json({ error: 'Date is required and must be a valid string.' });
+    }
+
     const newPaymentRecord = {
       id: admin.firestore().collection('_').doc().id,
       amount,
-      date: admin.firestore.Timestamp.fromDate(new Date(date)),
+      date: paymentDate,
       method,
       notes,
       recordedBy: authResult.decodedToken.uid,
