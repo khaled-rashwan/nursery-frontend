@@ -105,7 +105,7 @@ app.post('/createPayment', async (req, res) => {
       return res.status(403).json({ error: authResult.error });
     }
 
-    const { studentId, academicYear, totalFees, paidAmount, paymentRecords = [] } = req.body;
+    const { studentId, academicYear, totalFees, paidAmount, date, method, notes } = req.body;
     
     // Validate required fields
     const validationErrors = validatePaymentData({ studentId, academicYear, totalFees, paidAmount });
@@ -122,6 +122,19 @@ app.post('/createPayment', async (req, res) => {
     const studentData = studentDoc.data();
     const remainingBalance = totalFees - paidAmount;
     
+    const initialPaymentRecords = [];
+    if (paidAmount > 0) {
+      initialPaymentRecords.push({
+        id: admin.firestore().collection('_').doc().id,
+        amount: paidAmount,
+        date: date ? admin.firestore.Timestamp.fromDate(new Date(date)) : admin.firestore.FieldValue.serverTimestamp(),
+        method: method || 'cash',
+        notes: notes || 'Initial payment',
+        recordedBy: authResult.decodedToken.uid,
+        recordedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
     const paymentData = {
       studentId,
       parentUID: studentData.parentUID,
@@ -129,15 +142,7 @@ app.post('/createPayment', async (req, res) => {
       totalFees,
       paidAmount,
       remainingBalance,
-      paymentRecords: paymentRecords.map(record => ({
-        id: record.id || admin.firestore().collection('_').doc().id,
-        amount: record.amount,
-        date: admin.firestore.Timestamp.fromDate(new Date(record.date)),
-        method: record.method || 'cash',
-        notes: record.notes || '',
-        recordedBy: authResult.decodedToken.uid,
-        recordedAt: admin.firestore.FieldValue.serverTimestamp()
-      })),
+      paymentRecords: initialPaymentRecords,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: authResult.decodedToken.uid
@@ -330,7 +335,7 @@ app.post('/addPaymentRecord/:paymentId', async (req, res) => {
     };
     
     const updatedPaymentRecords = [...(existingData.paymentRecords || []), newPaymentRecord];
-    const newPaidAmount = existingData.paidAmount + amount;
+    const newPaidAmount = updatedPaymentRecords.reduce((sum, record) => sum + record.amount, 0);
     const newRemainingBalance = existingData.totalFees - newPaidAmount;
     
     await db.collection('payments').doc(paymentId).update({
