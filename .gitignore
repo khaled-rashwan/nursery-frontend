@@ -46,3 +46,8 @@ functions/**/.env*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Test files for payment issue debugging
+test-payment-issue.js
+test-fixed-payment-logic.js
+test-exact-issue-fix.js
