@@ -124,10 +124,26 @@ app.post('/createPayment', async (req, res) => {
     
     const initialPaymentRecords = [];
     if (paidAmount > 0) {
+      let paymentDate;
+      // Only attempt to parse the date if it's a non-empty string
+      if (date && typeof date === 'string' && date.length > 0) {
+          try {
+              const parsed = new Date(date);
+              if (isNaN(parsed.getTime())) {
+                  throw new Error("Invalid date string");
+              }
+              paymentDate = admin.firestore.Timestamp.fromDate(parsed);
+          } catch (e) {
+              paymentDate = admin.firestore.FieldValue.serverTimestamp();
+          }
+      } else {
+          paymentDate = admin.firestore.FieldValue.serverTimestamp();
+      }
+
       initialPaymentRecords.push({
         id: admin.firestore().collection('_').doc().id,
         amount: paidAmount,
-        date: date ? admin.firestore.Timestamp.fromDate(new Date(date)) : admin.firestore.FieldValue.serverTimestamp(),
+        date: paymentDate,
         method: method || 'cash',
         notes: notes || 'Initial payment',
         recordedBy: authResult.decodedToken.uid,
