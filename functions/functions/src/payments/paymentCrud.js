@@ -105,10 +105,20 @@ app.post('/createPayment', async (req, res) => {
       return res.status(403).json({ error: authResult.error });
     }
 
-    const { studentId, academicYear, totalFees, paidAmount, paymentRecords = [] } = req.body;
+    const { studentId, academicYear, totalFees, paidAmount = 0, paymentRecords = [] } = req.body;
     
-    // Validate required fields
-    const validationErrors = validatePaymentData({ studentId, academicYear, totalFees, paidAmount });
+    // Validate required fields (remove paidAmount from validation since it will be calculated)
+    const validationErrors = [];
+    if (!studentId || typeof studentId !== 'string') {
+      validationErrors.push('Valid studentId is required');
+    }
+    if (!academicYear || typeof academicYear !== 'string') {
+      validationErrors.push('Valid academicYear is required');
+    }
+    if (typeof totalFees !== 'number' || totalFees < 0) {
+      validationErrors.push('totalFees must be a non-negative number');
+    }
+    
     if (validationErrors.length > 0) {
       return res.status(400).json({ error: validationErrors.join(', ') });
     }
@@ -120,16 +130,13 @@ app.post('/createPayment', async (req, res) => {
     }
 
     const studentData = studentDoc.data();
-    const remainingBalance = totalFees - paidAmount;
     
-    const paymentData = {
-      studentId,
-      parentUID: studentData.parentUID,
-      academicYear,
-      totalFees,
-      paidAmount,
-      remainingBalance,
-      paymentRecords: paymentRecords.map(record => ({
+    // Build payment records array - if paidAmount > 0, create an initial payment record
+    let finalPaymentRecords = [];
+    
+    // Process existing payment records if any
+    if (paymentRecords && paymentRecords.length > 0) {
+      finalPaymentRecords = paymentRecords.map(record => ({
         id: record.id || admin.firestore().collection('_').doc().id,
         amount: record.amount,
         date: admin.firestore.Timestamp.fromDate(new Date(record.date)),
@@ -137,7 +144,40 @@ app.post('/createPayment', async (req, res) => {
         notes: record.notes || '',
         recordedBy: authResult.decodedToken.uid,
         recordedAt: admin.firestore.FieldValue.serverTimestamp()
-      })),
+      }));
+    }
+    
+    // If paidAmount > 0 and no payment records, create initial payment record
+    if (paidAmount > 0 && finalPaymentRecords.length === 0) {
+      const initialPaymentRecord = {
+        id: admin.firestore().collection('_').doc().id,
+        amount: paidAmount,
+        date: admin.firestore.FieldValue.serverTimestamp(),
+        method: 'cash', // Default method for initial payment
+        notes: 'Initial payment',
+        recordedBy: authResult.decodedToken.uid,
+        recordedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      finalPaymentRecords.push(initialPaymentRecord);
+    }
+    
+    // Calculate paidAmount from payment records sum
+    const calculatedPaidAmount = finalPaymentRecords.reduce((sum, record) => sum + record.amount, 0);
+    const remainingBalance = totalFees - calculatedPaidAmount;
+    
+    // Validate that calculated paid amount doesn't exceed total fees
+    if (calculatedPaidAmount > totalFees) {
+      return res.status(400).json({ error: 'Payment amount cannot exceed total fees' });
+    }
+    
+    const paymentData = {
+      studentId,
+      parentUID: studentData.parentUID,
+      academicYear,
+      totalFees,
+      paidAmount: calculatedPaidAmount, // Always calculated from payment records
+      remainingBalance,
+      paymentRecords: finalPaymentRecords,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: authResult.decodedToken.uid
@@ -330,8 +370,17 @@ app.post('/addPaymentRecord/:paymentId', async (req, res) => {
     };
     
     const updatedPaymentRecords = [...(existingData.paymentRecords || []), newPaymentRecord];
-    const newPaidAmount = existingData.paidAmount + amount;
+    
+    // Calculate new paid amount from all payment records
+    const newPaidAmount = updatedPaymentRecords.reduce((sum, record) => sum + record.amount, 0);
     const newRemainingBalance = existingData.totalFees - newPaidAmount;
+    
+    // Validate that new payment doesn't exceed remaining amount
+    if (newPaidAmount > existingData.totalFees) {
+      return res.status(400).json({ 
+        error: `Payment amount ${amount} exceeds remaining balance. Maximum allowed: ${existingData.totalFees - (existingData.paidAmount || 0)}` 
+      });
+    }
     
     await db.collection('payments').doc(paymentId).update({
       paymentRecords: updatedPaymentRecords,
@@ -343,7 +392,11 @@ app.post('/addPaymentRecord/:paymentId', async (req, res) => {
     res.json({
       success: true,
       message: 'Payment record added successfully',
-      newRecord: newPaymentRecord
+      newRecord: newPaymentRecord,
+      updatedTotals: {
+        paidAmount: newPaidAmount,
+        remainingBalance: newRemainingBalance
+      }
     });
   } catch (error) {
     console.error('Error adding payment record:', error);

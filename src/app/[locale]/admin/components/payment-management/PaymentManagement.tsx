@@ -61,11 +61,11 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
   const [createForm, setCreateForm] = useState({
     studentId: '',
     totalFees: 0,
-    paidAmount: 0
+    initialPaymentAmount: 0 // Changed from paidAmount to initialPaymentAmount for clarity
   });
   const [editForm, setEditForm] = useState({
     totalFees: 0,
-    paidAmount: 0
+    paidAmount: 0 // Keep this for editing existing payments
   });
   const [addRecordForm, setAddRecordForm] = useState({
     amount: 0,
@@ -125,9 +125,11 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...createForm,
+          studentId: createForm.studentId,
           academicYear: selectedAcademicYear,
-          paymentRecords: []
+          totalFees: createForm.totalFees,
+          paidAmount: createForm.initialPaymentAmount, // Pass initial payment amount
+          paymentRecords: [] // Backend will create payment record if paidAmount > 0
         })
       });
 
@@ -137,7 +139,7 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
       }
 
       setShowCreateForm(false);
-      setCreateForm({ studentId: '', totalFees: 0, paidAmount: 0 });
+      setCreateForm({ studentId: '', totalFees: 0, initialPaymentAmount: 0 });
       fetchPaymentSummaries();
     } catch (error) {
       console.error('Error creating payment:', error);
@@ -838,14 +840,14 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
                   fontWeight: 'bold',
                   color: '#2c3e50'
                 }}>
-                  {locale === 'ar-SA' ? 'المبلغ المدفوع' : 'Paid Amount'}
+                  {locale === 'ar-SA' ? 'المبلغ المدفوع مقدماً (اختياري)' : 'Initial Payment Amount (Optional)'}
                 </label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={createForm.paidAmount}
-                  onChange={(e) => setCreateForm({...createForm, paidAmount: parseFloat(e.target.value) || 0})}
+                  value={createForm.initialPaymentAmount}
+                  onChange={(e) => setCreateForm({...createForm, initialPaymentAmount: parseFloat(e.target.value) || 0})}
                   style={{
                     width: '100%',
                     padding: '0.8rem',
@@ -853,8 +855,14 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
                     borderRadius: '6px',
                     fontSize: '1rem'
                   }}
-                  required
+                  placeholder={locale === 'ar-SA' ? 'اتركه 0 إذا لم يدفع شيء بعد' : 'Leave 0 if no payment made yet'}
                 />
+                <small style={{ color: '#7f8c8d', fontSize: '0.9rem', marginTop: '0.5rem', display: 'block' }}>
+                  {locale === 'ar-SA' 
+                    ? 'سيتم إنشاء سجل دفع تلقائياً إذا كان المبلغ أكبر من 0'
+                    : 'A payment record will be automatically created if amount > 0'
+                  }
+                </small>
               </div>
               <div style={{
                 display: 'flex',
