@@ -31,77 +31,18 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
       <div className="header-content">
         <Link href={`/${locale}`} className="logo" style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          flexDirection: isRTL ? 'row-reverse' : 'row'
+          alignItems: 'center'
         }}>
           <Image
-            src="/logo.png" 
+            src={locale === 'ar-SA' ? '/ar-SA_logo.png' : '/en-US_logo.png'}
             alt="Future Step Nursery Logo"
-            width={60}
-            height={40}
+            width={240}
+            height={97}
             style={{
               objectFit: 'contain',
               flexShrink: 0
             }}
           />
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            lineHeight: '1.1',
-            gap: '0.1rem'
-          }}>
-            {locale === 'ar-SA' ? (
-              <>
-                <span style={{ 
-                  color: 'var(--primary-blue-dark)', 
-                  fontWeight: '600',
-                  fontSize: '1rem'
-                }}>
-                  روضة
-                </span>
-                <span style={{ 
-                  color: 'var(--primary-blue-dark)', 
-                  fontWeight: '600',
-                  fontSize: '1rem'
-                }}>
-                  خطوة المستقبل
-                </span>
-                <span style={{ 
-                  color: 'var(--primary-orange-dark)', 
-                  fontWeight: '600',
-                  fontSize: '1rem'
-                }}>
-                  العالمية
-                </span>
-              </>
-            ) : (
-              <>
-                <span style={{ 
-                  color: 'var(--primary-blue-dark)', 
-                  fontWeight: '600',
-                  fontSize: '1rem'
-                }}>
-                  Future
-                </span>
-                <span style={{ 
-                  color: 'var(--primary-blue-dark)', 
-                  fontWeight: '600',
-                  fontSize: '1rem'
-                }}>
-                  Step
-                </span>
-                <span style={{ 
-                  color: 'var(--primary-orange-dark)', 
-                  fontWeight: '600',
-                  fontSize: '1rem'
-                }}>
-                  Kindergarten
-                </span>
-              </>
-            )}
-          </div>
         </Link>
         
         <nav>
