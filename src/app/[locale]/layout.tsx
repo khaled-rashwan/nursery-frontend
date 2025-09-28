@@ -196,22 +196,24 @@ async function Footer({locale}: {locale: string}) {
   const content = footerContent || fallbackContent;
 
   return (
-    <Link href={`/${locale}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-      <footer className="kindergarten-footer" style={{ cursor: 'pointer' }}>
-        <div className="footer-content">
-          {content.sections.map((section, index) => (
-            <div key={index} className="footer-section">
-              <h3>{section.icon} {section.title}</h3>
-              <p>{section.content}</p>
-            </div>
-          ))}
-        </div>
-        
-        <div className="footer-bottom">
-          <p>{content.copyright}</p>
-        </div>
-      </footer>
-    </Link>
+    <footer className="kindergarten-footer">
+      <div className="footer-content">
+        {content.sections.map((section, index) => (
+          <div key={index} className="footer-section">
+            <h3>{section.icon} {section.title}</h3>
+            <p>{section.content}</p>
+          </div>
+        ))}
+      </div>
+      
+      <div className="footer-bottom">
+        <p>
+          <Link href={`/${locale}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            {content.copyright}
+          </Link>
+        </p>
+      </div>
+    </footer>
   );
 }
  
