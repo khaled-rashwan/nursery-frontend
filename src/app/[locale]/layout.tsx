@@ -207,7 +207,11 @@ async function Footer({locale}: {locale: string}) {
       </div>
       
       <div className="footer-bottom">
-        <p>{content.copyright}</p>
+        <p>
+          <Link href={`/${locale}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            {content.copyright}
+          </Link>
+        </p>
       </div>
     </footer>
   );
