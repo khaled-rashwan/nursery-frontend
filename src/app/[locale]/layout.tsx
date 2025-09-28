@@ -3,6 +3,7 @@ import {NextIntlClientProvider, hasLocale} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import {notFound} from 'next/navigation';
 import {routing} from '@/i18n/routing';
+import type { Metadata } from "next";
 // Temporarily commented out Google Fonts due to network restrictions
 // import { Geist, Geist_Mono } from "next/font/google";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
@@ -156,6 +157,30 @@ async function Footer({locale}: {locale: string}) {
       </div>
     </footer>
   );
+}
+
+export async function generateMetadata({ 
+  params 
+}: {
+  params: Promise<{locale: string}>
+}): Promise<Metadata> {
+  const {locale} = await params;
+  
+  const title = locale === 'ar-SA' 
+    ? 'روضة خطوة المستقبل العالمية - مستقبل الغد'
+    : 'Future Step Kindergarten';
+    
+  const description = locale === 'ar-SA'
+    ? 'روضة خطوة المستقبل العالمية - بناء قادة المستقبل'
+    : 'Future Step International Kindergarten - Building Tomorrow\'s Leaders';
+
+  return {
+    title,
+    description,
+    icons: {
+      icon: '/logo.png',
+    },
+  };
 }
  
 export default async function LocaleLayout({
