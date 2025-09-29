@@ -11,7 +11,6 @@ steps:
     args:
       - 'deploy'
       - '--project=${_PROJECT_ID}' # Use Cloud Build's built-in project ID substitution
-      - '--only=firestore:rules,storage:rules,functions' 
       # If you only want to deploy specific services, you can add --only flags:
       # - '--only=hosting,firestore:rules,storage:rules,functions,auth' 
 
