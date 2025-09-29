@@ -1,0 +1,23 @@
+steps:
+  # 1. Install dependencies for your project, including those for seed-database.js
+  #    Assumes package.json is in your project root.
+  - name: 'gcr.io/cloud-builders/npm'
+    dir: '.'
+    args: ['install']
+
+  # 2. Deploy Firebase services (functions, rules, storage, hosting, auth, etc.)
+  #    Using the official Firebase CLI Cloud Build image.
+  - name: 'us-docker.pkg.dev/firebase-cli/us/firebase' # Recommended Firebase CLI image
+    args:
+      - 'deploy'
+      - '--project=${_PROJECT_ID}' # Use Cloud Build's built-in project ID substitution
+      # If you only want to deploy specific services, you can add --only flags:
+      # - '--only=hosting,firestore:rules,storage:rules,functions,auth' 
+
+  # 3. Run seed-database.js to populate Firestore
+  #    Assumes seed-database.js is in your project root and uses installed npm packages.
+  - name: 'gcr.io/cloud-builders/node'
+    entrypoint: 'node'
+    args: ['seed-database.js']
+
+timeout: 1200s # 20 minutes, adjust as needed for longer builds/seeding
