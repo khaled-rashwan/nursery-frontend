@@ -15,13 +15,14 @@
   --primary-green: #82c341;
   --primary-red: #ef4223;
   
-  /* Light versions for backgrounds */
-  --light-blue: #d0e4f4;
+  /* Light versions for backgrounds - enhanced for kindergarten appeal */
+  --light-blue: #e3f2fd;
   --light-blue-alt: #c5e4ff;
-  --light-yellow: #fff3d9;
-  --light-orange: #ffe5dc;
-  --light-green: #f0f8e8;
-  --light-red: #fce8e5;
+  --light-yellow: #fff8e1;
+  --light-orange: #fff3e0;
+  --light-green: #f1f8e9;
+  --light-red: #ffebee;
+  --light-pink: #fce4ec;
   
   /* Maintaining compatibility with existing code */
   --primary-pink: #ff885e; /* Using orange as pink replacement */
@@ -162,7 +163,7 @@ body {
 .hero-section {
   text-align: center;
   padding: 4rem 2rem;
-  background: linear-gradient(135deg, var(--light-pink), var(--light-blue));
+  background: var(--light-yellow);
   border-radius: var(--border-radius);
   margin: 2rem auto;
   max-width: 1200px;
@@ -255,22 +256,22 @@ body {
 }
 
 .puzzle-piece:nth-child(1) {
-  background: linear-gradient(135deg, var(--light-pink), white);
+  background: var(--light-pink);
   border-color: var(--primary-pink);
 }
 
 .puzzle-piece:nth-child(2) {
-  background: linear-gradient(135deg, var(--light-blue), white);
+  background: var(--light-blue);
   border-color: var(--primary-blue);
 }
 
 .puzzle-piece:nth-child(3) {
-  background: linear-gradient(135deg, var(--light-yellow), white);
+  background: var(--light-yellow);
   border-color: var(--primary-yellow);
 }
 
 .puzzle-piece:nth-child(4) {
-  background: linear-gradient(135deg, var(--light-orange), white);
+  background: var(--light-orange);
   border-color: var(--primary-orange);
 }
 
@@ -637,14 +638,10 @@ body {
   transform: rotate(5deg) scale(1.05);
 }
 
-/* Gradient Text */
-.gradient-text {
-  background: linear-gradient(45deg, var(--primary-pink), var(--primary-blue), var(--primary-purple));
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-shift 3s ease-in-out infinite;
+/* Solid Color Text - Kindergarten Friendly */
+.kindergarten-text {
+  color: var(--primary-orange);
+  font-weight: bold;
 }
 
 @keyframes gradient-shift {
@@ -690,4 +687,119 @@ body {
   .logo {
     font-size: 1.5rem;
   }
+}
+
+/* Additional responsive improvements for homepage */
+@media (max-width: 1024px) {
+  /* Tablet adjustments */
+  .hero-section {
+    padding: 3rem 1.5rem;
+  }
+  
+  /* Better grid layout for tablets */
+  .academic-program-grid,
+  .features-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile adjustments */
+  .hero-section {
+    padding: 2rem 1rem;
+    min-height: 70vh;
+  }
+  
+  /* Single column layout for mobile */
+  .academic-program-grid,
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Improved button sizing for mobile */
+  .cta-button,
+  .primary-button {
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+    padding: 1.2rem 2rem;
+    font-size: 1.1rem;
+  }
+  
+  /* Better text sizing for mobile */
+  .section-title {
+    font-size: 2.5rem !important;
+  }
+  
+  .section-subtitle {
+    font-size: 1.3rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Small mobile adjustments */
+  .hero-section {
+    padding: 1.5rem 0.75rem;
+  }
+  
+  .section-title {
+    font-size: 2rem !important;
+  }
+  
+  .section-subtitle {
+    font-size: 1.1rem !important;
+  }
+  
+  .cta-button,
+  .primary-button {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Kindergarten-friendly utility classes */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-8px) rotate(1deg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.kindergarten-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.kindergarten-button {
+  background: var(--primary-orange);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 1rem 2rem;
+  font-size: 1.1rem; 
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.kindergarten-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.kindergarten-button.secondary {
+  background: var(--primary-blue);
+}
+
+.kindergarten-button.success {
+  background: var(--primary-green);
 }
