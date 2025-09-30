@@ -27,3 +27,5 @@ timeout: 1200s # 20 minutes, adjust if seeding takes longer
 
 options:
   logging: CLOUD_LOGGING_ONLY
+
+# --- Redeploy trigger: harmless comment to force Cloud Build to run again ---
