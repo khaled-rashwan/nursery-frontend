@@ -9,58 +9,63 @@ const { admissionsPageContent } = require('./admissionsPageContent.js');
 const { galleryPageContent } = require('./galleryPageContent.js');
 const { footerContent } = require('./footerContent.js');
 
-// IMPORTANT: Make sure the path to your service account key is correct.
-// You should have this file in the root of your project.
-const serviceAccount = require('./serviceAccountKey.json');
-
-// Initialize the Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// ✅ Smart initialization: use serviceAccount locally, ADC in Cloud
+let app;
+try {
+  // Try local service account key
+  const serviceAccount = require('./serviceAccountKey.json');
+  app = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log('Initialized Firebase Admin with local serviceAccountKey.json');
+} catch (err) {
+  // Fallback: Application Default Credentials (for Cloud Build / Cloud Functions)
+  app = admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+  });
+  console.log('Initialized Firebase Admin with applicationDefault()');
+}
 
 const db = admin.firestore();
 
 async function seedDatabase() {
   try {
     console.log('Starting to seed homepage content...');
-    
-    // Use merge: true to preserve existing content, including uploaded images
-    // This prevents overwriting of user-uploaded images and dynamic content
     await db.collection('websiteContent').doc('homePage').set(homePageContent, { merge: true });
-    console.log('✅ Success! The homepage content has been seeded to Firestore.');
+    console.log('✅ Homepage content seeded');
 
     console.log('Starting to seed about us page content...');
     await db.collection('websiteContent').doc('aboutUsPage').set(aboutUsPageContent, { merge: true });
-    console.log('✅ Success! The about us page content has been seeded to Firestore.');
+    console.log('✅ About us content seeded');
 
     console.log('Starting to seed contact us page content...');
     await db.collection('websiteContent').doc('contactUsPage').set(contactUsPageContent, { merge: true });
-    console.log('✅ Success! The contact us page content has been seeded to Firestore.');
+    console.log('✅ Contact us content seeded');
 
     console.log('Starting to seed academic program page content...');
     await db.collection('websiteContent').doc('academicProgramPage').set(academicProgramPageContent, { merge: true });
-    console.log('✅ Success! The academic program page content has been seeded to Firestore.');
+    console.log('✅ Academic program content seeded');
 
     console.log('Starting to seed careers page content...');
     await db.collection('websiteContent').doc('careersPage').set(careersPageContent, { merge: true });
-    console.log('✅ Success! The careers page content has been seeded to Firestore.');
+    console.log('✅ Careers content seeded');
 
     console.log('Starting to seed admissions page content...');
     await db.collection('websiteContent').doc('admissionsPage').set(admissionsPageContent, { merge: true });
-    console.log('✅ Success! The admissions page content has been seeded to Firestore.');
+    console.log('✅ Admissions content seeded');
 
     console.log('Starting to seed gallery page content...');
     await db.collection('websiteContent').doc('galleryPage').set(galleryPageContent, { merge: true });
-    console.log('✅ Success! The gallery page content has been seeded to Firestore.');
+    console.log('✅ Gallery content seeded');
 
     console.log('Starting to seed footer content...');
     await db.collection('websiteContent').doc('footer').set(footerContent, { merge: true });
-    console.log('✅ Success! The footer content has been seeded to Firestore.');
+    console.log('✅ Footer content seeded');
 
-    console.log("Navigate to Firestore > websiteContent collection to see the data.");
+    console.log("🎉 Seeding complete. Check Firestore > websiteContent collection.");
   } catch (error) {
     console.error('❌ Error seeding database:', error);
-    process.exit(1); // Exit with an error code
+    process.exit(1);
   }
 }
 
