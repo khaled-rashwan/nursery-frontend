@@ -84,6 +84,7 @@ body {
   gap: 0.3rem;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: center;
 }
 
 .nav-item {

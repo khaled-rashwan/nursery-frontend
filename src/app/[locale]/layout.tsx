@@ -46,7 +46,7 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
           />
         </Link>
         
-        <nav>
+        <nav style={{flexGrow: 1}}>
           <ul className="nav-menu">
             <li className="nav-item">
               <Link href={`/${locale}`} className="nav-link bounce-on-hover">
