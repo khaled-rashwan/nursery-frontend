@@ -21,3 +21,6 @@ steps:
     args: ['seed-database.js']
 
 timeout: 1200s # 20 minutes, adjust as needed for longer builds/seeding
+
+options:
+  logging: CLOUD_LOGGING_ONLY
