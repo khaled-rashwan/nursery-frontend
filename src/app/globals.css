@@ -769,6 +769,107 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
+/* Admin Dashboard Responsive Design */
+@media (max-width: 768px) {
+  /* Admin Dashboard Container */
+  .admin-dashboard-container {
+    padding: 1rem !important;
+  }
+
+  /* Admin Dashboard Header */
+  .admin-dashboard-header {
+    padding: 1rem !important;
+    gap: 1rem !important;
+  }
+
+  .admin-dashboard-header h1 {
+    font-size: 1.4rem !important;
+  }
+
+  .admin-dashboard-header p {
+    font-size: 0.9rem !important;
+  }
+
+  /* Academic Year Selector in Admin */
+  .admin-academic-year-wrapper {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .academic-year-selector {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .academic-year-selector select {
+    max-width: 100%;
+    min-width: auto !important;
+  }
+
+  /* Admin Menu Cards */
+  .admin-menu-cards {
+    padding: 1rem !important;
+  }
+
+  .admin-menu-card-item {
+    padding: 1rem !important;
+    min-height: auto !important;
+  }
+
+  .admin-menu-card-item h3 {
+    font-size: 1rem !important;
+  }
+
+  .admin-menu-card-item p {
+    font-size: 0.85rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Small mobile adjustments for admin panel */
+  .admin-dashboard-container {
+    padding: 0.5rem !important;
+  }
+
+  .admin-dashboard-header {
+    padding: 0.75rem !important;
+    border-radius: 10px !important;
+  }
+
+  .admin-dashboard-header h1 {
+    font-size: 1.2rem !important;
+  }
+
+  .admin-dashboard-header p {
+    font-size: 0.8rem !important;
+  }
+
+  /* Admin Menu Cards for small screens */
+  .admin-menu-cards {
+    padding: 0.75rem !important;
+    border-radius: 15px !important;
+  }
+
+  .admin-menu-card-item {
+    padding: 0.75rem !important;
+    border-radius: 12px !important;
+  }
+
+  .admin-menu-card-item h3 {
+    font-size: 0.95rem !important;
+  }
+
+  .admin-menu-card-item p {
+    font-size: 0.8rem !important;
+  }
+
+  /* Adjust icon sizes */
+  .admin-menu-card-item > div > div {
+    font-size: 1.5rem !important;
+  }
+}
+
 .kindergarten-card {
   background: white;
   border-radius: 20px;
