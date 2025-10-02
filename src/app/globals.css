@@ -844,6 +844,20 @@ body {
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
+
+  /* Responsive tables */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Make table cells wrap text better */
+  td, th {
+    word-break: break-word;
+    max-width: 200px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -915,6 +929,12 @@ body {
   button {
     font-size: 0.9rem !important;
     padding: 0.7rem 1rem !important;
+  }
+
+  /* Smaller max-width for table cells on small screens */
+  td, th {
+    max-width: 150px;
+    font-size: 0.85rem !important;
   }
 }
 
