@@ -824,6 +824,26 @@ body {
   .admin-menu-card-item p {
     font-size: 0.85rem !important;
   }
+
+  /* Content Management Forms */
+  fieldset {
+    padding: 1rem !important;
+  }
+
+  legend {
+    font-size: 1.2rem !important;
+  }
+
+  /* Make all inputs, textareas, and selects responsive */
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -867,6 +887,34 @@ body {
   /* Adjust icon sizes */
   .admin-menu-card-item > div > div {
     font-size: 1.5rem !important;
+  }
+
+  /* Content Management Forms */
+  fieldset {
+    padding: 0.75rem !important;
+  }
+
+  legend {
+    font-size: 1.1rem !important;
+  }
+
+  label {
+    font-size: 0.9rem !important;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 0.9rem !important;
+    padding: 0.6rem !important;
+  }
+
+  button {
+    font-size: 0.9rem !important;
+    padding: 0.7rem 1rem !important;
   }
 }
 
