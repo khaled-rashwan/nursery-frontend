@@ -1,23 +1,31 @@
 steps:
-  # 1. Install dependencies for your project, including those for seed-database.js
-  #    Assumes package.json is in your project root.
-  - name: 'gcr.io/cloud-builders/npm'
-    dir: '.'
+  # 1. Install dependencies for the root project
+  - name: 'node:20'
+    entrypoint: npm
     args: ['install']
 
-  # 2. Deploy Firebase services (functions, rules, storage, hosting, auth, etc.)
-  #    Using the official Firebase CLI Cloud Build image.
-  - name: 'us-docker.pkg.dev/firebase-cli/us/firebase' # Recommended Firebase CLI image
+  # 2. Install dependencies in the nested functions directory
+  - name: 'node:20'
+    entrypoint: npm
+    dir: 'functions/functions'
+    args: ['install']
+
+  # 3. Deploy Firebase services (functions, rules, storage, hosting, auth, etc.)
+  - name: 'us-docker.pkg.dev/firebase-cli/us/firebase'
     args:
       - 'deploy'
-      - '--project=${_PROJECT_ID}' # Use Cloud Build's built-in project ID substitution
-      # If you only want to deploy specific services, you can add --only flags:
-      # - '--only=hosting,firestore:rules,storage:rules,functions,auth' 
+      - '--project=${_PROJECT_ID}'
+      # Example: limit to specific services with --only
+      # - '--only=hosting,firestore:rules,storage:rules,functions,auth'
 
-  # 3. Run seed-database.js to populate Firestore
-  #    Assumes seed-database.js is in your project root and uses installed npm packages.
-  - name: 'gcr.io/cloud-builders/node'
-    entrypoint: 'node'
+  # 4. Run seed-database.js to populate Firestore
+  - name: 'node:20'
+    entrypoint: node
     args: ['seed-database.js']
 
-timeout: 1200s # 20 minutes, adjust as needed for longer builds/seeding
+timeout: 1200s # 20 minutes, adjust if seeding takes longer
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# --- Redeploy trigger: harmless comment to force Cloud Build to run again ---

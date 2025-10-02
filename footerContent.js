@@ -23,7 +23,7 @@ const footerContent = {
         content: "Sunday to Thursday: 7:30 AM to 2:00 PM"
       }
     ],
-    copyright: "© 2025 Future Step Kindergarten. All rights reserved. Created by Njaz.org"
+    copyright: "All rights reserved © 2025 Future Step Kindergarten"
   },
   "ar-SA": {
     sections: [
@@ -48,7 +48,7 @@ const footerContent = {
         content: "الأحد - الخميس: 7:30 ص - 2:00 م"
       }
     ],
-    copyright: "© 2025 روضة المستقبل. جميع الحقوق محفوظة. تم الإنشاء بواسطة Njaz.org"
+    copyright: "جميع الحقوق محفوظة روضة خطوة المستقبل © ٢٠٢٥"
   }
 };
 

@@ -26,7 +26,7 @@ function HeroSection({ content, locale }: { content: LocaleSpecificContent['hero
   return (
     <section style={{
       display: 'flex', alignItems: 'center', minHeight: '80vh', padding: '4rem 2rem',
-      background: 'linear-gradient(135deg, var(--light-pink) 0%, var(--light-blue) 50%, var(--light-yellow) 100%)',
+      background: 'var(--light-yellow)',
       position: 'relative', overflow: 'hidden'
     }}>
       {/* Background elements from original component */}
@@ -69,7 +69,7 @@ function HeroSection({ content, locale }: { content: LocaleSpecificContent['hero
           </p>
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <Link href={`/${locale}/admissions`} style={{
-              display: 'inline-block', padding: '1.5rem 3rem', background: 'linear-gradient(135deg, var(--primary-pink), var(--primary-purple))',
+              display: 'inline-block', padding: '1.5rem 3rem', background: 'var(--primary-orange)',
               color: 'white', textDecoration: 'none', borderRadius: '50px', fontSize: '1.3rem', fontWeight: 'bold',
               transition: 'all 0.3s ease', border: '3px solid white', boxShadow: '0 8px 25px rgba(0,0,0,0.2)', textAlign: 'center'
             }}>
@@ -103,7 +103,7 @@ function HeroSection({ content, locale }: { content: LocaleSpecificContent['hero
 function PrincipalMessageSection({ content, locale }: { content: LocaleSpecificContent['principalMessage']; locale: string }) {
   return (
     <section style={{
-      padding: '6rem 2rem', background: 'linear-gradient(135deg, var(--light-blue) 0%, var(--light-pink) 100%)',
+      padding: '6rem 2rem', background: 'var(--light-blue)',
       position: 'relative', overflow: 'hidden'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', position: 'relative', zIndex: 2 }}>
@@ -157,7 +157,7 @@ function AcademicProgramSection({ content, locale }: { content: LocaleSpecificCo
 
   return (
     <section style={{
-      padding: '6rem 2rem', background: 'linear-gradient(135deg, var(--light-yellow) 0%, var(--light-orange) 100%)',
+      padding: '6rem 2rem', background: 'var(--light-green)',
       position: 'relative', overflow: 'hidden'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', position: 'relative', zIndex: 2 }}>
@@ -179,7 +179,7 @@ function AcademicProgramSection({ content, locale }: { content: LocaleSpecificCo
               border: `3px solid ${getProgramColor(index)}`, transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden', textAlign: 'center'
             }}>
               <div style={{
-                width: '100px', height: '100px', background: `linear-gradient(135deg, ${getProgramColor(index)}, ${getProgramColor(index)}20)`,
+                width: '100px', height: '100px', background: `${getProgramColor(index)}40`,
                 borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
                 margin: '0 auto 1.5rem auto'
               }}>
@@ -213,7 +213,7 @@ function AcademicProgramSection({ content, locale }: { content: LocaleSpecificCo
             {content.ctaSubtitle}
           </p>
           <Link href={`/${locale}/academic-program`} style={{
-            display: 'inline-block', padding: '1.5rem 3rem', background: 'linear-gradient(135deg, var(--primary-purple), var(--primary-pink))',
+            display: 'inline-block', padding: '1.5rem 3rem', background: 'var(--primary-green)',
             color: 'white', textDecoration: 'none', borderRadius: '50px', fontSize: '1.3rem', fontWeight: 'bold',
             transition: 'all 0.3s ease', boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
           }}>
@@ -228,7 +228,7 @@ function AcademicProgramSection({ content, locale }: { content: LocaleSpecificCo
 // Features Section Component
 function FeaturesSection({ content }: { content: LocaleSpecificContent['features'] }) {
   return (
-    <section style={{ padding: '6rem 2rem', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', position: 'relative' }}>
+    <section style={{ padding: '6rem 2rem', background: 'white', position: 'relative' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
           <h2 style={{
@@ -268,7 +268,7 @@ function FeaturesSection({ content }: { content: LocaleSpecificContent['features
 function CTASection({ content, locale }: { content: LocaleSpecificContent['cta']; locale: string }) {
   return (
     <section style={{
-      padding: '6rem 2rem', background: 'linear-gradient(135deg, var(--primary-pink), var(--primary-purple))',
+      padding: '6rem 2rem', background: 'var(--primary-blue)',
       color: 'white', position: 'relative', overflow: 'hidden'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', position: 'relative', zIndex: 2 }}>
@@ -316,7 +316,7 @@ function CTASection({ content, locale }: { content: LocaleSpecificContent['cta']
                 boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
               }}/>
               <div style={{
-                position: 'absolute', top: '-10px', right: '-10px', background: 'linear-gradient(135deg, var(--primary-yellow), var(--primary-orange))',
+                position: 'absolute', top: '-10px', right: '-10px', background: 'var(--primary-yellow)',
                 color: 'var(--primary-purple)', padding: '1rem 2rem', borderRadius: '25px', fontSize: '1.1rem',
                 fontWeight: 'bold', boxShadow: '0 8px 25px rgba(0,0,0,0.3)', border: '3px solid white',
                 animation: 'bounce 2s infinite', transform: 'rotate(15deg)'
@@ -383,7 +383,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     return (
       <div style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh',
-        background: 'linear-gradient(135deg, var(--light-pink), var(--light-blue))'
+        background: 'var(--light-blue)'
       }}>
         <div style={{ textAlign: 'center', color: 'var(--primary-purple)' }}>
           <div className="loading-spinner" style={{ width: '60px', height: '60px', margin: '0 auto 2rem' }}></div>
@@ -399,7 +399,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     return (
       <div style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh',
-        background: 'linear-gradient(135deg, #ffdddd, #ffd1d1)', color: '#d8000c', padding: '2rem'
+        background: 'var(--light-red)', color: '#d8000c', padding: '2rem'
       }}>
         <div style={{ textAlign: 'center', background: 'white', padding: '3rem', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.1)' }}>
           <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>😟 {locale === 'ar-SA' ? 'خطأ في تحميل الصفحة' : 'Error Loading Page'}</h2>
@@ -419,7 +419,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)' }}>
+    <div style={{ minHeight: '100vh', background: '#ffffff' }}>
       <HeroSection content={content.hero} locale={locale} />
       <PrincipalMessageSection content={content.principalMessage} locale={locale} />
       <AcademicProgramSection content={content.academicProgram} locale={locale} />
