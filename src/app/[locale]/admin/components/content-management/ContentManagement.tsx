@@ -61,6 +61,7 @@ const formStyles = {
     fontSize: '1rem',
     border: '1px solid #ccc',
     borderRadius: '4px',
+    boxSizing: 'border-box' as const,
   },
   textarea: {
     width: '100%',
@@ -69,10 +70,11 @@ const formStyles = {
     border: '1px solid #ccc',
     borderRadius: '4px',
     minHeight: '100px',
+    boxSizing: 'border-box' as const,
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
     gap: '1.5rem',
   },
 };

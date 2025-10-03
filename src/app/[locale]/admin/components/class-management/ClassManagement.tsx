@@ -392,7 +392,7 @@ export function ClassManagement({ locale }: ClassManagementProps) {
       )}
 
       {!loading && classes.length > 0 && (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="admin-table-wrapper" style={{ overflowX: 'auto' }}>
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',

@@ -109,7 +109,7 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
           No career applications found.
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="admin-table-wrapper" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' }}>
             <thead>
               <tr>

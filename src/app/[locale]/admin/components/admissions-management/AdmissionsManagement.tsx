@@ -109,7 +109,7 @@ export default function AdmissionsManagement({ locale }: AdmissionsManagementPro
       {loading && <p>{locale === 'ar-SA' ? 'جاري التحميل...' : 'Loading...'}</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      <div style={{ overflowX: 'auto' }}>
+      <div className="admin-table-wrapper" style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
