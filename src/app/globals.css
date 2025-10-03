@@ -888,15 +888,25 @@ body {
   table:not(.no-mobile-scroll) th:first-child,
   table:not(.no-mobile-scroll) td:first-child {
     min-width: 150px;
-    position: sticky;
-    left: 0;
-    background: white;
-    z-index: 1;
   }
 
-  /* Header should have background when sticky */
-  table:not(.no-mobile-scroll) thead th:first-child {
-    background: #f8f9fa;
+  /* Row highlighting for better tracking while scrolling on mobile */
+  table:not(.no-mobile-scroll) tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  table:not(.no-mobile-scroll) tbody tr:hover,
+  table:not(.no-mobile-scroll) tbody tr:active,
+  table:not(.no-mobile-scroll) tbody tr:focus-within {
+    background-color: #e9ecef;
+  }
+
+  /* For touch devices, keep the highlight visible */
+  @media (hover: none) {
+    table:not(.no-mobile-scroll) tbody tr:active {
+      background-color: #dee2e6;
+    }
   }
 
   /* Actions column can be narrower */
