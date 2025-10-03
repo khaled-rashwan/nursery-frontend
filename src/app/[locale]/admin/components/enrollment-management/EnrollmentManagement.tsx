@@ -534,10 +534,11 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
           </div>
 
           {/* Enrollment Table */}
-          <div style={{ 
+          <div className="admin-table-wrapper" style={{ 
             background: 'white',
             borderRadius: '8px',
             overflow: 'hidden',
+            overflowX: 'auto',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
