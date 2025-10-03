@@ -77,7 +77,12 @@ export function AcademicYearSelector({
   return (
     <div 
       className={`academic-year-selector ${className}`}
-      style={{ ...variantStyles, ...style }}
+      style={{ 
+        ...variantStyles, 
+        ...style,
+        minWidth: 0,
+        maxWidth: '100%'
+      }}
     >
       {/* Label */}
       <div style={{
@@ -86,7 +91,8 @@ export function AcademicYearSelector({
         gap: '0.5rem',
         fontWeight: 'bold',
         color: '#2c3e50',
-        fontSize: variant === 'minimal' ? '0.9rem' : '1rem'
+        fontSize: variant === 'minimal' ? '0.9rem' : '1rem',
+        whiteSpace: 'nowrap'
       }}>
         📅 {locale === 'ar-SA' ? 'العام الدراسي:' : 'Academic Year:'}
       </div>
@@ -107,6 +113,7 @@ export function AcademicYearSelector({
           background: 'white',
           color: '#2c3e50',
           minWidth: variant === 'minimal' ? '120px' : '150px',
+          maxWidth: '100%',
           cursor: 'pointer'
         }}
       >

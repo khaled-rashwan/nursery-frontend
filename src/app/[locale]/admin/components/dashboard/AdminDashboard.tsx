@@ -146,13 +146,14 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
 
   return (
     <AcademicYearProvider>
-      <div style={{
+      <div className="admin-dashboard-container" style={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
         padding: '2rem'
       }}>
       {/* Header */}
       <div
+        className="admin-dashboard-header"
         style={{
           background: 'white',
           padding: '2rem',
@@ -168,7 +169,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
           columnGap: '1.5rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0, flex: '1 1 auto' }}>
           <div style={{
             width: '60px',
             height: '60px',
@@ -182,15 +183,17 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             justifyContent: 'center',
             color: 'white',
             fontSize: '1.5rem',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            flexShrink: 0
           }}>
             {!user?.photoURL && (user?.displayName?.charAt(0)?.toUpperCase() || '👤')}
           </div>
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <h1 style={{
               fontSize: '1.8rem',
               color: '#2c3e50',
-              margin: '0 0 0.5rem 0'
+              margin: '0 0 0.5rem 0',
+              wordBreak: 'break-word'
             }}>
               {locale === 'ar-SA' ? 'مرحباً، ' : 'Welcome, '}
               {user?.displayName || 'Name is missing'}
@@ -202,7 +205,8 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              flexWrap: 'wrap'
+              flexWrap: 'wrap',
+              wordBreak: 'break-word'
             }}>
               <span style={{
                 display: 'inline-flex',
@@ -213,7 +217,8 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
                 color: 'white',
                 borderRadius: '12px',
                 fontSize: '0.9rem',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap'
               }}>
                 {userClaims?.role ? getRoleIcon(userClaims.role) : '❓'}
                 {' '}
@@ -222,17 +227,17 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
                   (locale === 'ar-SA' ? 'الدور مفقود' : 'Role is missing')
                 }
               </span>
-              • {user?.email || 'Email is missing'}
+              <span style={{ wordBreak: 'break-all' }}>• {user?.email || 'Email is missing'}</span>
             </p>
           </div>
         </div>
         
         {/* Academic Year Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', margin: '0 1rem' }}>
-          <AcademicYearSelector variant="compact" />
+        <div className="admin-academic-year-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+          <AcademicYearSelector variant="compact" locale={locale} />
         </div>
         
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={fetchSystemStats}
             disabled={loading}
@@ -248,7 +253,8 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
               transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              whiteSpace: 'nowrap'
             }}
             onMouseEnter={(e) => !loading && (e.currentTarget.style.transform = 'translateY(-2px)')}
             onMouseLeave={(e) => !loading && (e.currentTarget.style.transform = 'translateY(0)')}
@@ -261,7 +267,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
       </div>
 
       {/* Navigation Tabs - Card Design */}
-      <div style={{
+      <div className="admin-menu-cards" style={{
         background: 'white',
         padding: '2rem',
         borderRadius: '20px',
@@ -270,7 +276,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
           gap: '1.5rem',
           maxWidth: '1400px',
           margin: '0 auto'
@@ -362,6 +368,7 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             <div
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              className="admin-menu-card-item"
               style={{
                 background: activeTab === tab.id 
                   ? `linear-gradient(135deg, ${tab.color}, ${tab.color}dd)` 
@@ -379,7 +386,8 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
                 minHeight: '140px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                overflow: 'hidden'
               }}
               onMouseEnter={(e) => {
                 if (activeTab !== tab.id) {
@@ -410,7 +418,8 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
                   fontSize: '1.1rem',
                   fontWeight: 'bold',
                   margin: '0 0 0.5rem 0',
-                  lineHeight: '1.3'
+                  lineHeight: '1.3',
+                  wordBreak: 'break-word'
                 }}>
                   {tab.label}
                 </h3>
@@ -419,7 +428,8 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
                 fontSize: '0.9rem',
                 margin: 0,
                 opacity: activeTab === tab.id ? 0.9 : 0.7,
-                lineHeight: '1.4'
+                lineHeight: '1.4',
+                wordBreak: 'break-word'
               }}>
                 {tab.description}
               </p>

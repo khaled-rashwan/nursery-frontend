@@ -769,6 +769,245 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
+/* Admin Dashboard Responsive Design */
+
+/* Table wrapper for better mobile scrolling */
+.admin-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.admin-table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+@media (max-width: 768px) {
+  /* Admin Dashboard Container */
+  .admin-dashboard-container {
+    padding: 1rem !important;
+  }
+
+  /* Admin Dashboard Header */
+  .admin-dashboard-header {
+    padding: 1rem !important;
+    gap: 1rem !important;
+  }
+
+  .admin-dashboard-header h1 {
+    font-size: 1.4rem !important;
+  }
+
+  .admin-dashboard-header p {
+    font-size: 0.9rem !important;
+  }
+
+  /* Academic Year Selector in Admin */
+  .admin-academic-year-wrapper {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .academic-year-selector {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .academic-year-selector select {
+    max-width: 100%;
+    min-width: auto !important;
+  }
+
+  /* Admin Menu Cards */
+  .admin-menu-cards {
+    padding: 1rem !important;
+  }
+
+  .admin-menu-card-item {
+    padding: 1rem !important;
+    min-height: auto !important;
+  }
+
+  .admin-menu-card-item h3 {
+    font-size: 1rem !important;
+  }
+
+  .admin-menu-card-item p {
+    font-size: 0.85rem !important;
+  }
+
+  /* Content Management Forms */
+  fieldset {
+    padding: 1rem !important;
+  }
+
+  legend {
+    font-size: 1.2rem !important;
+  }
+
+  /* Make all inputs, textareas, and selects responsive */
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Responsive tables - Horizontal scroll container */
+  table {
+    min-width: 100%;
+    border-collapse: collapse;
+  }
+
+  /* Wrap table in scrollable container */
+  table:not(.no-mobile-scroll) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* Ensure table cells have minimum width on mobile */
+  table:not(.no-mobile-scroll) th,
+  table:not(.no-mobile-scroll) td {
+    min-width: 120px;
+    white-space: normal;
+    padding: 0.75rem;
+  }
+
+  /* First column (usually name/title) can be wider */
+  table:not(.no-mobile-scroll) th:first-child,
+  table:not(.no-mobile-scroll) td:first-child {
+    min-width: 150px;
+  }
+
+  /* Row highlighting for better tracking while scrolling on mobile */
+  table:not(.no-mobile-scroll) tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  table:not(.no-mobile-scroll) tbody tr:hover,
+  table:not(.no-mobile-scroll) tbody tr:active,
+  table:not(.no-mobile-scroll) tbody tr:focus-within {
+    background-color: #e9ecef;
+  }
+
+  /* For touch devices, keep the highlight visible */
+  @media (hover: none) {
+    table:not(.no-mobile-scroll) tbody tr:active {
+      background-color: #dee2e6;
+    }
+  }
+
+  /* Actions column can be narrower */
+  table:not(.no-mobile-scroll) th:last-child,
+  table:not(.no-mobile-scroll) td:last-child {
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Small mobile adjustments for admin panel */
+  .admin-dashboard-container {
+    padding: 0.5rem !important;
+  }
+
+  .admin-dashboard-header {
+    padding: 0.75rem !important;
+    border-radius: 10px !important;
+  }
+
+  .admin-dashboard-header h1 {
+    font-size: 1.2rem !important;
+  }
+
+  .admin-dashboard-header p {
+    font-size: 0.8rem !important;
+  }
+
+  /* Admin Menu Cards for small screens */
+  .admin-menu-cards {
+    padding: 0.75rem !important;
+    border-radius: 15px !important;
+  }
+
+  .admin-menu-card-item {
+    padding: 0.75rem !important;
+    border-radius: 12px !important;
+  }
+
+  .admin-menu-card-item h3 {
+    font-size: 0.95rem !important;
+  }
+
+  .admin-menu-card-item p {
+    font-size: 0.8rem !important;
+  }
+
+  /* Adjust icon sizes */
+  .admin-menu-card-item > div > div {
+    font-size: 1.5rem !important;
+  }
+
+  /* Content Management Forms */
+  fieldset {
+    padding: 0.75rem !important;
+  }
+
+  legend {
+    font-size: 1.1rem !important;
+  }
+
+  label {
+    font-size: 0.9rem !important;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 0.9rem !important;
+    padding: 0.6rem !important;
+  }
+
+  button {
+    font-size: 0.9rem !important;
+    padding: 0.7rem 1rem !important;
+  }
+
+  /* Smaller minimum widths for table cells on small screens */
+  table:not(.no-mobile-scroll) th,
+  table:not(.no-mobile-scroll) td {
+    min-width: 100px;
+    font-size: 0.85rem;
+    padding: 0.6rem;
+  }
+
+  /* First column on small mobile */
+  table:not(.no-mobile-scroll) th:first-child,
+  table:not(.no-mobile-scroll) td:first-child {
+    min-width: 130px;
+  }
+
+  /* Actions column on small mobile */
+  table:not(.no-mobile-scroll) th:last-child,
+  table:not(.no-mobile-scroll) td:last-child {
+    min-width: 90px;
+  }
+}
+
 .kindergarten-card {
   background: white;
   border-radius: 20px;
