@@ -12,6 +12,7 @@ import LoginNavButton from "../../components/LoginNavButton";
 import Link from 'next/link';
 import Image from 'next/image';
 import PortalNavButton from '../../components/PortalNavButton';
+import MobileMenu from '../../components/MobileMenu';
 import { fetchFooterContent } from '../fetchContent';
 import '../globals.css';
 
@@ -46,7 +47,8 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
           />
         </Link>
         
-        <nav>
+        {/* Desktop Navigation */}
+        <nav className="desktop-nav">
           <ul className="nav-menu">
             <li className="nav-item">
               <Link href={`/${locale}`} className="nav-link bounce-on-hover">
@@ -94,10 +96,14 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
           </ul>
         </nav>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="header-actions">
           <FirebaseLogoutButton locale={locale} />
           <div className="language-switcher">
             <LanguageSwitcher currentLocale={locale} isRTL={isRTL} />
+          </div>
+          {/* Mobile Menu Button */}
+          <div className="mobile-menu-wrapper">
+            <MobileMenu locale={locale} isRTL={isRTL} />
           </div>
         </div>
       </div>
