@@ -18,6 +18,9 @@ import CareerSubmissionsManagement from '../career-management/CareerSubmissionsM
 import ContentManagement from '../content-management/ContentManagement';
 import { AcademicYearProvider, AcademicYearSelector } from '../../../../../components/academic-year';
 import { hasPermission, UserRole } from '../../../../../utils/rolePermissions';
+import { useGuidedTour } from '../../../../../hooks/useGuidedTour';
+import 'intro.js/introjs.css';
+import '../../../../../styles/guided-tour.css';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -38,6 +41,46 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
   const [loading, setLoading] = useState(false);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Guided tour setup
+  const isArabic = locale === 'ar-SA';
+  const { resetTour } = useGuidedTour({
+    tourKey: 'admin-dashboard-tour',
+    locale,
+    steps: [
+      {
+        intro: isArabic 
+          ? 'مرحباً بك في لوحة التحكم الإدارية! دعنا نأخذك في جولة سريعة لتتعرف على الميزات الرئيسية.'
+          : 'Welcome to the Admin Dashboard! Let\'s take a quick tour to show you the main features.'
+      },
+      {
+        element: '.admin-dashboard-header',
+        intro: isArabic
+          ? 'هذا هو رأس لوحة التحكم حيث يمكنك رؤية معلومات ملفك الشخصي والوصول إلى الإعدادات السريعة.'
+          : 'This is the dashboard header where you can see your profile information and access quick settings.',
+        position: 'bottom'
+      },
+      {
+        element: '.admin-menu-cards',
+        intro: isArabic
+          ? 'هذه هي قائمة الأقسام الرئيسية. انقر على أي قسم للوصول إلى ميزاته.'
+          : 'These are the main sections. Click on any section to access its features.',
+        position: 'bottom'
+      },
+      {
+        element: '.admin-menu-card-item',
+        intro: isArabic
+          ? 'كل بطاقة تمثل قسماً من أقسام النظام مثل إدارة الطلاب والمعلمين والفصول والمدفوعات.'
+          : 'Each card represents a system section like student management, teachers, classes, and payments.',
+        position: 'bottom'
+      },
+      {
+        intro: isArabic
+          ? 'يمكنك إعادة تشغيل هذه الجولة في أي وقت من خلال زر "بدء الجولة" في الأعلى. استمتع باستخدام لوحة التحكم!'
+          : 'You can restart this tour anytime using the "Start Tour" button at the top. Enjoy using the dashboard!'
+      }
+    ]
+  });
 
   useEffect(() => {
     const fetchUserClaims = async () => {
@@ -262,6 +305,29 @@ export function AdminDashboard({ onLogout, locale }: AdminDashboardProps) {
             🔄 {loading
               ? (locale === 'ar-SA' ? 'تحديث...' : 'Refreshing...') 
               : (locale === 'ar-SA' ? 'تحديث البيانات' : 'Refresh Data')}
+          </button>
+          
+          <button
+            onClick={resetTour}
+            style={{
+              padding: '0.6rem 1.2rem',
+              background: 'linear-gradient(135deg, #3498db, #2980b9)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            🎯 {locale === 'ar-SA' ? 'بدء الجولة' : 'Start Tour'}
           </button>
         </div>
       </div>

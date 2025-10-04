@@ -1,0 +1,133 @@
+/* Custom styles for intro.js guided tour with RTL support */
+
+/* RTL specific styles */
+.introjs-rtl .introjs-tooltip {
+  direction: rtl;
+  text-align: right;
+}
+
+.introjs-rtl .introjs-tooltipbuttons {
+  direction: rtl;
+  text-align: left;
+}
+
+.introjs-rtl .introjs-skipbutton {
+  left: 0;
+  right: auto;
+}
+
+.introjs-rtl .introjs-prevbutton {
+  margin-left: 5px;
+  margin-right: 0;
+}
+
+.introjs-rtl .introjs-nextbutton {
+  margin-right: 5px;
+  margin-left: 0;
+}
+
+/* Enhanced tooltip styling */
+.introjs-tooltip {
+  min-width: 300px;
+  max-width: 500px;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.introjs-tooltiptext {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #2c3e50;
+  padding: 10px 0;
+}
+
+.introjs-tooltip-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+/* Button styling */
+.introjs-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.introjs-nextbutton,
+.introjs-donebutton {
+  background: linear-gradient(135deg, #3498db, #2980b9) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.introjs-nextbutton:hover,
+.introjs-donebutton:hover {
+  background: linear-gradient(135deg, #2980b9, #21618c) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.introjs-prevbutton {
+  background: #95a5a6 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.introjs-prevbutton:hover {
+  background: #7f8c8d !important;
+  transform: translateY(-2px);
+}
+
+.introjs-skipbutton {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.introjs-skipbutton:hover {
+  color: #c0392b;
+}
+
+/* Progress bar styling */
+.introjs-progressbar {
+  background-color: #ecf0f1;
+  border-radius: 4px;
+}
+
+.introjs-progress {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  border-radius: 4px;
+}
+
+/* Bullets styling */
+.introjs-bullets ul li a {
+  width: 10px;
+  height: 10px;
+  background: #bdc3c7;
+  border-radius: 50%;
+}
+
+.introjs-bullets ul li a.active {
+  background: #3498db;
+  width: 12px;
+  height: 12px;
+}
+
+/* Overlay */
+.introjs-overlay {
+  opacity: 0.8 !important;
+}
+
+/* Highlighted element */
+.introjs-showElement {
+  z-index: 9999999 !important;
+}
+
+.introjs-relativePosition {
+  z-index: 9999999 !important;
+}
