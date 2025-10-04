@@ -383,8 +383,8 @@ body {
   }
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+/* Header Responsive Styles - Collapse to mobile menu at 1300px */
+@media (max-width: 1300px) {
   .header-content {
     flex-direction: column;
     text-align: center;
@@ -401,7 +401,10 @@ body {
     padding: 0.4rem 0.8rem;
     font-size: 0.85rem;
   }
-  
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
   .hero-title {
     font-size: 2.5rem;
   }
@@ -1228,7 +1231,7 @@ body {
 }
 
 /* Mobile Responsive Styles */
-@media (max-width: 768px) {
+@media (max-width: 1300px) {
   .desktop-nav {
     display: none;
   }
