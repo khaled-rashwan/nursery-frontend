@@ -33,13 +33,14 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
       <div className="header-content">
         <Link href={`/${locale}`} className="logo" style={{
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexShrink: 0
         }}>
           <Image
             src={locale === 'ar-SA' ? '/ar-SA_logo.png' : '/en-US_logo.png'}
             alt="Future Step Nursery Logo"
-            width={240}
-            height={97}
+            width={200}
+            height={81}
             style={{
               objectFit: 'contain',
               flexShrink: 0

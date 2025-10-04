@@ -36,26 +36,26 @@ export default function LanguageSwitcher({ currentLocale, isRTL }: { currentLoca
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '0.5rem',
-          minWidth: '70px',
-          height: '42px',
-          borderRadius: '25px',
+          gap: '0.4rem',
+          minWidth: '65px',
+          height: '38px',
+          borderRadius: '20px',
           background: isHovered 
             ? 'linear-gradient(135deg, var(--primary-yellow), var(--primary-orange))' 
             : 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))',
           color: isHovered ? 'var(--primary-purple)' : 'var(--primary-blue)',
           textDecoration: 'none',
           fontWeight: 'bold',
-          fontSize: '0.9rem',
+          fontSize: '0.85rem',
           boxShadow: isHovered 
-            ? '0 8px 25px rgba(0,0,0,0.2)' 
-            : '0 4px 15px rgba(0,0,0,0.1)',
-          border: `3px solid ${isHovered ? 'var(--primary-pink)' : 'var(--primary-blue)'}`,
+            ? '0 6px 20px rgba(0,0,0,0.2)' 
+            : '0 3px 12px rgba(0,0,0,0.1)',
+          border: `2px solid ${isHovered ? 'var(--primary-pink)' : 'var(--primary-blue)'}`,
           transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           transform: isHovered ? 'translateY(-2px) scale(1.05)' : 'translateY(0) scale(1)',
-          marginLeft: isRTL ? 0 : 8,
-          marginRight: isRTL ? 8 : 0,
-          padding: '0 1rem',
+          marginLeft: isRTL ? 0 : 4,
+          marginRight: isRTL ? 4 : 0,
+          padding: '0 0.8rem',
           backdropFilter: 'blur(10px)',
           position: 'relative',
           overflow: 'hidden'
@@ -76,7 +76,7 @@ export default function LanguageSwitcher({ currentLocale, isRTL }: { currentLoca
         
         {/* Flag Icon */}
         <span style={{
-          fontSize: '1.2rem',
+          fontSize: '1.1rem',
           animation: isHovered ? 'bounce 0.6s ease-in-out' : 'none',
           filter: isHovered ? 'brightness(1.2)' : 'brightness(1)',
           transition: 'filter 0.3s ease'
@@ -86,7 +86,7 @@ export default function LanguageSwitcher({ currentLocale, isRTL }: { currentLoca
         
         {/* Language Code */}
         <span style={{
-          fontSize: '0.85rem',
+          fontSize: '0.8rem',
           fontWeight: 'bold',
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
