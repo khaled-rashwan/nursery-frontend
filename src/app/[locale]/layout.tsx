@@ -37,13 +37,14 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
           flexShrink: 0
         }}>
           <Image
-            src={locale === 'ar-SA' ? '/ar-SA_logo.png' : '/en-US_logo.png'}
+            src={locale === 'ar-SA' ? '/logos/FutureStep-AR-New.svg' : '/logos/FutureStep-EN-New.svg'}
             alt="Future Step Nursery Logo"
-            width={200}
-            height={81}
+            width={locale === 'ar-SA' ? 200 : 115}
+            height={locale === 'ar-SA' ? 73 : 80}
             style={{
               objectFit: 'contain',
-              flexShrink: 0
+              flexShrink: 0,
+              maxHeight: '80px'
             }}
           />
         </Link>
