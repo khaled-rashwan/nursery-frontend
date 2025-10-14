@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../../../../hooks/useAuth';
+import { userAPI } from '../../services/api';
 
 interface StudentRegistrationProps {
   locale: string;
@@ -18,6 +20,13 @@ interface StudentData {
   parentUID: string;
 }
 
+interface ParentUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  phoneNumber?: string;
+}
+
 export function StudentRegistration({ 
   locale, 
   onSubmit, 
@@ -26,6 +35,7 @@ export function StudentRegistration({
   initialData,
   isEditing = false 
 }: StudentRegistrationProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
     dateOfBirth: '',
@@ -34,6 +44,37 @@ export function StudentRegistration({
   });
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [parents, setParents] = useState<ParentUser[]>([]);
+  const [loadingParents, setLoadingParents] = useState(false);
+  const [parentSearchTerm, setParentSearchTerm] = useState('');
+
+  // Fetch parents list
+  const fetchParents = useCallback(async () => {
+    if (!user) return;
+    
+    setLoadingParents(true);
+    try {
+      const response = await userAPI.list(user, 'parent');
+      const parentUsers = response.users
+        .filter((u: { customClaims?: { role?: string } }) => u.customClaims?.role === 'parent')
+        .map((u: { uid: string; email: string; displayName: string; phoneNumber?: string }) => ({
+          uid: u.uid,
+          email: u.email,
+          displayName: u.displayName,
+          phoneNumber: u.phoneNumber
+        }));
+      setParents(parentUsers);
+    } catch (error) {
+      console.error('Error fetching parents:', error);
+    } finally {
+      setLoadingParents(false);
+    }
+  }, [user]);
+
+  // Fetch parents on component mount
+  useEffect(() => {
+    fetchParents();
+  }, [fetchParents]);
 
   // Initialize form data with initial data if provided
   useEffect(() => {
@@ -219,7 +260,7 @@ export function StudentRegistration({
           </select>
         </div>
 
-        {/* Parent UID */}
+        {/* Parent Selection */}
         <div>
           <label style={{
             display: 'block',
@@ -227,34 +268,80 @@ export function StudentRegistration({
             fontWeight: 'bold',
             color: '#2c3e50'
           }}>
-            {locale === 'ar-SA' ? 'معرف ولي الأمر' : 'Parent UID'} *
+            👨‍👩‍👧‍👦 {locale === 'ar-SA' ? 'ولي الأمر' : 'Parent'} *
           </label>
+          
+          {/* Search Input */}
           <input
             type="text"
+            value={parentSearchTerm}
+            onChange={(e) => setParentSearchTerm(e.target.value)}
+            placeholder={locale === 'ar-SA' ? 'ابحث عن ولي أمر...' : 'Search for a parent...'}
+            style={{
+              width: '100%',
+              padding: '0.8rem',
+              border: '2px solid #bdc3c7',
+              borderRadius: '8px 8px 0 0',
+              fontSize: '1rem',
+              boxSizing: 'border-box',
+              borderBottom: 'none'
+            }}
+            disabled={loading || loadingParents}
+          />
+          
+          {/* Parent Dropdown */}
+          <select
             value={formData.parentUID}
             onChange={(e) => handleInputChange('parentUID', e.target.value)}
-            placeholder={locale === 'ar-SA' ? 'أدخل معرف ولي الأمر' : 'Enter parent UID'}
             style={{
               width: '100%',
               padding: '0.8rem',
               border: errors.parentUID ? '2px solid #e74c3c' : '2px solid #bdc3c7',
-              borderRadius: '8px',
+              borderRadius: '0 0 8px 8px',
               fontSize: '1rem',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              maxHeight: '200px'
             }}
-            disabled={loading}
-          />
+            disabled={loading || loadingParents}
+          >
+            <option value="">
+              {loadingParents 
+                ? (locale === 'ar-SA' ? 'جاري التحميل...' : 'Loading...')
+                : (locale === 'ar-SA' ? 'اختر ولي أمر' : 'Select a parent')
+              }
+            </option>
+            {parents
+              .filter(parent => {
+                if (!parentSearchTerm) return true;
+                const searchLower = parentSearchTerm.toLowerCase();
+                return (
+                  parent.displayName.toLowerCase().includes(searchLower) ||
+                  parent.email.toLowerCase().includes(searchLower) ||
+                  parent.uid.toLowerCase().includes(searchLower)
+                );
+              })
+              .map(parent => (
+                <option key={parent.uid} value={parent.uid}>
+                  {parent.displayName} ({parent.email})
+                </option>
+              ))
+            }
+          </select>
+          
           {errors.parentUID && (
             <p style={{ color: '#e74c3c', fontSize: '0.9rem', margin: '0.25rem 0 0 0' }}>
               {errors.parentUID}
             </p>
           )}
-          <p style={{ color: '#7f8c8d', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>
-            {locale === 'ar-SA' 
-              ? 'يمكن العثور على معرف ولي الأمر في قسم إدارة المستخدمين. تأكد من أن المستخدم لديه دور "ولي أمر"' 
-              : 'Parent UID can be found in the User Management section. Make sure the user has "parent" role'
-            }
-          </p>
+          
+          {parents.length === 0 && !loadingParents && (
+            <p style={{ color: '#e67e22', fontSize: '0.9rem', margin: '0.5rem 0 0 0' }}>
+              ⚠️ {locale === 'ar-SA' 
+                ? 'لا يوجد أولياء أمور مسجلين. يرجى إضافة مستخدم بدور "ولي أمر" من قسم إدارة المستخدمين أولاً.'
+                : 'No parents found. Please add a user with "parent" role from User Management first.'
+              }
+            </p>
+          )}
         </div>
 
         {/* Action Buttons */}
