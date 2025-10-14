@@ -54,7 +54,6 @@ export function StudentManagement({ locale }: StudentManagementProps) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [studentsPerPage] = useState(10);
-  const [showStudentModal, setShowStudentModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -257,7 +256,6 @@ export function StudentManagement({ locale }: StudentManagementProps) {
       
       // Refresh the student list
       await fetchStudents(true);
-      setShowStudentModal(false);
       setActiveSubTab('list');
       
       // Show success message
@@ -310,7 +308,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
       ));
       
       setEditingStudent(null);
-      setShowStudentModal(false);
+      setActiveSubTab('list');
       
       // Show success message
       alert(locale === 'ar-SA' ? 'تم تحديث الطالب بنجاح' : 'Student updated successfully');
@@ -544,7 +542,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
             <button
               onClick={() => {
                 setEditingStudent(null);
-                setShowStudentModal(true);
+                setActiveSubTab('register');
               }}
               style={{
                 background: 'linear-gradient(135deg, #27ae60, #219a52)',
@@ -853,7 +851,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
                             <button
                               onClick={() => {
                                 setEditingStudent(student);
-                                setShowStudentModal(true);
+                                setActiveSubTab('register');
                               }}
                               disabled={editingInProgress === student.id}
                               style={{
@@ -941,8 +939,8 @@ export function StudentManagement({ locale }: StudentManagementProps) {
         </div>
       )}
 
-      {/* Student Registration/Edit Modal */}
-      {(activeSubTab === 'register' || showStudentModal) && (
+      {/* Student Registration/Edit Form */}
+      {activeSubTab === 'register' && (
         <StudentRegistration
           locale={locale}
           onSubmit={editingStudent 
@@ -950,12 +948,8 @@ export function StudentManagement({ locale }: StudentManagementProps) {
             : handleCreateStudent
           }
           onCancel={() => {
-            if (showStudentModal) {
-              setShowStudentModal(false);
-              setEditingStudent(null);
-            } else {
-              setActiveSubTab('list');
-            }
+            setActiveSubTab('list');
+            setEditingStudent(null);
           }}
           loading={loading || editingInProgress !== null}
           initialData={editingStudent ? {
