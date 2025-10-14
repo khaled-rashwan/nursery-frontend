@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { fetchAdmissionsPageContent } from '../../fetchContent';
 import { LocaleSpecificAdmissionsContent } from '../../types';
+import { useRecaptchaForm } from '../../../hooks/useRecaptchaForm';
 
 export default function AdmissionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -20,8 +22,22 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
     relationship: '',
     message: ''
   });
-  const [submissionStatus, setSubmissionStatus] = useState<{ success: boolean; message: string; } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const { recaptchaRef, isSubmitting, formError, formSuccess, submitForm, resetForm } = useRecaptchaForm({
+    onSuccess: (message) => {
+      // Reset form on success
+      setFormData({
+        parentName: '',
+        email: '',
+        phone: '',
+        bestTime: '',
+        whatsapp: 'yes',
+        preferredLang: 'arabic',
+        relationship: '',
+        message: ''
+      });
+    }
+  });
 
   useEffect(() => {
     const loadContent = async () => {
@@ -44,40 +60,8 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setSubmissionStatus(null);
-
-    try {
-      const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitAdmission', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setSubmissionStatus({ success: true, message: 'Thank you! Your submission has been received.' });
-        setFormData({
-          parentName: '',
-          email: '',
-          phone: '',
-          bestTime: '',
-          whatsapp: 'yes',
-          preferredLang: 'arabic',
-          relationship: '',
-          message: ''
-        });
-      } else {
-        setSubmissionStatus({ success: false, message: `Error: ${result.error}` });
-      }
-    } catch (error) {
-      setSubmissionStatus({ success: false, message: 'An unexpected error occurred. Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
+    resetForm();
+    await submitForm(formData, 'admission');
   };
 
   if (loading) {
@@ -268,46 +252,56 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
           <input type="text" id="relationship" name="relationship" value={formData.relationship} onChange={handleChange} style={inputStyle} required />
           <label htmlFor="message">{content.admissionForm.fields.message}</label>
           <textarea id="message" name="message" rows={5} value={formData.message} onChange={handleChange} style={inputStyle}></textarea>
-          {/* Recaptcha placeholder */}
-          <div style={{
-            height: '78px',
-            background: '#f9f9f9',
-            border: '1px solid #d3d3d3',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#555'
-          }}>
-            reCAPTCHA placeholder
+          
+          {/* reCAPTCHA Widget */}
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
+            />
           </div>
-          {submissionStatus && (
+
+          {formError && (
             <div style={{
               padding: '1rem',
               borderRadius: 'var(--border-radius)',
-              background: submissionStatus.success ? 'var(--light-green)' : 'var(--light-pink)',
-              color: submissionStatus.success ? 'var(--primary-green)' : 'var(--primary-pink)',
-              border: `2px solid ${submissionStatus.success ? 'var(--primary-green)' : 'var(--primary-pink)'}`,
+              background: 'var(--light-pink)',
+              color: 'var(--primary-pink)',
+              border: '2px solid var(--primary-pink)',
               textAlign: 'center'
             }}>
-              {submissionStatus.message}
+              {formError}
             </div>
           )}
-          <button type="submit" disabled={isLoading} style={{
+          
+          {formSuccess && (
+            <div style={{
+              padding: '1rem',
+              borderRadius: 'var(--border-radius)',
+              background: 'var(--light-green)',
+              color: 'var(--primary-green)',
+              border: '2px solid var(--primary-green)',
+              textAlign: 'center'
+            }}>
+              {formSuccess}
+            </div>
+          )}
+
+          <button type="submit" disabled={isSubmitting} style={{
             padding: '1rem',
-            background: isLoading ? '#ccc' : 'var(--primary-pink)',
+            background: isSubmitting ? '#ccc' : 'var(--primary-pink)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--border-radius)',
             fontSize: '1.2rem',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
             fontWeight: 'bold',
             transition: 'background 0.3s ease'
           }}
-          onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-purple)'}}
-          onMouseLeave={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-pink)'}}
+          onMouseEnter={(e) => { if (!isSubmitting) e.currentTarget.style.background = 'var(--primary-purple)'}}
+          onMouseLeave={(e) => { if (!isSubmitting) e.currentTarget.style.background = 'var(--primary-pink)'}}
           >
-            {isLoading ? 'Submitting...' : content.admissionForm.submit}
+            {isSubmitting ? 'Submitting...' : content.admissionForm.submit}
           </button>
         </form>
       </section>
