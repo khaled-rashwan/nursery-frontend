@@ -1,0 +1,151 @@
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         GOOGLE reCAPTCHA INTEGRATION                        │
+│                              Architecture Diagram                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                              USER BROWSER                                  │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐       │
+│  │  Admissions      │  │    Careers       │  │   Contact Us     │       │
+│  │   Form Page      │  │    Form Page     │  │    Form Page     │       │
+│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘       │
+│           │                     │                      │                  │
+│           └─────────────────────┼──────────────────────┘                  │
+│                                 │                                          │
+│                    ┌────────────▼──────────────┐                          │
+│                    │  useRecaptchaForm Hook    │                          │
+│                    │  ┌──────────────────────┐ │                          │
+│                    │  │ recaptchaRef         │ │                          │
+│                    │  │ isSubmitting         │ │                          │
+│                    │  │ formError            │ │                          │
+│                    │  │ formSuccess          │ │                          │
+│                    │  │ submitForm()         │ │                          │
+│                    │  │ resetForm()          │ │                          │
+│                    │  └──────────────────────┘ │                          │
+│                    └────────────┬──────────────┘                          │
+│                                 │                                          │
+│                    ┌────────────▼──────────────┐                          │
+│                    │  ReCAPTCHA Widget         │                          │
+│                    │  (react-google-recaptcha) │                          │
+│                    │                            │                          │
+│                    │  Site Key:                 │                          │
+│                    │  NEXT_PUBLIC_RECAPTCHA_    │                          │
+│                    │  SITE_KEY                  │                          │
+│                    └────────────┬──────────────┘                          │
+│                                 │                                          │
+└─────────────────────────────────┼──────────────────────────────────────────┘
+                                  │
+                    ┌─────────────▼──────────────┐
+                    │   Submit Form               │
+                    │   ┌──────────────────────┐  │
+                    │   │ formData             │  │
+                    │   │ recaptchaToken       │  │
+                    │   │ formType             │  │
+                    │   └──────────────────────┘  │
+                    └─────────────┬──────────────┘
+                                  │
+                                  │ POST /submitPublicForm
+                                  │
+┌─────────────────────────────────▼─────────────────────────────────────────┐
+│                          FIREBASE CLOUD FUNCTIONS                          │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│                    ┌──────────────────────────┐                           │
+│                    │  submitPublicForm        │                           │
+│                    │  Function                │                           │
+│                    └─────────┬────────────────┘                           │
+│                              │                                             │
+│              ┌───────────────┼───────────────┐                            │
+│              │               │               │                            │
+│   ┌──────────▼─────────┐ ┌──▼──────────┐ ┌──▼──────────────┐            │
+│   │ Validate Request   │ │ Verify      │ │ Validate Form   │            │
+│   │ - formData ✓       │ │ reCAPTCHA   │ │ Data            │            │
+│   │ - recaptchaToken ✓ │ │ Token       │ │ - Required      │            │
+│   │ - formType ✓       │ │             │ │   fields        │            │
+│   └────────────────────┘ │ POST to:    │ │ - Email format  │            │
+│                          │ Google API  │ └─────────────────┘            │
+│                          │             │                                  │
+│                          │ Secret Key: │                                  │
+│                          │ functions   │                                  │
+│                          │ .config()   │                                  │
+│                          │ .recaptcha  │                                  │
+│                          │ .secret     │                                  │
+│                          └──────┬──────┘                                  │
+│                                 │                                          │
+│                      Verification                                          │
+│                         Success?                                           │
+│                                 │                                          │
+│                    ┌────────────▼──────────────┐                          │
+│                    │ Route to Collection       │                          │
+│                    │                            │                          │
+│              ┌─────┼────────┬──────────┬───────┼────┐                    │
+│              │     │        │          │       │    │                    │
+│     ┌────────▼───┐ │  ┌────▼────┐ ┌───▼──────┐│ ┌──▼───────────┐       │
+│     │ admission  │ │  │ career  │ │ contact  ││ │   Return      │       │
+│     │            │ │  │         │ │          ││ │   Error       │       │
+│     └────────┬───┘ │  └────┬────┘ └───┬──────┘│ └──────────────┘       │
+│              │     │       │          │       │                          │
+└──────────────┼─────┼───────┼──────────┼───────┼──────────────────────────┘
+               │     │       │          │       │
+               │     │       │          │       │
+┌──────────────▼─────▼───────▼──────────▼───────▼──────────────────────────┐
+│                         FIRESTORE DATABASE                                 │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐       │
+│  │   admissions     │  │ careerSubmissions│  │contactSubmissions│       │
+│  │   collection     │  │    collection    │  │   collection     │       │
+│  ├──────────────────┤  ├──────────────────┤  ├──────────────────┤       │
+│  │ - id             │  │ - id             │  │ - id             │       │
+│  │ - parentName     │  │ - fullName       │  │ - fullName       │       │
+│  │ - email          │  │ - phoneNumber    │  │ - phoneNumber    │       │
+│  │ - phone          │  │ - emailAddress   │  │ - message        │       │
+│  │ - relationship   │  │ - jobTitle       │  │ - status         │       │
+│  │ - message        │  │ - message        │  │ - createdAt      │       │
+│  │ - status         │  │ - resumeUrl      │  │ - updatedAt      │       │
+│  │ - createdAt      │  │ - status         │  └──────────────────┘       │
+│  │ - updatedAt      │  │ - createdAt      │                              │
+│  └──────────────────┘  │ - updatedAt      │                              │
+│                        └──────────────────┘                              │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                            EXTERNAL SERVICES                               │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│                    ┌──────────────────────────┐                           │
+│                    │  Google reCAPTCHA API    │                           │
+│                    │  siteverify endpoint     │                           │
+│                    │                           │                           │
+│                    │  https://www.google.com/  │                           │
+│                    │  recaptcha/api/siteverify │                           │
+│                    │                           │                           │
+│                    │  Validates reCAPTCHA      │                           │
+│                    │  tokens and returns       │                           │
+│                    │  success/failure          │                           │
+│                    └──────────────────────────┘                           │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+CONFIGURATION REQUIREMENTS:
+════════════════════════════════════════════════════════════════════════════
+
+Frontend (Vercel):
+  ➜ NEXT_PUBLIC_RECAPTCHA_SITE_KEY=<your_site_key>
+
+Backend (Firebase Functions):
+  ➜ firebase functions:config:set recaptcha.secret="<your_secret_key>"
+
+═══════════════════════════════════════════════════════════════════════════
+
+KEY FEATURES:
+- ✅ Single reusable hook for all forms
+- ✅ Unified backend function (no duplication)
+- ✅ Server-side reCAPTCHA verification
+- ✅ Form-type-based routing to collections
+- ✅ Comprehensive error handling
+- ✅ User-friendly feedback messages
+- ✅ Automatic reCAPTCHA reset after submission

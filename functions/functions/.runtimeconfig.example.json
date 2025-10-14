@@ -1,0 +1,5 @@
+{
+  "recaptcha": {
+    "secret": "your_recaptcha_secret_key_here"
+  }
+}
