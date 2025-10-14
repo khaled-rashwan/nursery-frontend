@@ -327,7 +327,10 @@ export function UserModal({
                 }}
               >
                 {currentUserRole === 'superadmin' && (
-                  <option value="admin">{locale === 'ar-SA' ? 'مدير' : 'Admin'}</option>
+                  <>
+                    <option value="superadmin">{locale === 'ar-SA' ? 'مدير عام' : 'Super Admin'}</option>
+                    <option value="admin">{locale === 'ar-SA' ? 'مدير' : 'Admin'}</option>
+                  </>
                 )}
                 <option value="teacher">{locale === 'ar-SA' ? 'معلم' : 'Teacher'}</option>
                 <option value="parent">{locale === 'ar-SA' ? 'ولي أمر' : 'Parent'}</option>

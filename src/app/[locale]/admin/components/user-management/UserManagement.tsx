@@ -37,7 +37,7 @@ export function UserManagement({ locale }: UserManagementProps) {
   const canCreateRole = (targetRole: string): boolean => {
     if (!currentUserRole) return false;
     if (currentUserRole === 'superadmin') {
-      return ['admin', 'teacher', 'parent'].includes(targetRole);
+      return ['superadmin', 'admin', 'teacher', 'parent', 'content-manager'].includes(targetRole);
     }
     if (currentUserRole === 'admin') {
       return ['teacher', 'parent'].includes(targetRole);
