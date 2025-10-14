@@ -21,7 +21,7 @@ const canDeleteUser = (deleterRole, targetRole) => {
 
 const canCreateRole = (creatorRole, targetRole) => {
   if (targetRole === 'superadmin') {
-    return false;
+    return creatorRole === 'superadmin';
   }
   if (targetRole === 'admin') {
     return creatorRole === 'superadmin';
@@ -31,7 +31,7 @@ const canCreateRole = (creatorRole, targetRole) => {
 
 const canAssignRole = (assignerRole, targetRole) => {
   if (targetRole === 'superadmin') {
-    return false;
+    return assignerRole === 'superadmin';
   }
   if (targetRole === 'admin') {
     return assignerRole === 'superadmin';
