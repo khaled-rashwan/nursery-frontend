@@ -36,6 +36,13 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
     loadContent();
   }, [params]);
 
+  // Debug logging for reCAPTCHA configuration
+  useEffect(() => {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    console.log('[reCAPTCHA Debug - Contact] Site key configured:', siteKey ? `${siteKey.substring(0, 20)}...` : 'NOT SET');
+    console.log('[reCAPTCHA Debug - Contact] Implementation type: reCAPTCHA v2 (Checkbox)');
+  }, []);
+
   const formInputStyle = {
     width: '100%',
     padding: '12px',

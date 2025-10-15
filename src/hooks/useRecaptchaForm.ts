@@ -36,6 +36,9 @@ export const useRecaptchaForm = (options?: UseRecaptchaFormOptions): UseRecaptch
       // Get the reCAPTCHA token
       const recaptchaToken = recaptchaRef.current?.getValue();
       
+      // Debug logging for troubleshooting
+      console.log('[reCAPTCHA Debug] Token obtained:', recaptchaToken ? `${recaptchaToken.substring(0, 20)}...` : 'null');
+      
       if (!recaptchaToken) {
         throw new Error('Please complete the reCAPTCHA verification');
       }

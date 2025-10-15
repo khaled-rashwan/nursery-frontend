@@ -54,6 +54,13 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
     loadContent();
   }, [params]);
 
+  // Debug logging for reCAPTCHA configuration
+  useEffect(() => {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    console.log('[reCAPTCHA Debug - Careers] Site key configured:', siteKey ? `${siteKey.substring(0, 20)}...` : 'NOT SET');
+    console.log('[reCAPTCHA Debug - Careers] Implementation type: reCAPTCHA v2 (Checkbox)');
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
