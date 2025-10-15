@@ -6,46 +6,6 @@ const { verifyRecaptchaV3 } = require('../utils/recaptcha');
 
 const db = admin.firestore();
 
-/**
- * Verify reCAPTCHA token with Google's API
- * @param {string} token - The reCAPTCHA token to verify
- * @returns {Promise<boolean>} - True if verification succeeds, false otherwise
- */
-const verifyRecaptcha = async (token) => {
-    if (!token) {
-        return false;
-    }
-
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY || functions.config().recaptcha?.secret_key;
-    
-    if (!secretKey) {
-        console.warn('reCAPTCHA secret key not configured, skipping verification');
-        return true; // Allow submission if secret not configured
-    }
-
-    try {
-        const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `secret=${secretKey}&response=${token}`,
-        });
-
-        const data = await response.json();
-        
-        // For reCAPTCHA v3, check both success and score (score > 0.5 is generally acceptable)
-        if (data.success && data.score !== undefined) {
-            return data.score > 0.5;
-        }
-        
-        return data.success || false;
-    } catch (error) {
-        console.error('Error verifying reCAPTCHA:', error);
-        return false;
-    }
-};
-
 const validateSubmission = (data) => {
     const requiredFields = ['fullName', 'phoneNumber', 'message'];
     for (const field of requiredFields) {
