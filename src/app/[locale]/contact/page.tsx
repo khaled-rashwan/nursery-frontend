@@ -68,15 +68,18 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
     try {
       // Generate reCAPTCHA token
       let recaptchaToken = '';
-      if (typeof window !== 'undefined' && (window as any).grecaptcha) {
-        try {
-          recaptchaToken = await (window as any).grecaptcha.execute(
-            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', 
-            { action: 'submit_contact_form' }
-          );
-        } catch (error) {
-          console.warn('reCAPTCHA token generation failed:', error);
-          // Continue without token - backend should handle gracefully
+      if (typeof window !== 'undefined') {
+        const win = window as Window & { grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> } };
+        if (win.grecaptcha) {
+          try {
+            recaptchaToken = await win.grecaptcha.execute(
+              process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', 
+              { action: 'submit_contact_form' }
+            );
+          } catch (error) {
+            console.warn('reCAPTCHA token generation failed:', error);
+            // Continue without token - backend should handle gracefully
+          }
         }
       }
 

@@ -85,6 +85,7 @@ const submitContactForm = functions.https.onRequest(async (req, res) => {
         const contactRef = db.collection('contactSubmissions').doc();
         
         // Remove recaptchaToken from data before storing
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { recaptchaToken, ...dataToStore } = submissionData;
         
         const newSubmission = {
