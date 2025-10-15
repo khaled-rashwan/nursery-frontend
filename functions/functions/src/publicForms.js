@@ -1,45 +1,9 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const axios = require('axios');
 const { setCorsHeaders } = require('./utils/cors');
+const { verifyRecaptchaEnterprise } = require('./utils/recaptchaEnterprise');
 
 const db = admin.firestore();
-
-/**
- * Verify reCAPTCHA token with Google's API
- */
-const verifyRecaptcha = async (token, secretKey) => {
-    try {
-        console.log('[reCAPTCHA Debug] Verifying token with Google API...');
-        console.log('[reCAPTCHA Debug] Token length:', token?.length || 0);
-        console.log('[reCAPTCHA Debug] Secret key configured:', secretKey ? 'YES (length: ' + secretKey.length + ')' : 'NO');
-        
-        const response = await axios.post('https://www.google.com/recaptcha/api/siteverify', null, {
-            params: {
-                secret: secretKey,
-                response: token,
-            },
-        });
-
-        console.log('[reCAPTCHA Debug] Google API response received');
-        console.log('[reCAPTCHA Debug] Verification success:', response.data.success);
-        if (response.data['error-codes']) {
-            console.log('[reCAPTCHA Debug] Error codes:', response.data['error-codes']);
-        }
-        if (response.data.score !== undefined) {
-            console.log('[reCAPTCHA Debug] Score detected (v3):', response.data.score);
-            console.warn('[reCAPTCHA WARNING] This appears to be a v3 response, but implementation expects v2!');
-        }
-        if (response.data.challenge_ts) {
-            console.log('[reCAPTCHA Debug] Challenge timestamp:', response.data.challenge_ts);
-        }
-
-        return response.data;
-    } catch (error) {
-        console.error('[reCAPTCHA Debug] Error verifying reCAPTCHA:', error);
-        throw new Error('Failed to verify reCAPTCHA');
-    }
-};
 
 /**
  * Validate admission form data
@@ -88,7 +52,7 @@ const validateContactData = (data) => {
 };
 
 /**
- * Generic function to handle all public form submissions with reCAPTCHA verification
+ * Generic function to handle all public form submissions with reCAPTCHA Enterprise verification
  */
 const submitPublicForm = functions.https.onRequest(async (req, res) => {
     setCorsHeaders(res);
@@ -102,43 +66,70 @@ const submitPublicForm = functions.https.onRequest(async (req, res) => {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    console.log('[reCAPTCHA Debug] Form submission received');
-    console.log('[reCAPTCHA Debug] Implementation type: reCAPTCHA v2 (Checkbox expected)');
+    console.log('[reCAPTCHA Enterprise] Form submission received');
 
     const { formData, recaptchaToken, formType } = req.body;
 
     // Validate required parameters
     if (!formData || !recaptchaToken || !formType) {
-        console.log('[reCAPTCHA Debug] Missing parameters - formData:', !!formData, 'token:', !!recaptchaToken, 'formType:', formType);
+        console.log('[reCAPTCHA Enterprise] Missing parameters - formData:', !!formData, 'token:', !!recaptchaToken, 'formType:', formType);
         return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    console.log('[reCAPTCHA Debug] Form type:', formType);
-    console.log('[reCAPTCHA Debug] Token received (first 20 chars):', recaptchaToken.substring(0, 20) + '...');
+    console.log('[reCAPTCHA Enterprise] Form type:', formType);
+    console.log('[reCAPTCHA Enterprise] Token received (first 20 chars):', recaptchaToken.substring(0, 20) + '...');
 
     if (!['admission', 'career', 'contact'].includes(formType)) {
         return res.status(400).json({ error: 'Invalid form type' });
     }
 
     try {
-        // Check if secret key is configured
-        const recaptchaSecret = functions.config().recaptcha?.secret;
-        console.log('[reCAPTCHA Debug] Secret key found in config:', recaptchaSecret ? 'YES' : 'NO');
+        // Get configuration for reCAPTCHA Enterprise
+        const projectId = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || 'future-step-nursery';
+        const siteKey = process.env.RECAPTCHA_SITE_KEY || '6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25';
         
-        if (!recaptchaSecret) {
-            console.error('[reCAPTCHA Debug] Secret key not configured! Run: firebase functions:config:set recaptcha.secret="YOUR_SECRET"');
-            return res.status(500).json({ error: 'reCAPTCHA not configured on server' });
+        console.log('[reCAPTCHA Enterprise] Using project ID:', projectId);
+        console.log('[reCAPTCHA Enterprise] Using site key:', siteKey);
+
+        // Determine expected action based on form type
+        let expectedAction;
+        switch (formType) {
+            case 'admission':
+                expectedAction = 'submit_admission';
+                break;
+            case 'career':
+                expectedAction = 'submit_career';
+                break;
+            case 'contact':
+                expectedAction = 'submit_contact';
+                break;
         }
 
-        // Verify reCAPTCHA token
-        const verificationResult = await verifyRecaptcha(recaptchaToken, recaptchaSecret);
+        // Get user IP address for enhanced risk assessment (optional)
+        const userIpAddress = req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+        const userAgent = req.headers['user-agent'];
+
+        // Verify reCAPTCHA Enterprise token
+        const verificationResult = await verifyRecaptchaEnterprise(
+            recaptchaToken,
+            siteKey,
+            expectedAction,
+            projectId,
+            {
+                userIpAddress,
+                userAgent,
+                minScore: 0.5
+            }
+        );
 
         if (!verificationResult.success) {
-            console.error('reCAPTCHA verification failed:', verificationResult['error-codes']);
+            console.error('[reCAPTCHA Enterprise] Verification failed:', verificationResult.error);
             return res.status(400).json({ 
                 error: 'reCAPTCHA verification failed. Please try again.' 
             });
         }
+
+        console.log('[reCAPTCHA Enterprise] Verification successful. Score:', verificationResult.score);
 
         // Validate form data based on type
         let validation;
