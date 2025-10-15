@@ -4,22 +4,29 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 - **Multi-language Support**: English and Arabic locales
 - **Public Forms**: Admissions, Careers, and Contact Us forms
-- **Google reCAPTCHA v2**: Anti-spam protection for all public forms
+- **Google reCAPTCHA Enterprise**: Advanced anti-spam protection with Service Account authentication
 - **Firebase Backend**: Cloud Functions and Firestore database
 - **Admin Portal**: Comprehensive management system
 - **Teacher Portal**: Class management and homework tracking
 - **Parent Portal**: View student information and communicate with teachers
 
-## Google reCAPTCHA Integration
+## Google reCAPTCHA Enterprise Integration
 
-All public forms (Admissions, Careers, Contact Us) are protected with Google reCAPTCHA v2 to prevent spam and automated submissions.
+All public forms (Admissions, Careers, Contact Us) are protected with **Google reCAPTCHA Enterprise** to prevent spam and automated submissions.
 
-**Setup Required**: Before the forms will work, you need to configure reCAPTCHA keys:
-1. Create reCAPTCHA keys at https://www.google.com/recaptcha/admin
-2. Add `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` to your environment variables
-3. Configure Firebase Functions with the secret key
+**Key Information**:
+- **Site Key**: `6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25`
+- **Authentication**: Uses Google Cloud Service Account (no secret keys needed)
+- **API**: Calls `projects.assessments.create` for verification
 
-For detailed setup instructions, see [RECAPTCHA_SETUP_GUIDE.md](./RECAPTCHA_SETUP_GUIDE.md)
+**Setup Required**:
+1. Set `NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25` in Vercel
+2. Configure Cloud Functions with reCAPTCHA Enterprise service account
+3. Deploy both frontend and backend
+
+**Documentation**:
+- Quick Start: [RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md](./RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md)
+- Full Migration Guide: [RECAPTCHA_ENTERPRISE_MIGRATION.md](./RECAPTCHA_ENTERPRISE_MIGRATION.md)
 
 ## Getting Started
 
@@ -54,8 +61,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ### Project Documentation
 
-- [RECAPTCHA_SETUP_GUIDE.md](./RECAPTCHA_SETUP_GUIDE.md) - Complete guide for setting up Google reCAPTCHA
-- [RECAPTCHA_IMPLEMENTATION.md](./RECAPTCHA_IMPLEMENTATION.md) - Technical details of the reCAPTCHA integration
+- [RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md](./RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md) - Quick setup guide for reCAPTCHA Enterprise
+- [RECAPTCHA_ENTERPRISE_MIGRATION.md](./RECAPTCHA_ENTERPRISE_MIGRATION.md) - Complete migration guide with troubleshooting
+- [RECAPTCHA_IMPLEMENTATION.md](./RECAPTCHA_IMPLEMENTATION.md) - Legacy documentation (v2 implementation)
 
 ## Deploy on Vercel
 
