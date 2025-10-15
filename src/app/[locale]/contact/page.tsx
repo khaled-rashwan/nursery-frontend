@@ -17,7 +17,6 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
-  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -148,13 +147,6 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
       background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
       padding: '2rem 1rem'
     }}>
-      {/* Load reCAPTCHA v3 script */}
-      <Script
-        src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}`}
-        onLoad={() => setRecaptchaLoaded(true)}
-        strategy="lazyOnload"
-      />
-      
       {/* Hero Section */}
       <section style={{
         textAlign: 'center',
