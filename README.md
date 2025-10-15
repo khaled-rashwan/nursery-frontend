@@ -16,6 +16,7 @@ All public forms (Admissions, Careers, Contact Us) are protected with **Google r
 
 **Key Information**:
 - **Site Key**: `6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25`
+- **Environment Variable**: `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (must be set in Vercel)
 - **Authentication**: Uses Google Cloud Service Account (no secret keys needed)
 - **API**: Calls `projects.assessments.create` for verification
 
@@ -25,6 +26,7 @@ All public forms (Admissions, Careers, Contact Us) are protected with **Google r
 3. Deploy both frontend and backend
 
 **Documentation**:
+- **Reconfiguration Guide**: [RECAPTCHA_ENTERPRISE_RECONFIGURATION.md](./RECAPTCHA_ENTERPRISE_RECONFIGURATION.md) - Latest configuration updates
 - Quick Start: [RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md](./RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md)
 - Full Migration Guide: [RECAPTCHA_ENTERPRISE_MIGRATION.md](./RECAPTCHA_ENTERPRISE_MIGRATION.md)
 
@@ -61,6 +63,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ### Project Documentation
 
+- [RECAPTCHA_ENTERPRISE_RECONFIGURATION.md](./RECAPTCHA_ENTERPRISE_RECONFIGURATION.md) - Latest reCAPTCHA Enterprise reconfiguration (October 2025)
 - [RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md](./RECAPTCHA_ENTERPRISE_QUICK_GUIDE.md) - Quick setup guide for reCAPTCHA Enterprise
 - [RECAPTCHA_ENTERPRISE_MIGRATION.md](./RECAPTCHA_ENTERPRISE_MIGRATION.md) - Complete migration guide with troubleshooting
 - [RECAPTCHA_IMPLEMENTATION.md](./RECAPTCHA_IMPLEMENTATION.md) - Legacy documentation (v2 implementation)

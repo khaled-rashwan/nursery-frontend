@@ -5,8 +5,12 @@
  * integrates with Google Cloud's reCAPTCHA Enterprise API for backend verification.
  */
 
-// reCAPTCHA Enterprise Site Key
-const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25';
+// reCAPTCHA Enterprise Site Key - Must be configured via NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+
+if (!RECAPTCHA_SITE_KEY) {
+  console.error('NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable is not set');
+}
 
 declare global {
   interface Window {
@@ -24,6 +28,12 @@ declare global {
  */
 export const loadRecaptchaScript = (): Promise<void> => {
   return new Promise((resolve, reject) => {
+    // Check if site key is configured
+    if (!RECAPTCHA_SITE_KEY) {
+      reject(new Error('reCAPTCHA site key not configured. Please set NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable.'));
+      return;
+    }
+
     // Check if script is already loaded
     if (window.grecaptcha?.enterprise) {
       resolve();
@@ -58,6 +68,10 @@ export const loadRecaptchaScript = (): Promise<void> => {
  */
 export const executeRecaptcha = async (action: string): Promise<string> => {
   try {
+    if (!RECAPTCHA_SITE_KEY) {
+      throw new Error('reCAPTCHA site key not configured. Please set NEXT_PUBLIC_RECAPTCHA_SITE_KEY environment variable.');
+    }
+
     await loadRecaptchaScript();
     
     return new Promise((resolve, reject) => {

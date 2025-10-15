@@ -2,9 +2,13 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { setCorsHeaders } = require('../utils/cors');
 const { authenticate, requireRole } = require('../utils/auth');
-const { verifyRecaptchaV3 } = require('../utils/recaptcha');
+const { verifyRecaptchaEnterprise } = require('../utils/recaptchaEnterprise');
 
 const db = admin.firestore();
+
+// reCAPTCHA Enterprise configuration
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25';
+const RECAPTCHA_PROJECT_ID = 'future-step-nursery';
 
 const validateSubmission = (data) => {
     const requiredFields = ['fullName', 'phoneNumber', 'message'];
@@ -29,21 +33,27 @@ const submitContactForm = functions.https.onRequest(async (req, res) => {
 
     const submissionData = req.body;
     
-    // Verify reCAPTCHA v3
-    const recaptchaResult = await verifyRecaptchaV3(
+    // Verify reCAPTCHA Enterprise
+    const recaptchaResult = await verifyRecaptchaEnterprise(
         submissionData.recaptchaToken,
+        RECAPTCHA_SITE_KEY,
         'submit_contact',
-        0.5
+        RECAPTCHA_PROJECT_ID,
+        {
+            userIpAddress: req.ip,
+            userAgent: req.get('user-agent'),
+            minScore: 0.5
+        }
     );
     
     if (!recaptchaResult.success) {
-        console.error('reCAPTCHA verification failed:', recaptchaResult.error);
+        console.error('reCAPTCHA Enterprise verification failed:', recaptchaResult.error);
         return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
     }
     
-    console.log('reCAPTCHA verification successful:', {
+    console.log('reCAPTCHA Enterprise verification successful:', {
         score: recaptchaResult.score,
-        action: recaptchaResult.action
+        reasons: recaptchaResult.reasons
     });
     
     const validation = validateSubmission(submissionData);
