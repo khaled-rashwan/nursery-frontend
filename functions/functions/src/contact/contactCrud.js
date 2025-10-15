@@ -5,6 +5,46 @@ const { authenticate, requireRole } = require('../utils/auth');
 
 const db = admin.firestore();
 
+/**
+ * Verify reCAPTCHA token with Google's API
+ * @param {string} token - The reCAPTCHA token to verify
+ * @returns {Promise<boolean>} - True if verification succeeds, false otherwise
+ */
+const verifyRecaptcha = async (token) => {
+    if (!token) {
+        return false;
+    }
+
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY || functions.config().recaptcha?.secret_key;
+    
+    if (!secretKey) {
+        console.warn('reCAPTCHA secret key not configured, skipping verification');
+        return true; // Allow submission if secret not configured
+    }
+
+    try {
+        const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `secret=${secretKey}&response=${token}`,
+        });
+
+        const data = await response.json();
+        
+        // For reCAPTCHA v3, check both success and score (score > 0.5 is generally acceptable)
+        if (data.success && data.score !== undefined) {
+            return data.score > 0.5;
+        }
+        
+        return data.success || false;
+    } catch (error) {
+        console.error('Error verifying reCAPTCHA:', error);
+        return false;
+    }
+};
+
 const validateSubmission = (data) => {
     const requiredFields = ['fullName', 'phoneNumber', 'message'];
     for (const field of requiredFields) {
@@ -27,6 +67,15 @@ const submitContactForm = functions.https.onRequest(async (req, res) => {
     }
 
     const submissionData = req.body;
+    
+    // Validate reCAPTCHA if token is provided
+    if (submissionData.recaptchaToken) {
+        const isValidRecaptcha = await verifyRecaptcha(submissionData.recaptchaToken);
+        if (!isValidRecaptcha) {
+            return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
+        }
+    }
+    
     const validation = validateSubmission(submissionData);
     if (!validation.isValid) {
         return res.status(400).json({ error: validation.message });
@@ -34,9 +83,13 @@ const submitContactForm = functions.https.onRequest(async (req, res) => {
 
     try {
         const contactRef = db.collection('contactSubmissions').doc();
+        
+        // Remove recaptchaToken from data before storing
+        const { recaptchaToken, ...dataToStore } = submissionData;
+        
         const newSubmission = {
             id: contactRef.id,
-            ...submissionData,
+            ...dataToStore,
             status: 'new',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),

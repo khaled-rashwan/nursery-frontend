@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchContactUsPageContent } from '../../fetchContent';
 import { LocaleSpecificContactUsContent } from '../../types';
+import Script from 'next/script';
 
 export default function ContactUsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -16,6 +17,7 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -64,12 +66,29 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
     setSubmitMessage(null);
 
     try {
+      // Generate reCAPTCHA token
+      let recaptchaToken = '';
+      if (typeof window !== 'undefined' && (window as any).grecaptcha) {
+        try {
+          recaptchaToken = await (window as any).grecaptcha.execute(
+            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', 
+            { action: 'submit_contact_form' }
+          );
+        } catch (error) {
+          console.warn('reCAPTCHA token generation failed:', error);
+          // Continue without token - backend should handle gracefully
+        }
+      }
+
       const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitContactForm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken
+        }),
       });
 
       if (response.ok) {
@@ -135,6 +154,13 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
       background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
       padding: '2rem 1rem'
     }}>
+      {/* Load reCAPTCHA v3 script */}
+      <Script
+        src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}`}
+        onLoad={() => setRecaptchaLoaded(true)}
+        strategy="lazyOnload"
+      />
+      
       {/* Hero Section */}
       <section style={{
         textAlign: 'center',
