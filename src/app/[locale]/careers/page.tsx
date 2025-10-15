@@ -2,12 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import ReCAPTCHA from 'react-google-recaptcha';
 import { fetchCareersPageContent } from '../../../app/fetchContent';
 import { LocaleSpecificCareersContent } from '../../../app/types';
-import { CareerFormData } from '../../../services/careerService';
+import { submitCareerForm, CareerFormData } from '../../../services/careerService';
 import { uploadResume } from '../../../services/storageService';
-import { useRecaptchaForm } from '../../../hooks/useRecaptchaForm';
+import { loadRecaptchaScript, executeRecaptcha } from '../../../utils/recaptcha';
 
 export default function CareersPage({ params }: { params: Promise<{ locale: string }> }) {
   const [content, setContent] = useState<LocaleSpecificCareersContent | null>(null);
@@ -20,28 +19,9 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
     message: '',
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-
-  const { recaptchaRef, isSubmitting, formError, formSuccess, submitForm, resetForm } = useRecaptchaForm({
-    onSuccess: (message) => {
-      // Reset form on success
-      setFormData({
-        fullName: '',
-        phoneNumber: '',
-        emailAddress: '',
-        jobTitle: '',
-        message: '',
-      });
-      setResumeFile(null);
-      setUploadProgress(0);
-      
-      // Reset file input
-      const fileInput = document.getElementById('resume') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
-      }
-    }
-  });
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -52,14 +32,12 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
       setLoading(false);
     };
     loadContent();
+    
+    // Load reCAPTCHA v3 script
+    loadRecaptchaScript().catch(error => {
+      console.error('Failed to load reCAPTCHA:', error);
+    });
   }, [params]);
-
-  // Debug logging for reCAPTCHA configuration
-  useEffect(() => {
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    console.log('[reCAPTCHA Debug - Careers] Site key configured:', siteKey ? `${siteKey.substring(0, 20)}...` : 'NOT SET');
-    console.log('[reCAPTCHA Debug - Careers] Implementation type: reCAPTCHA v2 (Checkbox)');
-  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -77,10 +55,14 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
     e.preventDefault();
     if (!content) return;
 
-    resetForm();
+    setIsSubmitting(true);
+    setSubmitMessage(null);
     setUploadProgress(0);
 
     try {
+      // Execute reCAPTCHA v3
+      const recaptchaToken = await executeRecaptcha('submit_career');
+
       let resumeUrl: string | undefined;
       
       // Upload resume if provided
@@ -91,22 +73,52 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
           });
         } catch (uploadError) {
           console.error('Resume upload error:', uploadError);
-          // Let the hook handle the error display
-          throw new Error(`Resume upload failed: ${uploadError}`);
+          setSubmitMessage({ 
+            type: 'error', 
+            text: `Resume upload failed: ${uploadError}` 
+          });
+          setIsSubmitting(false);
+          return;
         }
       }
 
-      // Submit form with reCAPTCHA
+      // Submit form
       const submissionData: CareerFormData = {
         ...formData,
         resumeUrl,
+        recaptchaToken,
       };
 
-      await submitForm(submissionData, 'career');
+      await submitCareerForm(submissionData);
+      
+      setSubmitMessage({ 
+        type: 'success', 
+        text: 'Your application has been submitted successfully! We will contact you soon.' 
+      });
+      
+      // Reset form
+      setFormData({
+        fullName: '',
+        phoneNumber: '',
+        emailAddress: '',
+        jobTitle: '',
+        message: '',
+      });
+      setResumeFile(null);
+      setUploadProgress(0);
+      
+      // Reset file input
+      const fileInput = document.getElementById('resume') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
 
     } catch (error) {
       console.error('Form submission error:', error);
-      // Error is already handled by the hook
+      setSubmitMessage({ 
+        type: 'error', 
+        text: `Submission failed: ${error}` 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -309,31 +321,17 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
           {content.section4_p2}
         </p>
         
-        {formError && (
+        {submitMessage && (
           <div style={{
             padding: '1rem',
             borderRadius: 'var(--border-radius)',
             marginBottom: '2rem',
-            background: '#f8d7da',
-            color: '#721c24',
-            border: '1px solid #f5c6cb',
+            background: submitMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+            color: submitMessage.type === 'success' ? '#155724' : '#721c24',
+            border: `1px solid ${submitMessage.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
             textAlign: 'center'
           }}>
-            {formError}
-          </div>
-        )}
-        
-        {formSuccess && (
-          <div style={{
-            padding: '1rem',
-            borderRadius: 'var(--border-radius)',
-            marginBottom: '2rem',
-            background: '#d4edda',
-            color: '#155724',
-            border: '1px solid #c3e6cb',
-            textAlign: 'center'
-          }}>
-            {formSuccess}
+            {submitMessage.text}
           </div>
         )}
         
@@ -434,15 +432,6 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
               style={{...formInputStyle, minHeight: '150px'}}
             ></textarea>
           </div>
-          
-          {/* reCAPTCHA Widget */}
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
-            <ReCAPTCHA
-              ref={recaptchaRef}
-              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
-            />
-          </div>
-
           <button 
             type="submit" 
             disabled={isSubmitting}

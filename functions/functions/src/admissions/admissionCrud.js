@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { setCorsHeaders } = require('../utils/cors');
 const { authenticate, requireRole } = require('../utils/auth');
+const { verifyRecaptchaV3 } = require('../utils/recaptcha');
 
 const db = admin.firestore();
 
@@ -30,6 +31,24 @@ const submitAdmission = functions.https.onRequest(async (req, res) => {
     }
 
     const submissionData = req.body;
+    
+    // Verify reCAPTCHA v3
+    const recaptchaResult = await verifyRecaptchaV3(
+        submissionData.recaptchaToken,
+        'submit_admission',
+        0.5
+    );
+    
+    if (!recaptchaResult.success) {
+        console.error('reCAPTCHA verification failed:', recaptchaResult.error);
+        return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
+    }
+    
+    console.log('reCAPTCHA verification successful:', {
+        score: recaptchaResult.score,
+        action: recaptchaResult.action
+    });
+    
     const validation = validateSubmission(submissionData);
     if (!validation.isValid) {
         return res.status(400).json({ error: validation.message });
@@ -40,10 +59,14 @@ const submitAdmission = functions.https.onRequest(async (req, res) => {
         const newSubmission = {
             id: admissionRef.id,
             ...submissionData,
+            recaptchaScore: recaptchaResult.score,
             status: 'new',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
+        // Remove recaptchaToken from stored data
+        delete newSubmission.recaptchaToken;
+        
         await admissionRef.set(newSubmission);
         return res.status(201).json({ message: 'Admission submitted successfully', submissionId: admissionRef.id });
     } catch (error) {

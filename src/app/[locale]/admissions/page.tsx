@@ -2,10 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import ReCAPTCHA from 'react-google-recaptcha';
 import { fetchAdmissionsPageContent } from '../../fetchContent';
 import { LocaleSpecificAdmissionsContent } from '../../types';
-import { useRecaptchaForm } from '../../../hooks/useRecaptchaForm';
+import { loadRecaptchaScript, executeRecaptcha } from '../../../utils/recaptcha';
 
 export default function AdmissionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -22,22 +21,8 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
     relationship: '',
     message: ''
   });
-
-  const { recaptchaRef, isSubmitting, formError, formSuccess, submitForm, resetForm } = useRecaptchaForm({
-    onSuccess: (message) => {
-      // Reset form on success
-      setFormData({
-        parentName: '',
-        email: '',
-        phone: '',
-        bestTime: '',
-        whatsapp: 'yes',
-        preferredLang: 'arabic',
-        relationship: '',
-        message: ''
-      });
-    }
-  });
+  const [submissionStatus, setSubmissionStatus] = useState<{ success: boolean; message: string; } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -49,14 +34,12 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
       setLoading(false);
     };
     loadContent();
+    
+    // Load reCAPTCHA v3 script
+    loadRecaptchaScript().catch(error => {
+      console.error('Failed to load reCAPTCHA:', error);
+    });
   }, [params]);
-
-  // Debug logging for reCAPTCHA configuration
-  useEffect(() => {
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    console.log('[reCAPTCHA Debug - Admissions] Site key configured:', siteKey ? `${siteKey.substring(0, 20)}...` : 'NOT SET');
-    console.log('[reCAPTCHA Debug - Admissions] Implementation type: reCAPTCHA v2 (Checkbox)');
-  }, []);
 
   const isRTL = locale === 'ar-SA';
 
@@ -67,8 +50,47 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    resetForm();
-    await submitForm(formData, 'admission');
+    setIsLoading(true);
+    setSubmissionStatus(null);
+
+    try {
+      // Execute reCAPTCHA v3
+      const recaptchaToken = await executeRecaptcha('submit_admission');
+
+      const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitAdmission', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmissionStatus({ success: true, message: 'Thank you! Your submission has been received.' });
+        setFormData({
+          parentName: '',
+          email: '',
+          phone: '',
+          bestTime: '',
+          whatsapp: 'yes',
+          preferredLang: 'arabic',
+          relationship: '',
+          message: ''
+        });
+      } else {
+        setSubmissionStatus({ success: false, message: `Error: ${result.error}` });
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      setSubmissionStatus({ success: false, message: 'An unexpected error occurred. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (loading) {
@@ -259,56 +281,33 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
           <input type="text" id="relationship" name="relationship" value={formData.relationship} onChange={handleChange} style={inputStyle} required />
           <label htmlFor="message">{content.admissionForm.fields.message}</label>
           <textarea id="message" name="message" rows={5} value={formData.message} onChange={handleChange} style={inputStyle}></textarea>
-          
-          {/* reCAPTCHA Widget */}
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
-            <ReCAPTCHA
-              ref={recaptchaRef}
-              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
-            />
-          </div>
-
-          {formError && (
+          {submissionStatus && (
             <div style={{
               padding: '1rem',
               borderRadius: 'var(--border-radius)',
-              background: 'var(--light-pink)',
-              color: 'var(--primary-pink)',
-              border: '2px solid var(--primary-pink)',
+              background: submissionStatus.success ? 'var(--light-green)' : 'var(--light-pink)',
+              color: submissionStatus.success ? 'var(--primary-green)' : 'var(--primary-pink)',
+              border: `2px solid ${submissionStatus.success ? 'var(--primary-green)' : 'var(--primary-pink)'}`,
               textAlign: 'center'
             }}>
-              {formError}
+              {submissionStatus.message}
             </div>
           )}
-          
-          {formSuccess && (
-            <div style={{
-              padding: '1rem',
-              borderRadius: 'var(--border-radius)',
-              background: 'var(--light-green)',
-              color: 'var(--primary-green)',
-              border: '2px solid var(--primary-green)',
-              textAlign: 'center'
-            }}>
-              {formSuccess}
-            </div>
-          )}
-
-          <button type="submit" disabled={isSubmitting} style={{
+          <button type="submit" disabled={isLoading} style={{
             padding: '1rem',
-            background: isSubmitting ? '#ccc' : 'var(--primary-pink)',
+            background: isLoading ? '#ccc' : 'var(--primary-pink)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--border-radius)',
             fontSize: '1.2rem',
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             fontWeight: 'bold',
             transition: 'background 0.3s ease'
           }}
-          onMouseEnter={(e) => { if (!isSubmitting) e.currentTarget.style.background = 'var(--primary-purple)'}}
-          onMouseLeave={(e) => { if (!isSubmitting) e.currentTarget.style.background = 'var(--primary-pink)'}}
+          onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-purple)'}}
+          onMouseLeave={(e) => { if (!isLoading) e.currentTarget.style.background = 'var(--primary-pink)'}}
           >
-            {isSubmitting ? 'Submitting...' : content.admissionForm.submit}
+            {isLoading ? 'Submitting...' : content.admissionForm.submit}
           </button>
         </form>
       </section>

@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { setCorsHeaders } = require('../utils/cors');
 const { authenticate, requireRole } = require('../utils/auth');
+const { verifyRecaptchaV3 } = require('../utils/recaptcha');
 
 const db = admin.firestore();
 
@@ -34,6 +35,24 @@ const submitCareerForm = functions.https.onRequest(async (req, res) => {
     }
 
     const submissionData = req.body;
+    
+    // Verify reCAPTCHA v3
+    const recaptchaResult = await verifyRecaptchaV3(
+        submissionData.recaptchaToken,
+        'submit_career',
+        0.5
+    );
+    
+    if (!recaptchaResult.success) {
+        console.error('reCAPTCHA verification failed:', recaptchaResult.error);
+        return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
+    }
+    
+    console.log('reCAPTCHA verification successful:', {
+        score: recaptchaResult.score,
+        action: recaptchaResult.action
+    });
+    
     const validation = validateSubmission(submissionData);
     if (!validation.isValid) {
         return res.status(400).json({ error: validation.message });
@@ -49,6 +68,7 @@ const submitCareerForm = functions.https.onRequest(async (req, res) => {
             jobTitle: submissionData.jobTitle,
             message: submissionData.message,
             resumeUrl: submissionData.resumeUrl || null, // Optional file upload
+            recaptchaScore: recaptchaResult.score,
             status: 'new',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
