@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { fetchContactUsPageContent } from '../../fetchContent';
 import { LocaleSpecificContactUsContent } from '../../types';
-import { loadRecaptchaScript, executeRecaptcha } from '../../../utils/recaptcha';
+import { useRecaptchaForm } from '../../../hooks/useRecaptchaForm';
 
 export default function ContactUsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -15,8 +16,13 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
     phoneNumber: '',
     message: ''
   });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+
+  const { recaptchaRef, isSubmitting, formError, formSuccess, submitForm, resetForm } = useRecaptchaForm({
+    onSuccess: (message) => {
+      // Reset form on success
+      setFormData({ fullName: '', phoneNumber: '', message: '' });
+    }
+  });
 
   useEffect(() => {
     const loadContent = async () => {
@@ -34,6 +40,13 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
       console.error('Failed to load reCAPTCHA:', error);
     });
   }, [params]);
+
+  // Debug logging for reCAPTCHA configuration
+  useEffect(() => {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    console.log('[reCAPTCHA Debug - Contact] Site key configured:', siteKey ? `${siteKey.substring(0, 20)}...` : 'NOT SET');
+    console.log('[reCAPTCHA Debug - Contact] Implementation type: reCAPTCHA v2 (Checkbox)');
+  }, []);
 
   const formInputStyle = {
     width: '100%',
@@ -66,36 +79,8 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    setSubmitMessage(null);
-
-    try {
-      // Execute reCAPTCHA v3
-      const recaptchaToken = await executeRecaptcha('submit_contact');
-
-      const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitContactForm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          recaptchaToken,
-        }),
-      });
-
-      if (response.ok) {
-        setSubmitMessage(locale === 'ar-SA' ? 'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.' : 'Your message has been submitted successfully! We will contact you soon.');
-        setFormData({ fullName: '', phoneNumber: '', message: '' });
-      } else {
-        setSubmitMessage(locale === 'ar-SA' ? 'حدث خطأ في إرسال الرسالة. يرجى المحاولة مرة أخرى.' : 'An error occurred while submitting your message. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error submitting contact form:', error);
-      setSubmitMessage(locale === 'ar-SA' ? 'حدث خطأ في إرسال الرسالة. يرجى المحاولة مرة أخرى.' : 'An error occurred while submitting your message. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    resetForm();
+    await submitForm(formData, 'contact');
   };
 
   // Hardcoded form text content
@@ -267,49 +252,73 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
               required
             ></textarea>
           </div>
-          {submitMessage && (
+          
+          {/* reCAPTCHA Widget */}
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
+            />
+          </div>
+
+          {formError && (
             <div style={{
               margin: '1rem 0', 
               padding: '1rem', 
               borderRadius: 'var(--border-radius)', 
               textAlign: 'center',
-              background: submitMessage.includes('success') || submitMessage.includes('بنجاح') ? '#d4edda' : '#f8d7da',
-              color: submitMessage.includes('success') || submitMessage.includes('بنجاح') ? '#155724' : '#721c24',
-              border: submitMessage.includes('success') || submitMessage.includes('بنجاح') ? '1px solid #c3e6cb' : '1px solid #f5c6cb'
+              background: '#f8d7da',
+              color: '#721c24',
+              border: '1px solid #f5c6cb'
             }}>
-              {submitMessage}
+              {formError}
             </div>
           )}
+
+          {formSuccess && (
+            <div style={{
+              margin: '1rem 0', 
+              padding: '1rem', 
+              borderRadius: 'var(--border-radius)', 
+              textAlign: 'center',
+              background: '#d4edda',
+              color: '#155724',
+              border: '1px solid #c3e6cb'
+            }}>
+              {formSuccess}
+            </div>
+          )}
+
           <button 
             type="submit" 
-            disabled={submitting}
+            disabled={isSubmitting}
             style={{
               display: 'block',
               width: '100%',
               padding: '1rem',
-              background: submitting ? '#ccc' : 'var(--primary-green)',
+              background: isSubmitting ? '#ccc' : 'var(--primary-green)',
               color: 'white',
               border: 'none',
               borderRadius: 'var(--border-radius)',
               fontSize: '1.2rem',
               fontWeight: 'bold',
-              cursor: submitting ? 'not-allowed' : 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
               transition: 'background 0.3s, transform 0.3s',
             }}
             onMouseEnter={(e) => {
-              if (!submitting) {
+              if (!isSubmitting) {
                 e.currentTarget.style.background = 'var(--primary-blue-dark)';
                 e.currentTarget.style.transform = 'scale(1.02)';
               }
             }}
             onMouseLeave={(e) => {
-              if (!submitting) {
+              if (!isSubmitting) {
                 e.currentTarget.style.background = 'var(--primary-green)';
                 e.currentTarget.style.transform = 'scale(1)';
               }
             }}
           >
-            {submitting 
+            {isSubmitting 
               ? (locale === 'ar-SA' ? 'جاري الإرسال...' : 'Submitting...') 
               : formContent.form_submitButton
             }

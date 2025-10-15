@@ -109,6 +109,10 @@ const { submitCareerForm, manageCareerSubmissions } = require('./src/careers/car
 exports.submitCareerForm = submitCareerForm;
 exports.manageCareerSubmissions = manageCareerSubmissions;
 
+// Export Public Forms Function with reCAPTCHA
+const { submitPublicForm } = require('./src/publicForms');
+exports.submitPublicForm = submitPublicForm;
+
 // Export Content Management Functions
 const contentManagement = require('./src/content/contentManagement');
 exports.getHomePageContent = contentManagement.getHomePageContent;
