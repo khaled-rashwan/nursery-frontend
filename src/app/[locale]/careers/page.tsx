@@ -6,6 +6,7 @@ import { fetchCareersPageContent } from '../../../app/fetchContent';
 import { LocaleSpecificCareersContent } from '../../../app/types';
 import { submitCareerForm, CareerFormData } from '../../../services/careerService';
 import { uploadResume } from '../../../services/storageService';
+import { loadRecaptchaScript, executeRecaptcha } from '../../../utils/recaptcha';
 
 export default function CareersPage({ params }: { params: Promise<{ locale: string }> }) {
   const [content, setContent] = useState<LocaleSpecificCareersContent | null>(null);
@@ -31,6 +32,11 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
       setLoading(false);
     };
     loadContent();
+    
+    // Load reCAPTCHA v3 script
+    loadRecaptchaScript().catch(error => {
+      console.error('Failed to load reCAPTCHA:', error);
+    });
   }, [params]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -54,6 +60,9 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
     setUploadProgress(0);
 
     try {
+      // Execute reCAPTCHA v3
+      const recaptchaToken = await executeRecaptcha('submit_career');
+
       let resumeUrl: string | undefined;
       
       // Upload resume if provided
@@ -77,6 +86,7 @@ export default function CareersPage({ params }: { params: Promise<{ locale: stri
       const submissionData: CareerFormData = {
         ...formData,
         resumeUrl,
+        recaptchaToken,
       };
 
       await submitCareerForm(submissionData);
