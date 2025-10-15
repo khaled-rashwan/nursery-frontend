@@ -2,8 +2,13 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { setCorsHeaders } = require('../utils/cors');
 const { authenticate, requireRole } = require('../utils/auth');
+const { verifyRecaptchaEnterprise } = require('../utils/recaptchaEnterprise');
 
 const db = admin.firestore();
+
+// reCAPTCHA Enterprise configuration
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25';
+const RECAPTCHA_PROJECT_ID = 'future-step-nursery';
 
 const validateSubmission = (data) => {
     const requiredFields = ['fullName', 'phoneNumber', 'message'];
@@ -27,6 +32,30 @@ const submitContactForm = functions.https.onRequest(async (req, res) => {
     }
 
     const submissionData = req.body;
+    
+    // Verify reCAPTCHA Enterprise
+    const recaptchaResult = await verifyRecaptchaEnterprise(
+        submissionData.recaptchaToken,
+        RECAPTCHA_SITE_KEY,
+        'submit_contact',
+        RECAPTCHA_PROJECT_ID,
+        {
+            userIpAddress: req.ip,
+            userAgent: req.get('user-agent'),
+            minScore: 0.5
+        }
+    );
+    
+    if (!recaptchaResult.success) {
+        console.error('reCAPTCHA Enterprise verification failed:', recaptchaResult.error);
+        return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
+    }
+    
+    console.log('reCAPTCHA Enterprise verification successful:', {
+        score: recaptchaResult.score,
+        reasons: recaptchaResult.reasons
+    });
+    
     const validation = validateSubmission(submissionData);
     if (!validation.isValid) {
         return res.status(400).json({ error: validation.message });
@@ -34,13 +63,22 @@ const submitContactForm = functions.https.onRequest(async (req, res) => {
 
     try {
         const contactRef = db.collection('contactSubmissions').doc();
+        
+        // Prepare data for storage, excluding recaptchaToken
+        const dataToStore = { ...submissionData };
+        delete dataToStore.recaptchaToken;
+        
         const newSubmission = {
             id: contactRef.id,
             ...submissionData,
+            recaptchaScore: recaptchaResult.score,
             status: 'new',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
+        // Remove recaptchaToken from stored data
+        delete newSubmission.recaptchaToken;
+        
         await contactRef.set(newSubmission);
         return res.status(201).json({ message: 'Contact form submitted successfully', submissionId: contactRef.id });
     } catch (error) {

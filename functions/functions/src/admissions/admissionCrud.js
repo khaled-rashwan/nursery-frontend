@@ -2,8 +2,13 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { setCorsHeaders } = require('../utils/cors');
 const { authenticate, requireRole } = require('../utils/auth');
+const { verifyRecaptchaEnterprise } = require('../utils/recaptchaEnterprise');
 
 const db = admin.firestore();
+
+// reCAPTCHA Enterprise configuration
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6Lc1Y-orAAAAAB-fkrBM8xhIhu5WrZprgcgZVN25';
+const RECAPTCHA_PROJECT_ID = 'future-step-nursery';
 
 const validateSubmission = (data) => {
     const requiredFields = ['parentName', 'email', 'phone', 'relationship'];
@@ -30,6 +35,30 @@ const submitAdmission = functions.https.onRequest(async (req, res) => {
     }
 
     const submissionData = req.body;
+    
+    // Verify reCAPTCHA Enterprise
+    const recaptchaResult = await verifyRecaptchaEnterprise(
+        submissionData.recaptchaToken,
+        RECAPTCHA_SITE_KEY,
+        'submit_admission',
+        RECAPTCHA_PROJECT_ID,
+        {
+            userIpAddress: req.ip,
+            userAgent: req.get('user-agent'),
+            minScore: 0.5
+        }
+    );
+    
+    if (!recaptchaResult.success) {
+        console.error('reCAPTCHA Enterprise verification failed:', recaptchaResult.error);
+        return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
+    }
+    
+    console.log('reCAPTCHA Enterprise verification successful:', {
+        score: recaptchaResult.score,
+        reasons: recaptchaResult.reasons
+    });
+    
     const validation = validateSubmission(submissionData);
     if (!validation.isValid) {
         return res.status(400).json({ error: validation.message });
@@ -40,10 +69,14 @@ const submitAdmission = functions.https.onRequest(async (req, res) => {
         const newSubmission = {
             id: admissionRef.id,
             ...submissionData,
+            recaptchaScore: recaptchaResult.score,
             status: 'new',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
+        // Remove recaptchaToken from stored data
+        delete newSubmission.recaptchaToken;
+        
         await admissionRef.set(newSubmission);
         return res.status(201).json({ message: 'Admission submitted successfully', submissionId: admissionRef.id });
     } catch (error) {

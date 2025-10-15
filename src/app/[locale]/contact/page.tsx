@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchContactUsPageContent } from '../../fetchContent';
 import { LocaleSpecificContactUsContent } from '../../types';
+import { loadRecaptchaScript, executeRecaptcha } from '../../../utils/recaptcha';
 
 export default function ContactUsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -27,6 +28,11 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
       setLoading(false);
     };
     loadContent();
+    
+    // Load reCAPTCHA v3 script
+    loadRecaptchaScript().catch(error => {
+      console.error('Failed to load reCAPTCHA:', error);
+    });
   }, [params]);
 
   const formInputStyle = {
@@ -64,12 +70,18 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
     setSubmitMessage(null);
 
     try {
+      // Execute reCAPTCHA v3
+      const recaptchaToken = await executeRecaptcha('submit_contact');
+
       const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitContactForm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken,
+        }),
       });
 
       if (response.ok) {
