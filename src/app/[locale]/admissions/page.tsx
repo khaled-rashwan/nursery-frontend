@@ -51,6 +51,13 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
     loadContent();
   }, [params]);
 
+  // Debug logging for reCAPTCHA configuration
+  useEffect(() => {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    console.log('[reCAPTCHA Debug - Admissions] Site key configured:', siteKey ? `${siteKey.substring(0, 20)}...` : 'NOT SET');
+    console.log('[reCAPTCHA Debug - Admissions] Implementation type: reCAPTCHA v2 (Checkbox)');
+  }, []);
+
   const isRTL = locale === 'ar-SA';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
