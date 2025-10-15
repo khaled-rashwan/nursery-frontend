@@ -34,7 +34,7 @@ Key functions:
 
 ### Backend (Firebase Functions)
 
-**Utility File**: `functions/functions/src/utils/recaptcha.js`
+**Utility File**: `functions/src/utils/recaptcha.js`
 
 Key function:
 - `verifyRecaptchaV3(token, expectedAction, minScore)`: Verifies token with Google's API
@@ -50,7 +50,8 @@ Key function:
 
 **Frontend** (`NEXT_PUBLIC_RECAPTCHA_SITE_KEY`):
 ```
-NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Lc1Y-orAAAAAB-fkrBM-fkrBM-fkrBM-fkrBM
+# Replace with your actual reCAPTCHA v3 site key
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY=YOUR_SITE_KEY_HERE
 ```
 > Note: This is the public site key, safe to expose in client-side code
 
@@ -337,7 +338,7 @@ If keys need to be regenerated:
 
 **Backend**:
 - ✅ Added: `axios` package for API calls
-- ✅ Added: `src/utils/recaptcha.js` verification utility
+- ✅ Added: `functions/src/utils/recaptcha.js` verification utility
 - ✅ Added: Score-based validation (≥ 0.5)
 - ✅ Added: Action name validation
 - ✅ Added: Score logging and storage

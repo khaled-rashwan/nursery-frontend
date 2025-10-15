@@ -144,14 +144,16 @@ db.collection('yourCollection')
 
 ```bash
 # .env.local
-NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Lc1Y-orAAAAAB-fkrBM-fkrBM-fkrBM-fkrBM
+# Replace with your actual reCAPTCHA v3 site key
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY=YOUR_SITE_KEY_HERE
 ```
 
 ### Production
 
 **Hosting Platform** (Vercel/Netlify/etc):
 ```
-NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Lc1Y-orAAAAAB-fkrBM-fkrBM-fkrBM-fkrBM
+# Set in environment variables section of your hosting platform
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY=YOUR_SITE_KEY_HERE
 ```
 
 **Firebase Functions**:
