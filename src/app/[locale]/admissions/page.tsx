@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { fetchAdmissionsPageContent } from '../../fetchContent';
 import { LocaleSpecificAdmissionsContent } from '../../types';
+import { loadRecaptchaScript, executeRecaptcha } from '../../../utils/recaptcha';
 
 export default function AdmissionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -33,6 +34,11 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
       setLoading(false);
     };
     loadContent();
+    
+    // Load reCAPTCHA v3 script
+    loadRecaptchaScript().catch(error => {
+      console.error('Failed to load reCAPTCHA:', error);
+    });
   }, [params]);
 
   const isRTL = locale === 'ar-SA';
@@ -48,12 +54,18 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
     setSubmissionStatus(null);
 
     try {
+      // Execute reCAPTCHA v3
+      const recaptchaToken = await executeRecaptcha('submit_admission');
+
       const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitAdmission', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken,
+        }),
       });
 
       const result = await response.json();
@@ -74,6 +86,7 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
         setSubmissionStatus({ success: false, message: `Error: ${result.error}` });
       }
     } catch (error) {
+      console.error('Form submission error:', error);
       setSubmissionStatus({ success: false, message: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -268,19 +281,6 @@ export default function AdmissionsPage({ params }: { params: Promise<{ locale: s
           <input type="text" id="relationship" name="relationship" value={formData.relationship} onChange={handleChange} style={inputStyle} required />
           <label htmlFor="message">{content.admissionForm.fields.message}</label>
           <textarea id="message" name="message" rows={5} value={formData.message} onChange={handleChange} style={inputStyle}></textarea>
-          {/* Recaptcha placeholder */}
-          <div style={{
-            height: '78px',
-            background: '#f9f9f9',
-            border: '1px solid #d3d3d3',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#555'
-          }}>
-            reCAPTCHA placeholder
-          </div>
           {submissionStatus && (
             <div style={{
               padding: '1rem',

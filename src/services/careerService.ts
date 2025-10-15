@@ -11,6 +11,7 @@ export interface CareerFormData {
   jobTitle: string;
   message: string;
   resumeUrl?: string;
+  recaptchaToken?: string;
 }
 
 /**

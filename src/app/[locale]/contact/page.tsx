@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchContactUsPageContent } from '../../fetchContent';
 import { LocaleSpecificContactUsContent } from '../../types';
-import Script from 'next/script';
+import { loadRecaptchaScript, executeRecaptcha } from '../../../utils/recaptcha';
 
 export default function ContactUsPage({ params }: { params: Promise<{ locale: string }> }) {
   const [locale, setLocale] = useState<string>('en-US');
@@ -29,6 +29,11 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
       setLoading(false);
     };
     loadContent();
+    
+    // Load reCAPTCHA v3 script
+    loadRecaptchaScript().catch(error => {
+      console.error('Failed to load reCAPTCHA:', error);
+    });
   }, [params]);
 
   const formInputStyle = {
@@ -66,22 +71,8 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
     setSubmitMessage(null);
 
     try {
-      // Generate reCAPTCHA token
-      let recaptchaToken = '';
-      if (typeof window !== 'undefined') {
-        const win = window as Window & { grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> } };
-        if (win.grecaptcha) {
-          try {
-            recaptchaToken = await win.grecaptcha.execute(
-              process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI', 
-              { action: 'submit_contact_form' }
-            );
-          } catch (error) {
-            console.warn('reCAPTCHA token generation failed:', error);
-            // Continue without token - backend should handle gracefully
-          }
-        }
-      }
+      // Execute reCAPTCHA v3
+      const recaptchaToken = await executeRecaptcha('submit_contact');
 
       const response = await fetch('https://us-central1-future-step-nursery.cloudfunctions.net/submitContactForm', {
         method: 'POST',
@@ -90,7 +81,7 @@ export default function ContactUsPage({ params }: { params: Promise<{ locale: st
         },
         body: JSON.stringify({
           ...formData,
-          recaptchaToken
+          recaptchaToken,
         }),
       });
 

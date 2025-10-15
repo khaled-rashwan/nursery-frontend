@@ -39,6 +39,7 @@ yarn-error.log*
 # Track the functions directory but ignore its dependency folders and local env files
 functions/**/node_modules/
 functions/**/.env*
+functions/**/.runtimeconfig.json
 
 # vercel
 .vercel
