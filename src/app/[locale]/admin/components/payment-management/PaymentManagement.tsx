@@ -335,7 +335,7 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
     setIsExporting(true);
     try {
       // Flatten the data structure for export
-      const exportData: any[] = [];
+      const exportData: Record<string, unknown>[] = [];
       
       parentSummaries.forEach(parentSummary => {
         parentSummary.children.forEach(payment => {

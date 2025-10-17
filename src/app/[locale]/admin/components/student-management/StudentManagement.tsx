@@ -423,22 +423,6 @@ export function StudentManagement({ locale }: StudentManagementProps) {
       setIsExporting(false);
     }
   };
-      setShowDeleteConfirm(null);
-      
-      // Show success message
-      alert(
-        data.softDelete 
-          ? (locale === 'ar-SA' ? 'تم حذف الطالب (محفوظ للأرشيف)' : 'Student deleted (archived)')
-          : (locale === 'ar-SA' ? 'تم حذف الطالب نهائياً' : 'Student permanently deleted')
-      );
-      
-    } catch (error) {
-      console.error('Error deleting student:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete student');
-    } finally {
-      setEditingInProgress(null);
-    }
-  };
 
   // Filter and sort students
   useEffect(() => {

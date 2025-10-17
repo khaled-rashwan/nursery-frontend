@@ -8,7 +8,7 @@ import { getFirebaseErrorMessage } from '../../utils/firebaseErrorHandler';
 import { DeleteConfirmModal } from '../DeleteConfirmModal';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { UserModal } from './UserModal';
-import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
+import { exportToExcel } from '../../../../../utils/excelExport';
 
 interface UserManagementProps {
   locale: string;

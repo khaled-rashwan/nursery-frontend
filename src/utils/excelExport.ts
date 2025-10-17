@@ -17,7 +17,7 @@ export interface ExcelExportOptions {
   fileName: string;
   sheetName: string;
   columns: ExcelColumn[];
-  data: any[];
+  data: Record<string, unknown>[];
   locale?: string;
 }
 
@@ -26,6 +26,7 @@ export interface ExcelExportOptions {
  * @param options Export configuration options
  */
 export async function exportToExcel(options: ExcelExportOptions): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { fileName, sheetName, columns, data, locale = 'en-US' } = options;
 
   try {
