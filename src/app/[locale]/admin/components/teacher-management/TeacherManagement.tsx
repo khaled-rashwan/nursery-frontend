@@ -148,7 +148,7 @@ export function TeacherManagement({ locale }: TeacherManagementProps) {
           numberOfClasses: filteredClasses.length,
           classes: filteredClasses.map(c => c.className).join(', '),
           disabled: teacher.disabled ? 'Yes' : 'No',
-          createdAt: formatFirestoreTimestamp(teacher.createdAt)
+          createdAt: teacher.createdAt ? formatFirestoreTimestamp(teacher.createdAt) : ''
         };
       });
 

@@ -143,8 +143,8 @@ export function UserManagement({ locale }: UserManagementProps) {
         role: user.customClaims.role,
         emailVerified: user.emailVerified ? 'Yes' : 'No',
         disabled: user.disabled ? 'Yes' : 'No',
-        createdAt: user.metadata?.createdAt || '',
-        lastSignInTime: user.metadata?.lastSignInTime || ''
+        createdAt: user.createdAt || '',
+        lastSignInTime: user.lastSignIn || ''
       }));
 
       const columns = locale === 'ar-SA' ? [

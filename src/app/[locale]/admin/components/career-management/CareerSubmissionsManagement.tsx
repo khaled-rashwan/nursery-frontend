@@ -103,7 +103,7 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
         jobTitle: submission.jobTitle,
         status: submission.status,
         resumeUrl: submission.resumeUrl || '',
-        coverLetter: submission.coverLetter || '',
+        message: submission.message || '',
         applicationDate: formatFirestoreTimestamp(submission.createdAt)
       }));
 
@@ -114,7 +114,7 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
         { header: 'المسمى الوظيفي', key: 'jobTitle', width: 25 },
         { header: 'الحالة', key: 'status', width: 15 },
         { header: 'رابط السيرة الذاتية', key: 'resumeUrl', width: 40 },
-        { header: 'خطاب التقديم', key: 'coverLetter', width: 40 },
+        { header: 'الرسالة', key: 'message', width: 40 },
         { header: 'تاريخ التقديم', key: 'applicationDate', width: 20 }
       ] : [
         { header: 'Full Name', key: 'fullName', width: 25 },
@@ -123,7 +123,7 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
         { header: 'Job Title', key: 'jobTitle', width: 25 },
         { header: 'Status', key: 'status', width: 15 },
         { header: 'Resume URL', key: 'resumeUrl', width: 40 },
-        { header: 'Cover Letter', key: 'coverLetter', width: 40 },
+        { header: 'Message', key: 'message', width: 40 },
         { header: 'Application Date', key: 'applicationDate', width: 20 }
       ];
 
