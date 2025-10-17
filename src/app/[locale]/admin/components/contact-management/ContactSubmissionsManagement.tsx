@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { DeleteConfirmModal } from '../DeleteConfirmModal';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 interface ContactSubmission {
   id: string;
@@ -27,6 +28,7 @@ export default function ContactSubmissionsManagement({ locale }: ContactSubmissi
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const { user } = useAuth();
 
   const fetchContactSubmissions = useCallback(async () => {
@@ -119,6 +121,51 @@ export default function ContactSubmissionsManagement({ locale }: ContactSubmissi
     }
   };
 
+  const handleExportToExcel = async () => {
+    if (contactSubmissions.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = contactSubmissions.map(submission => ({
+        fullName: submission.fullName,
+        phoneNumber: submission.phoneNumber,
+        message: submission.message,
+        status: getStatusText(submission.status),
+        submissionDate: formatFirestoreTimestamp(submission.createdAt)
+      }));
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'الاسم الكامل', key: 'fullName', width: 25 },
+        { header: 'رقم الهاتف', key: 'phoneNumber', width: 20 },
+        { header: 'الرسالة', key: 'message', width: 40 },
+        { header: 'الحالة', key: 'status', width: 15 },
+        { header: 'تاريخ الإرسال', key: 'submissionDate', width: 20 }
+      ] : [
+        { header: 'Full Name', key: 'fullName', width: 25 },
+        { header: 'Phone Number', key: 'phoneNumber', width: 20 },
+        { header: 'Message', key: 'message', width: 40 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Submission Date', key: 'submissionDate', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'رسائل_الاتصال' : 'contact_submissions',
+        sheetName: locale === 'ar-SA' ? 'رسائل الاتصال' : 'Contact Submissions',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting contact submissions:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div style={{
       background: 'white',
@@ -126,9 +173,37 @@ export default function ContactSubmissionsManagement({ locale }: ContactSubmissi
       borderRadius: '15px',
       boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
     }}>
-      <h2 style={{ fontSize: '1.8rem', color: '#2c3e50', marginBottom: '2rem' }}>
-        {locale === 'ar-SA' ? 'إدارة رسائل الاتصال' : 'Contact Submissions Management'}
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.8rem', color: '#2c3e50', margin: 0 }}>
+          {locale === 'ar-SA' ? 'إدارة رسائل الاتصال' : 'Contact Submissions Management'}
+        </h2>
+        <button
+          onClick={handleExportToExcel}
+          disabled={isExporting || loading || contactSubmissions.length === 0}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: isExporting || contactSubmissions.length === 0 ? '#95a5a6' : '#27ae60',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: isExporting || contactSubmissions.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '1rem',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          {isExporting ? (
+            locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+          ) : (
+            <>
+              <span>📊</span>
+              {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+            </>
+          )}
+        </button>
+      </div>
 
       {loading && <p>{locale === 'ar-SA' ? 'جاري التحميل...' : 'Loading...'}</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
