@@ -5,6 +5,7 @@ import { useAuth } from '../../../../../hooks/useAuth';
 import { useAcademicYear } from '../../../../../components/academic-year';
 import { StudentRegistration } from './StudentRegistration';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 interface ParentInfo {
   uid: string;
@@ -60,6 +61,7 @@ export function StudentManagement({ locale }: StudentManagementProps) {
   const [error, setError] = useState<string | null>(null);
   const [editingInProgress, setEditingInProgress] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
   const [nextPageInfo, setNextPageInfo] = useState<{
     hasNextPage: boolean;
     endCursor?: string;
@@ -357,19 +359,68 @@ export function StudentManagement({ locale }: StudentManagementProps) {
       // Remove student from the list or refresh
       setStudents(prev => prev.filter(student => student.id !== studentId));
       setShowDeleteConfirm(null);
-      
-      // Show success message
-      alert(
-        data.softDelete 
-          ? (locale === 'ar-SA' ? 'تم حذف الطالب (محفوظ للأرشيف)' : 'Student deleted (archived)')
-          : (locale === 'ar-SA' ? 'تم حذف الطالب نهائياً' : 'Student permanently deleted')
-      );
-      
     } catch (error) {
       console.error('Error deleting student:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete student');
     } finally {
       setEditingInProgress(null);
+    }
+  };
+
+  const handleExportToExcel = async () => {
+    if (students.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = students.map(student => ({
+        studentId: student.id,
+        fullName: student.fullName,
+        dateOfBirth: student.dateOfBirth,
+        gender: student.gender,
+        parentName: student.parentInfo?.displayName || '',
+        parentEmail: student.parentInfo?.email || '',
+        parentPhone: student.parentInfo?.phoneNumber || '',
+        createdAt: formatFirestoreTimestamp(student.createdAt),
+        updatedAt: formatFirestoreTimestamp(student.updatedAt)
+      }));
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'معرف الطالب', key: 'studentId', width: 30 },
+        { header: 'الاسم الكامل', key: 'fullName', width: 30 },
+        { header: 'تاريخ الميلاد', key: 'dateOfBirth', width: 15 },
+        { header: 'الجنس', key: 'gender', width: 10 },
+        { header: 'اسم ولي الأمر', key: 'parentName', width: 25 },
+        { header: 'بريد ولي الأمر', key: 'parentEmail', width: 30 },
+        { header: 'هاتف ولي الأمر', key: 'parentPhone', width: 20 },
+        { header: 'تاريخ الإنشاء', key: 'createdAt', width: 20 },
+        { header: 'آخر تحديث', key: 'updatedAt', width: 20 }
+      ] : [
+        { header: 'Student ID', key: 'studentId', width: 30 },
+        { header: 'Full Name', key: 'fullName', width: 30 },
+        { header: 'Date of Birth', key: 'dateOfBirth', width: 15 },
+        { header: 'Gender', key: 'gender', width: 10 },
+        { header: 'Parent Name', key: 'parentName', width: 25 },
+        { header: 'Parent Email', key: 'parentEmail', width: 30 },
+        { header: 'Parent Phone', key: 'parentPhone', width: 20 },
+        { header: 'Created At', key: 'createdAt', width: 20 },
+        { header: 'Updated At', key: 'updatedAt', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'الطلاب' : 'students',
+        sheetName: locale === 'ar-SA' ? 'الطلاب' : 'Students',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting students:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -539,27 +590,55 @@ export function StudentManagement({ locale }: StudentManagementProps) {
               </span>
             </h2>
 
-            <button
-              onClick={() => {
-                setEditingStudent(null);
-                setActiveSubTab('register');
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #27ae60, #219a52)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.75rem 1.5rem',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              ➕ {locale === 'ar-SA' ? 'إضافة طالب' : 'Add Student'}
-            </button>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={handleExportToExcel}
+                disabled={isExporting || loading || students.length === 0}
+                style={{
+                  backgroundColor: isExporting || students.length === 0 ? '#95a5a6' : '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: isExporting || students.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {isExporting ? (
+                  locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+                ) : (
+                  <>
+                    <span>📊</span>
+                    {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingStudent(null);
+                  setActiveSubTab('register');
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #27ae60, #219a52)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                ➕ {locale === 'ar-SA' ? 'إضافة طالب' : 'Add Student'}
+              </button>
+            </div>
           </div>
 
           {/* Search and Filters */}

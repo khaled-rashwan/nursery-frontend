@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { DeleteConfirmModal } from '../DeleteConfirmModal';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 interface Admission {
   id: string;
@@ -32,6 +33,7 @@ export default function AdmissionsManagement({ locale }: AdmissionsManagementPro
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedAdmission, setSelectedAdmission] = useState<Admission | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const { user } = useAuth();
 
   const fetchAdmissions = useCallback(async () => {
@@ -95,6 +97,66 @@ export default function AdmissionsManagement({ locale }: AdmissionsManagementPro
     }
   };
 
+  const handleExportToExcel = async () => {
+    if (admissions.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = admissions.map(admission => ({
+        parentName: admission.parentName,
+        email: admission.email,
+        phone: admission.phone,
+        relationship: admission.relationship,
+        status: admission.status,
+        submissionDate: formatFirestoreTimestamp(admission.createdAt),
+        bestTime: admission.bestTime || '',
+        whatsapp: admission.whatsapp || '',
+        preferredLang: admission.preferredLang || '',
+        message: admission.message || ''
+      }));
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'اسم ولي الأمر', key: 'parentName', width: 20 },
+        { header: 'البريد الإلكتروني', key: 'email', width: 25 },
+        { header: 'الهاتف', key: 'phone', width: 15 },
+        { header: 'العلاقة', key: 'relationship', width: 15 },
+        { header: 'الحالة', key: 'status', width: 15 },
+        { header: 'تاريخ التقديم', key: 'submissionDate', width: 20 },
+        { header: 'أفضل وقت للاتصال', key: 'bestTime', width: 20 },
+        { header: 'واتساب', key: 'whatsapp', width: 15 },
+        { header: 'اللغة المفضلة', key: 'preferredLang', width: 15 },
+        { header: 'الرسالة', key: 'message', width: 30 }
+      ] : [
+        { header: 'Parent Name', key: 'parentName', width: 20 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Phone', key: 'phone', width: 15 },
+        { header: 'Relationship', key: 'relationship', width: 15 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Submission Date', key: 'submissionDate', width: 20 },
+        { header: 'Best Time to Contact', key: 'bestTime', width: 20 },
+        { header: 'WhatsApp', key: 'whatsapp', width: 15 },
+        { header: 'Preferred Language', key: 'preferredLang', width: 15 },
+        { header: 'Message', key: 'message', width: 30 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'بيانات_القبول' : 'admissions_data',
+        sheetName: locale === 'ar-SA' ? 'القبول' : 'Admissions',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting admissions data:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div style={{
       background: 'white',
@@ -102,9 +164,37 @@ export default function AdmissionsManagement({ locale }: AdmissionsManagementPro
       borderRadius: '15px',
       boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
     }}>
-      <h2 style={{ fontSize: '1.8rem', color: '#2c3e50', marginBottom: '2rem' }}>
-        {locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions Management'}
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.8rem', color: '#2c3e50', margin: 0 }}>
+          {locale === 'ar-SA' ? 'إدارة القبول' : 'Admissions Management'}
+        </h2>
+        <button
+          onClick={handleExportToExcel}
+          disabled={isExporting || loading || admissions.length === 0}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: isExporting || admissions.length === 0 ? '#95a5a6' : '#27ae60',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: isExporting || admissions.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '1rem',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          {isExporting ? (
+            locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+          ) : (
+            <>
+              <span>📊</span>
+              {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+            </>
+          )}
+        </button>
+      </div>
 
       {loading && <p>{locale === 'ar-SA' ? 'جاري التحميل...' : 'Loading...'}</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}

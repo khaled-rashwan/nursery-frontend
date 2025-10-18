@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { useAcademicYear } from '../../../../../components/academic-year';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 // Types
 interface PaymentRecord {
@@ -56,6 +57,7 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState<PaymentData | null>(null);
   const [showAddPaymentRecord, setShowAddPaymentRecord] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Form states
   const [createForm, setCreateForm] = useState({
@@ -324,6 +326,74 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
     return date.toLocaleDateString(locale === 'ar-SA' ? 'ar-SA' : 'en-US');
   };
 
+  const handleExportToExcel = async () => {
+    if (parentSummaries.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Flatten the data structure for export
+      const exportData: Record<string, unknown>[] = [];
+      
+      parentSummaries.forEach(parentSummary => {
+        parentSummary.children.forEach(payment => {
+          // Add main payment info
+          exportData.push({
+            studentName: payment.studentInfo.name,
+            studentNameEn: payment.studentInfo.nameEn,
+            parentName: parentSummary.parentInfo.displayName,
+            parentEmail: parentSummary.parentInfo.email,
+            academicYear: payment.academicYear,
+            totalFees: payment.totalFees,
+            paidAmount: payment.paidAmount,
+            remainingBalance: payment.remainingBalance,
+            createdAt: formatFirestoreTimestamp(payment.createdAt),
+            updatedAt: formatFirestoreTimestamp(payment.updatedAt)
+          });
+        });
+      });
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'اسم الطالب', key: 'studentName', width: 25 },
+        { header: 'اسم الطالب (إنجليزي)', key: 'studentNameEn', width: 25 },
+        { header: 'اسم ولي الأمر', key: 'parentName', width: 25 },
+        { header: 'البريد الإلكتروني لولي الأمر', key: 'parentEmail', width: 30 },
+        { header: 'السنة الدراسية', key: 'academicYear', width: 15 },
+        { header: 'إجمالي الرسوم', key: 'totalFees', width: 15 },
+        { header: 'المبلغ المدفوع', key: 'paidAmount', width: 15 },
+        { header: 'الرصيد المتبقي', key: 'remainingBalance', width: 15 },
+        { header: 'تاريخ الإنشاء', key: 'createdAt', width: 20 },
+        { header: 'آخر تحديث', key: 'updatedAt', width: 20 }
+      ] : [
+        { header: 'Student Name', key: 'studentName', width: 25 },
+        { header: 'Student Name (English)', key: 'studentNameEn', width: 25 },
+        { header: 'Parent Name', key: 'parentName', width: 25 },
+        { header: 'Parent Email', key: 'parentEmail', width: 30 },
+        { header: 'Academic Year', key: 'academicYear', width: 15 },
+        { header: 'Total Fees', key: 'totalFees', width: 15 },
+        { header: 'Paid Amount', key: 'paidAmount', width: 15 },
+        { header: 'Remaining Balance', key: 'remainingBalance', width: 15 },
+        { header: 'Created At', key: 'createdAt', width: 20 },
+        { header: 'Updated At', key: 'updatedAt', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'سجلات_الدفع' : 'payment_records',
+        sheetName: locale === 'ar-SA' ? 'سجلات الدفع' : 'Payment Records',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting payment data:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div style={{
       background: 'white',
@@ -364,6 +434,33 @@ export function PaymentManagement({ locale }: PaymentManagementProps) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
+          <button
+            onClick={handleExportToExcel}
+            disabled={isExporting || loading || parentSummaries.length === 0}
+            style={{
+              padding: '0.8rem 1.5rem',
+              backgroundColor: isExporting || parentSummaries.length === 0 ? '#95a5a6' : '#27ae60',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isExporting || parentSummaries.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {isExporting ? (
+              locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+            ) : (
+              <>
+                <span>📊</span>
+                {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+              </>
+            )}
+          </button>
           <button
             onClick={() => setShowCreateForm(true)}
             style={{

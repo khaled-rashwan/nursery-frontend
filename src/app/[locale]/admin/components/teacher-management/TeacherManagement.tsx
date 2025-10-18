@@ -5,6 +5,7 @@ import { useAuth } from '../../../../../hooks/useAuth';
 import { teacherAPI, classAPI, handleAPIError } from '../../services/api';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { useAcademicYear } from '../../../../../contexts/AcademicYearContext';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 interface ClassInfo {
   classId: string;
@@ -50,6 +51,7 @@ export function TeacherManagement({ locale }: TeacherManagementProps) {
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [showClassAssignment, setShowClassAssignment] = useState(false);
   const [availableClasses, setAvailableClasses] = useState<AvailableClass[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Use global academic year context
   const { selectedAcademicYear } = useAcademicYear();
@@ -128,6 +130,63 @@ export function TeacherManagement({ locale }: TeacherManagementProps) {
     }
   }, [user]);
 
+  const handleExportToExcel = async () => {
+    if (teachers.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = teachers.map(teacher => {
+        const filteredClasses = getFilteredTeacherClasses(teacher);
+        return {
+          teacherId: teacher.id,
+          displayName: teacher.displayName,
+          email: teacher.email,
+          phoneNumber: teacher.phoneNumber || '',
+          numberOfClasses: filteredClasses.length,
+          classes: filteredClasses.map(c => c.className).join(', '),
+          disabled: teacher.disabled ? 'Yes' : 'No',
+          createdAt: teacher.createdAt ? formatFirestoreTimestamp(teacher.createdAt) : ''
+        };
+      });
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'معرف المعلم', key: 'teacherId', width: 30 },
+        { header: 'الاسم', key: 'displayName', width: 25 },
+        { header: 'البريد الإلكتروني', key: 'email', width: 30 },
+        { header: 'رقم الهاتف', key: 'phoneNumber', width: 20 },
+        { header: 'عدد الصفوف', key: 'numberOfClasses', width: 12 },
+        { header: 'الصفوف', key: 'classes', width: 40 },
+        { header: 'معطل', key: 'disabled', width: 10 },
+        { header: 'تاريخ الإنشاء', key: 'createdAt', width: 20 }
+      ] : [
+        { header: 'Teacher ID', key: 'teacherId', width: 30 },
+        { header: 'Display Name', key: 'displayName', width: 25 },
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Phone Number', key: 'phoneNumber', width: 20 },
+        { header: 'Number of Classes', key: 'numberOfClasses', width: 12 },
+        { header: 'Classes', key: 'classes', width: 40 },
+        { header: 'Disabled', key: 'disabled', width: 10 },
+        { header: 'Created At', key: 'createdAt', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'المعلمون' : 'teachers',
+        sheetName: locale === 'ar-SA' ? 'المعلمون' : 'Teachers',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting teachers:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   useEffect(() => {
     fetchTeachers();
     fetchClasses();
@@ -150,26 +209,56 @@ export function TeacherManagement({ locale }: TeacherManagementProps) {
         borderBottom: '2px solid #e9ecef',
         paddingBottom: '1rem'
       }}>
-        <h2 style={{ 
-          fontSize: '1.8rem',
-          fontWeight: 'bold',
-          color: '#2c3e50',
-          margin: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          👨‍🏫 {locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management'}
-        </h2>
-        <div style={{ 
-          fontSize: '0.9rem', 
-          color: '#7f8c8d',
-          padding: '0.5rem 1rem',
-          background: '#f8f9fa',
-          borderRadius: '6px',
-          border: '1px solid #e9ecef'
-        }}>
-          💡 {locale === 'ar-SA' ? 'لإضافة معلم جديد، استخدم إدارة المستخدمين' : 'To add new teachers, use User Management'}
+        <div>
+          <h2 style={{ 
+            fontSize: '1.8rem',
+            fontWeight: 'bold',
+            color: '#2c3e50',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            👨‍🏫 {locale === 'ar-SA' ? 'إدارة المعلمين' : 'Teacher Management'}
+          </h2>
+        </div>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button
+            onClick={handleExportToExcel}
+            disabled={isExporting || loading || teachers.length === 0}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: isExporting || teachers.length === 0 ? '#95a5a6' : '#27ae60',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isExporting || teachers.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            {isExporting ? (
+              locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+            ) : (
+              <>
+                <span>📊</span>
+                {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+              </>
+            )}
+          </button>
+          <div style={{ 
+            fontSize: '0.9rem', 
+            color: '#7f8c8d',
+            padding: '0.5rem 1rem',
+            background: '#f8f9fa',
+            borderRadius: '6px',
+            border: '1px solid #e9ecef'
+          }}>
+            💡 {locale === 'ar-SA' ? 'لإضافة معلم جديد، استخدم إدارة المستخدمين' : 'To add new teachers, use User Management'}
+          </div>
         </div>
       </div>
 
