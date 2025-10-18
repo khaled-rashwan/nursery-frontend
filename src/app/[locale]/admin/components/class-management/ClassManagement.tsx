@@ -24,6 +24,7 @@ import { useAuth } from '../../../../../hooks/useAuth';
 import { classAPI, userAPI, classTeacherAssignmentAPI, handleAPIError } from '../../services/api';
 import { ActivityHelpers } from '../../services/activityLogger';
 import { TeacherAssignment } from '../../types/admin.types';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 interface Class {
   id: string;
@@ -61,6 +62,7 @@ export function ClassManagement({ locale }: ClassManagementProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [filters, setFilters] = useState({
     academicYear: '',
     level: ''
@@ -134,6 +136,60 @@ export function ClassManagement({ locale }: ClassManagementProps) {
   useEffect(() => {
     fetchTeachers();
   }, [fetchTeachers]);
+
+  const handleExportToExcel = async () => {
+    if (classes.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = classes.map(cls => ({
+        classId: cls.id,
+        name: cls.name,
+        level: cls.level,
+        academicYear: cls.academicYear,
+        capacity: cls.capacity,
+        notes: cls.notes || '',
+        createdAt: formatFirestoreTimestamp(cls.createdAt),
+        updatedAt: formatFirestoreTimestamp(cls.updatedAt)
+      }));
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'معرف الصف', key: 'classId', width: 30 },
+        { header: 'اسم الصف', key: 'name', width: 25 },
+        { header: 'المستوى', key: 'level', width: 15 },
+        { header: 'السنة الدراسية', key: 'academicYear', width: 15 },
+        { header: 'السعة', key: 'capacity', width: 10 },
+        { header: 'ملاحظات', key: 'notes', width: 30 },
+        { header: 'تاريخ الإنشاء', key: 'createdAt', width: 20 },
+        { header: 'آخر تحديث', key: 'updatedAt', width: 20 }
+      ] : [
+        { header: 'Class ID', key: 'classId', width: 30 },
+        { header: 'Class Name', key: 'name', width: 25 },
+        { header: 'Level', key: 'level', width: 15 },
+        { header: 'Academic Year', key: 'academicYear', width: 15 },
+        { header: 'Capacity', key: 'capacity', width: 10 },
+        { header: 'Notes', key: 'notes', width: 30 },
+        { header: 'Created At', key: 'createdAt', width: 20 },
+        { header: 'Updated At', key: 'updatedAt', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'الصفوف' : 'classes',
+        sheetName: locale === 'ar-SA' ? 'الصفوف' : 'Classes',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting classes:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Handle class creation/update
   const handleSubmit = async (classData: Partial<Class>) => {
@@ -269,25 +325,53 @@ export function ClassManagement({ locale }: ClassManagementProps) {
           {locale === 'ar-SA' ? 'إدارة الفصول' : 'Class Management'}
         </h2>
         
-        <button
-          onClick={() => {
-            setEditingClass(null);
-            setShowForm(true);
-          }}
-          disabled={loading}
-          style={{
-            padding: '0.75rem 1.5rem',
-            background: '#27ae60',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '1rem',
-            fontWeight: '500'
-          }}
-        >
-          {locale === 'ar-SA' ? 'إضافة فصل جديد' : 'Add New Class'}
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button
+            onClick={handleExportToExcel}
+            disabled={isExporting || loading || classes.length === 0}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: isExporting || classes.length === 0 ? '#95a5a6' : '#27ae60',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: isExporting || classes.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            {isExporting ? (
+              locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+            ) : (
+              <>
+                <span>📊</span>
+                {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setEditingClass(null);
+              setShowForm(true);
+            }}
+            disabled={loading}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#27ae60',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500'
+            }}
+          >
+            {locale === 'ar-SA' ? 'إضافة فصل جديد' : 'Add New Class'}
+          </button>
+        </div>
       </div>
 
       {/* Error/Success Messages */}

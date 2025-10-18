@@ -6,6 +6,7 @@ import { EnrollmentRegistration } from './EnrollmentRegistration';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { enrollmentAPI, handleAPIError } from '../../services/api';
 import { EnrollmentFormData } from '../../types/admin.types';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 interface StudentInfo {
   uid: string;
@@ -69,6 +70,7 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   const [editingInProgress, setEditingInProgress] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [statistics, setStatistics] = useState<{
     totalEnrollments: number;
     activeEnrollments: number;
@@ -202,6 +204,66 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
     }
   };
 
+  const handleExportToExcel = async () => {
+    if (enrollments.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = enrollments.map(enrollment => ({
+        enrollmentId: enrollment.id,
+        studentName: enrollment.studentInfo?.fullName || '',
+        academicYear: enrollment.academicYear,
+        class: enrollment.class,
+        teacherName: enrollment.teacherInfo?.displayName || '',
+        status: enrollment.status,
+        enrollmentDate: enrollment.enrollmentDate,
+        notes: enrollment.notes || '',
+        createdAt: formatFirestoreTimestamp(enrollment.createdAt),
+        updatedAt: formatFirestoreTimestamp(enrollment.updatedAt)
+      }));
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'معرف التسجيل', key: 'enrollmentId', width: 30 },
+        { header: 'اسم الطالب', key: 'studentName', width: 30 },
+        { header: 'السنة الدراسية', key: 'academicYear', width: 15 },
+        { header: 'الصف', key: 'class', width: 15 },
+        { header: 'اسم المعلم', key: 'teacherName', width: 25 },
+        { header: 'الحالة', key: 'status', width: 15 },
+        { header: 'تاريخ التسجيل', key: 'enrollmentDate', width: 15 },
+        { header: 'ملاحظات', key: 'notes', width: 30 },
+        { header: 'تاريخ الإنشاء', key: 'createdAt', width: 20 },
+        { header: 'آخر تحديث', key: 'updatedAt', width: 20 }
+      ] : [
+        { header: 'Enrollment ID', key: 'enrollmentId', width: 30 },
+        { header: 'Student Name', key: 'studentName', width: 30 },
+        { header: 'Academic Year', key: 'academicYear', width: 15 },
+        { header: 'Class', key: 'class', width: 15 },
+        { header: 'Teacher Name', key: 'teacherName', width: 25 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Enrollment Date', key: 'enrollmentDate', width: 15 },
+        { header: 'Notes', key: 'notes', width: 30 },
+        { header: 'Created At', key: 'createdAt', width: 20 },
+        { header: 'Updated At', key: 'updatedAt', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'التسجيلات' : 'enrollments',
+        sheetName: locale === 'ar-SA' ? 'التسجيلات' : 'Enrollments',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting enrollments:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Load enrollments on component mount
   useEffect(() => {
     fetchEnrollments();
@@ -309,14 +371,42 @@ export function EnrollmentManagement({ locale }: EnrollmentManagementProps) {
     <div style={{ padding: '1rem' }}>
       {/* Header with Statistics */}
       <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ 
-          margin: '0 0 1rem 0', 
-          color: '#2c3e50',
-          fontSize: '1.8rem',
-          fontWeight: '600'
-        }}>
-          {locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management'}
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ 
+            margin: 0, 
+            color: '#2c3e50',
+            fontSize: '1.8rem',
+            fontWeight: '600'
+          }}>
+            {locale === 'ar-SA' ? 'إدارة التسجيلات' : 'Enrollment Management'}
+          </h2>
+          <button
+            onClick={handleExportToExcel}
+            disabled={isExporting || loading || enrollments.length === 0}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: isExporting || enrollments.length === 0 ? '#95a5a6' : '#27ae60',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isExporting || enrollments.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            {isExporting ? (
+              locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+            ) : (
+              <>
+                <span>📊</span>
+                {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+              </>
+            )}
+          </button>
+        </div>
 
         {statistics && (
           <div style={{ 

@@ -8,6 +8,7 @@ import { getFirebaseErrorMessage } from '../../utils/firebaseErrorHandler';
 import { DeleteConfirmModal } from '../DeleteConfirmModal';
 import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { UserModal } from './UserModal';
+import { exportToExcel } from '../../../../../utils/excelExport';
 
 interface UserManagementProps {
   locale: string;
@@ -30,6 +31,7 @@ export function UserManagement({ locale }: UserManagementProps) {
   const [error, setError] = useState<string | null>(null);
   const [editingInProgress, setEditingInProgress] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { user } = useAuth();
 
@@ -124,6 +126,63 @@ export function UserManagement({ locale }: UserManagementProps) {
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const handleExportToExcel = async () => {
+    if (users.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = users.map(user => ({
+        userId: user.id,
+        displayName: user.displayName,
+        email: user.email,
+        phoneNumber: user.phoneNumber || '',
+        role: user.customClaims.role,
+        emailVerified: user.emailVerified ? 'Yes' : 'No',
+        disabled: user.disabled ? 'Yes' : 'No',
+        createdAt: user.createdAt ? new Date(user.createdAt).toLocaleString(locale === 'ar-SA' ? 'ar-SA' : 'en-US') : '',
+        lastSignInTime: user.lastSignIn ? new Date(user.lastSignIn).toLocaleString(locale === 'ar-SA' ? 'ar-SA' : 'en-US') : ''
+      }));
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'معرف المستخدم', key: 'userId', width: 30 },
+        { header: 'الاسم', key: 'displayName', width: 25 },
+        { header: 'البريد الإلكتروني', key: 'email', width: 30 },
+        { header: 'رقم الهاتف', key: 'phoneNumber', width: 20 },
+        { header: 'الدور', key: 'role', width: 15 },
+        { header: 'البريد مؤكد', key: 'emailVerified', width: 15 },
+        { header: 'معطل', key: 'disabled', width: 10 },
+        { header: 'تاريخ الإنشاء', key: 'createdAt', width: 20 },
+        { header: 'آخر تسجيل دخول', key: 'lastSignInTime', width: 20 }
+      ] : [
+        { header: 'User ID', key: 'userId', width: 30 },
+        { header: 'Display Name', key: 'displayName', width: 25 },
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Phone Number', key: 'phoneNumber', width: 20 },
+        { header: 'Role', key: 'role', width: 15 },
+        { header: 'Email Verified', key: 'emailVerified', width: 15 },
+        { header: 'Disabled', key: 'disabled', width: 10 },
+        { header: 'Created At', key: 'createdAt', width: 20 },
+        { header: 'Last Sign In', key: 'lastSignInTime', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'المستخدمون' : 'users',
+        sheetName: locale === 'ar-SA' ? 'المستخدمون' : 'Users',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting users:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleCreateUser = () => {
     setEditingUser(null);
@@ -466,34 +525,62 @@ export function UserManagement({ locale }: UserManagementProps) {
             👥 {locale === 'ar-SA' ? 'إدارة المستخدمين' : 'User Management'}
           </h2>
           
-          <button
-            onClick={handleCreateUser}
-            disabled={!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent'))}
-            style={{
-              padding: '1rem 1.5rem',
-              background: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
-                ? '#95a5a6' 
-                : 'linear-gradient(135deg, #27ae60, #2ecc71)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: 'bold',
-              cursor: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
-                ? 'not-allowed' 
-                : 'pointer',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              opacity: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
-                ? 0.6 
-                : 1
-            }}
-            onMouseEnter={(e) => {
-              if (currentUserRole && (canCreateRole('admin') || canCreateRole('teacher') || canCreateRole('parent'))) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={handleExportToExcel}
+              disabled={isExporting || loading || users.length === 0}
+              style={{
+                padding: '1rem 1.5rem',
+                backgroundColor: isExporting || users.length === 0 ? '#95a5a6' : '#27ae60',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isExporting || users.length === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {isExporting ? (
+                locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+              ) : (
+                <>
+                  <span>📊</span>
+                  {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleCreateUser}
+              disabled={!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent'))}
+              style={{
+                padding: '1rem 1.5rem',
+                background: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
+                  ? '#95a5a6' 
+                  : 'linear-gradient(135deg, #27ae60, #2ecc71)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
+                  ? 'not-allowed' 
+                  : 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                opacity: (!currentUserRole || (!canCreateRole('admin') && !canCreateRole('teacher') && !canCreateRole('parent')))
+                  ? 0.6 
+                  : 1
+              }}
+              onMouseEnter={(e) => {
+                if (currentUserRole && (canCreateRole('admin') || canCreateRole('teacher') || canCreateRole('parent'))) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }
             }}
             onMouseLeave={(e) => {
               if (currentUserRole && (canCreateRole('admin') || canCreateRole('teacher') || canCreateRole('parent'))) {
@@ -508,6 +595,7 @@ export function UserManagement({ locale }: UserManagementProps) {
           >
             ➕ {locale === 'ar-SA' ? 'إضافة مستخدم' : 'Add User'}
           </button>
+          </div>
         </div>
 
         {/* Error message */}

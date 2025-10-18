@@ -6,6 +6,7 @@ import { tableHeaderStyle, tableCellStyle } from '../../styles/tableStyles';
 import { DeleteConfirmModal } from '../DeleteConfirmModal';
 import { CareerSubmission } from '../../../../../app/types';
 import { getCareerSubmissions, updateCareerSubmissionStatus, deleteCareerSubmission } from '../../../../../services/careerService';
+import { exportToExcel, formatFirestoreTimestamp } from '../../../../../utils/excelExport';
 
 interface CareerSubmissionsManagementProps {
   locale: string;
@@ -18,6 +19,7 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<CareerSubmission | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { user } = useAuth();
 
   const fetchCareerSubmissions = useCallback(async () => {
@@ -86,6 +88,60 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
     setShowDetailsModal(true);
   };
 
+  const handleExportToExcel = async () => {
+    if (careerSubmissions.length === 0) {
+      alert(locale === 'ar-SA' ? 'لا توجد بيانات للتصدير' : 'No data available to export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = careerSubmissions.map(submission => ({
+        fullName: submission.fullName,
+        emailAddress: submission.emailAddress,
+        phoneNumber: submission.phoneNumber,
+        jobTitle: submission.jobTitle,
+        status: submission.status,
+        resumeUrl: submission.resumeUrl || '',
+        message: submission.message || '',
+        applicationDate: formatFirestoreTimestamp(submission.createdAt)
+      }));
+
+      const columns = locale === 'ar-SA' ? [
+        { header: 'الاسم الكامل', key: 'fullName', width: 25 },
+        { header: 'البريد الإلكتروني', key: 'emailAddress', width: 30 },
+        { header: 'رقم الهاتف', key: 'phoneNumber', width: 20 },
+        { header: 'المسمى الوظيفي', key: 'jobTitle', width: 25 },
+        { header: 'الحالة', key: 'status', width: 15 },
+        { header: 'رابط السيرة الذاتية', key: 'resumeUrl', width: 40 },
+        { header: 'الرسالة', key: 'message', width: 40 },
+        { header: 'تاريخ التقديم', key: 'applicationDate', width: 20 }
+      ] : [
+        { header: 'Full Name', key: 'fullName', width: 25 },
+        { header: 'Email Address', key: 'emailAddress', width: 30 },
+        { header: 'Phone Number', key: 'phoneNumber', width: 20 },
+        { header: 'Job Title', key: 'jobTitle', width: 25 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Resume URL', key: 'resumeUrl', width: 40 },
+        { header: 'Message', key: 'message', width: 40 },
+        { header: 'Application Date', key: 'applicationDate', width: 20 }
+      ];
+
+      await exportToExcel({
+        fileName: locale === 'ar-SA' ? 'طلبات_التوظيف' : 'career_applications',
+        sheetName: locale === 'ar-SA' ? 'طلبات التوظيف' : 'Career Applications',
+        columns,
+        data: exportData,
+        locale
+      });
+    } catch (error) {
+      console.error('Error exporting career applications:', error);
+      alert(locale === 'ar-SA' ? 'فشل تصدير البيانات' : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading career submissions...</div>;
   }
@@ -96,9 +152,37 @@ export default function CareerSubmissionsManagement({ locale }: CareerSubmission
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h2 style={{ marginBottom: '2rem', color: 'var(--primary-purple)' }}>
-        Career Applications Management
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ margin: 0, color: 'var(--primary-purple)' }}>
+          Career Applications Management
+        </h2>
+        <button
+          onClick={handleExportToExcel}
+          disabled={isExporting || loading || careerSubmissions.length === 0}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: isExporting || careerSubmissions.length === 0 ? '#95a5a6' : '#27ae60',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: isExporting || careerSubmissions.length === 0 ? 'not-allowed' : 'pointer',
+            fontSize: '1rem',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          {isExporting ? (
+            locale === 'ar-SA' ? 'جاري التصدير...' : 'Exporting...'
+          ) : (
+            <>
+              <span>📊</span>
+              {locale === 'ar-SA' ? 'تصدير إلى Excel' : 'Export to Excel'}
+            </>
+          )}
+        </button>
+      </div>
       
       <div style={{ marginBottom: '1rem', color: '#666' }}>
         Total Applications: {careerSubmissions.length}
