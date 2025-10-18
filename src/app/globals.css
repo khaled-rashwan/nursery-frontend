@@ -39,6 +39,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   /* background: linear-gradient(135deg, var(--light-yellow) 0%, var(--light-orange) 100%); */
   color: var(--foreground);
@@ -46,6 +50,7 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
 }
+
 
 /* Header Styles */
 .kindergarten-header {
