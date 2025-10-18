@@ -516,7 +516,7 @@ function PrincipalMessageSection({ content, locale }: { content: LocaleSpecificC
                 right: locale === 'ar-SA' ? '20px' : 'auto',
                 lineHeight: '1',
               }}>
-                "
+                  &quot;
               </div>
 
               <p style={{
