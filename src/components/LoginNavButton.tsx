@@ -17,18 +17,20 @@ export default function LoginNavButton({ locale }: LoginNavButtonProps) {
   return (
     <Link
       href={`/${locale}/login`}
-      className="nav-link bounce-on-hover"
+      className="portal-nav-button"
       style={{
         padding: '0.5rem 1.2rem',
-        fontWeight: 'bold',
+        fontWeight: '600',
         borderRadius: 20,
-        background: 'linear-gradient(90deg, #3b82f6, #06b6d4)',
+        background: '#f37f20',
         color: '#fff',
-        fontSize: 16,
-        marginLeft: locale === 'ar-SA' ? 0 : 8,
-        marginRight: locale === 'ar-SA' ? 8 : 0,
-        letterSpacing: 0.5,
-        boxShadow: '0 2px 8px rgba(59,130,246,0.08)',
+        fontSize: '0.95rem',
+        marginInlineStart: '0.5rem',
+        letterSpacing: '0.3px',
+        textDecoration: 'none',
+        display: 'inline-block',
+        transition: 'all 0.3s ease',
+        boxShadow: '0 2px 8px rgba(243, 127, 32, 0.3)',
         direction: locale === 'ar-SA' ? 'rtl' : 'ltr',
       }}
     >

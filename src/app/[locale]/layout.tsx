@@ -53,37 +53,37 @@ function Header({locale, isRTL}: {locale: string; isRTL: boolean}) {
         <nav className="desktop-nav">
           <ul className="nav-menu">
             <li className="nav-item">
-              <Link href={`/${locale}`} className="nav-link bounce-on-hover">
+              <Link href={`/${locale}`} className="nav-link">
                 {locale === 'ar-SA' ? 'الرئيسية' : 'Home'}
               </Link>
             </li>
             <li className="nav-item">
-              <Link href={`/${locale}/about_us`} className="nav-link bounce-on-hover">
+              <Link href={`/${locale}/about_us`} className="nav-link">
                 {locale === 'ar-SA' ? 'من نحن' : 'About Us'}
               </Link>
             </li>
             <li className="nav-item">
-              <Link href={`/${locale}/academic-program`} className="nav-link bounce-on-hover">
+              <Link href={`/${locale}/academic-program`} className="nav-link">
                 {locale === 'ar-SA' ? 'البرنامج الأكاديمي' : 'Academic Program'}
               </Link>
             </li>
             <li className="nav-item">
-              <Link href={`/${locale}/admissions`} className="nav-link bounce-on-hover">
+              <Link href={`/${locale}/admissions`} className="nav-link">
                 {locale === 'ar-SA' ? 'القبول والتسجيل' : 'Admissions'}
               </Link>
             </li>
             <li className="nav-item">
-              <Link href={`/${locale}/gallery`} className="nav-link bounce-on-hover">
+              <Link href={`/${locale}/gallery`} className="nav-link">
                 {locale === 'ar-SA' ? 'المعرض' : 'Gallery'}
               </Link>
             </li>
             <li className="nav-item">
-              <Link href={`/${locale}/careers`} className="nav-link bounce-on-hover">
+              <Link href={`/${locale}/careers`} className="nav-link">
                 {locale === 'ar-SA' ? 'الوظائف' : 'Careers'}
               </Link>
             </li>
             <li className="nav-item">
-              <Link href={`/${locale}/contact`} className="nav-link bounce-on-hover">
+              <Link href={`/${locale}/contact`} className="nav-link">
                 {locale === 'ar-SA' ? 'اتصل بنا' : 'Contact Us'}
               </Link>
             </li>
