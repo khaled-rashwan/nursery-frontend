@@ -16,7 +16,7 @@ const roleToPortal: Record<string, string> = {
 };
 
 export default function PortalNavButton({ locale }: PortalNavButtonProps) {
-  const { user, getUserCustomClaims, loading } = useAuth();
+  const { user, getUserCustomClaims } = useAuth();
   const [portal, setPortal] = useState<string | null>(null);
   const [label, setLabel] = useState<string>("");
   const router = useRouter();

@@ -1,7 +1,6 @@
 "use client";
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface LoginNavButtonProps {
@@ -9,8 +8,7 @@ interface LoginNavButtonProps {
 }
 
 export default function LoginNavButton({ locale }: LoginNavButtonProps) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
 
   if (user) return null;
 
